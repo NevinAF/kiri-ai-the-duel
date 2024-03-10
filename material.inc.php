@@ -19,19 +19,22 @@
  *
  */
 
+$this->cardNames = array(
+    0 => clienttranslate('Approach/Retreat'),
+    5 => clienttranslate('Approach/Retreat'),
+	1 => clienttranslate('Charge/Change Stance'),
+	6 => clienttranslate('Charge/Change Stance'),
+	2 => clienttranslate('High Strike'),
+	7 => clienttranslate('High Strike'),
+	3 => clienttranslate('Low Strike'),
+	8 => clienttranslate('Low Strike'),
+	4 => clienttranslate('Balanced Strike'),
+	9 => clienttranslate('Balanced Strike'),
+	10 => clienttranslate('Kesa Strike'),
+	11 => clienttranslate('Zan-Tetsu Strike'),
+	12 => clienttranslate('Counterattack'),
 
-/*
-
-Example:
-
-$this->card_types = array(
-    1 => array( "card_name" => ...,
-                ...
-              )
+	97 => clienttranslate('<card back>'),
+	98 => clienttranslate('<card back>'),
+	99 => clienttranslate('<card back>')
 );
-
-*/
-
-
-
-

@@ -67,6 +67,81 @@
     }
 */
 
+.cardontable {
+    position: absolute;
+    width: 185px;
+    height: 270px;
+    background-image: url('img/placeholderCards.jpg'); 
+}
+
+#cardontable_1 {
+	background-position-x: -0px;
+}
+
+#cardontable_2 {
+	background-position-x: -185px;
+}
+
+#cardontable_3 {
+	background-position-x: -370px;
+}
+
+#cardontable_4 {
+	background-position-x: -555px;
+}
+
+#cardontable_5 {
+	background-position-x: -740px;
+}
+
+#cardontable_6 {
+	background-position-x: -925px;
+}
+
+#cardontable_7 {
+	background-position-x: -1110px;
+}
+
+#cardontable_8 {
+	background-position-x: -1295px;
+}
+
+#cardontable_9 {
+	background-position-x: -1480px;
+}
+
+#cardontable_10 {
+	background-position-x: -1665px;
+}
+
+#cardontable_11 {
+	background-position-x: -1850px;
+}
+
+#cardontable_12 {
+	background-position-x: -2035px;
+}
+
+#cardontable_13 {
+	background-position-x: -2220px;
+}
+
+#cardontable_97, #cardontable_98, #cardontable_99 {
+	background-position-x: -2405px;
+}
 
 
+.cardrow {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+}
 
+.cardslot {
+	position: relative;
+	width: 190px;
+	height: 275px;
+	background-color: white;
+}
