@@ -130,6 +130,10 @@
 	background-position-x: -2405px;
 }
 
+/* Adds a tint to the top portion of the div */
+.topPicked {
+	
+}
 
 .cardrow {
 	width: 100%;

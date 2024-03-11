@@ -197,15 +197,46 @@ function (dojo, declare) {
 				return;
 			}
 
+			let divFrom = target.parentNode;
+
 			dojo.place(target, divTo);
+
+			this.placeOnObject('cardontable_' + card_id, divFrom);
             this.slideToObject('cardontable_' + card_id, to).play();
         },
 
 		placeAllCards : function(cards)
 		{
 			for (let i in cards) // i = 'redHand', 'blueHand', 'redPlayed'...
-				for (let j in cards[i]) // j = 0, 1 [, 2, 3]
+				for (let j in cards[i]) // j = 0, 1 [, 2, 3, 4, 5]
 					this.moveCard(cards[i][j], i + "_" + j);
+		},
+
+		updateFlippedStatus: function(flippedState)
+		{
+			// There are only 4 cards that have a flipped state, so we can manually check the specific cards rather than the played cards. The prevents having to
+			let cardIds = [1, 2, 6, 7];
+			for (let i in cardIds)
+			{
+				let cardId = cardIds[i];
+				let cardDiv = $('cardontable_' + cardId);
+				let state = flippedState[cardDiv.parentNode.id + '_Flipped'];
+
+				// If undefined or not 0/1, remove the topPicked/bottomPicked class. If 0, add topPicked. If 1, add bottomPicked.
+
+				if (state == undefined || (state != 0 && state != 1)) {
+					dojo.removeClass(cardDiv, 'topPicked');
+					dojo.removeClass(cardDiv, 'bottomPicked');
+				}
+				else if (state == 0) {
+					dojo.addClass(cardDiv, 'topPicked');
+					dojo.removeClass(cardDiv, 'bottomPicked');
+				}
+				else {
+					dojo.addClass(cardDiv, 'bottomPicked');
+					dojo.removeClass(cardDiv, 'topPicked');
+				}
+			}
 		},
 
         ///////////////////////////////////////////////////
@@ -217,7 +248,11 @@ function (dojo, declare) {
 
 			// If parent contains 'hand' text, then playCardFromHand
 			if (evt.target.parentNode.id.includes('Hand')) {
-				this.playCardFromHand(card_id);
+				// we need to know if the top half or bottom half was clicked
+				let rect = evt.target.getBoundingClientRect();
+				let y = evt.clientY - rect.top;
+				let clickedTopHalf = y < rect.height / 2;
+				this.playCardFromHand(card_id, clickedTopHalf);
 			}
 			else if (evt.target.parentNode.id.includes('Played')) {
 				this.returnCardToHand(card_id);
@@ -226,8 +261,8 @@ function (dojo, declare) {
 				console.log('Card is not in the hand or played cards.', evt);
 			}
 		},
-        
-        playCardFromHand: function( card_id )
+
+        playCardFromHand: function( card_id, clickedTopHalf )
 		{
 			if (!this.checkAction('pickedCards')) {
 				console.log('It is not time to play cards.');
@@ -246,20 +281,34 @@ function (dojo, declare) {
 
 			// Check if the <playerType>FirstCard div is empty
 			let isFirstOpen = $(playerType + 'Played_0').childNodes.length == 0;
+			let isSecondOpen = $(playerType + 'Played_1').childNodes.length == 0;
+
+			if (!isFirstOpen && !isSecondOpen) {
+				console.log('Both cards are already played! Must choose one to return before playing another.');
+				return;
+			}
+
+			let flippableCards = [1, 2, 6, 7];
+			if (flippableCards.includes(parseInt(card_id))) {
+				if (clickedTopHalf) {
+					dojo.addClass(card_div, 'topPicked');
+					dojo.removeClass(card_div, 'bottomPicked');
+				}
+				else {
+					dojo.addClass(card_div, 'bottomPicked');
+					dojo.removeClass(card_div, 'topPicked');
+				}
+			}
 			
 			if (isFirstOpen) {
 				this.moveCard(card_id, playerType + 'Played_0');
 				return;
 			}
 
-			let isSecondOpen = $(playerType + 'Played_1').childNodes.length == 0;
-
 			if (isSecondOpen) {
 				this.moveCard(card_id, playerType + 'Played_1');
 				return;
 			}
-
-			console.log('Both cards are already played! Must choose one to return before playing another.');
 		},
 
 		returnCardToHand: function( card_id )
@@ -278,6 +327,10 @@ function (dojo, declare) {
 				console.log('Card is not in the played cards.');
 				return;
 			}
+
+			// Remove the topPicked/bottomPicked classes
+			dojo.removeClass(card_div, 'topPicked');
+			dojo.removeClass(card_div, 'bottomPicked');
 
 			// Now, find the first empty hand slot and move the card there (_0, _1, _2, _3)
 
@@ -311,6 +364,12 @@ function (dojo, declare) {
 			let firstCardId = firstCard.id.split('_')[1];
 			let secondCardId = secondCard.id.split('_')[1];
 
+			// If the first card or second card has the bottomPicked class, negate the card id
+			if (dojo.hasClass(firstCard, 'bottomPicked'))
+				firstCardId = -firstCardId;
+			if (dojo.hasClass(secondCard, 'bottomPicked'))
+				secondCardId = -secondCardId;
+
 			this.ajaxcall('/kiriaitheduel/kiriaitheduel/pickedCards.html', {
 				lock : true,
 				firstCard : firstCardId,
@@ -335,8 +394,12 @@ function (dojo, declare) {
         {
             console.log( 'notifications subscriptions setup' );
 
-			dojo.subscribe('placeAllCards', this, "notif_placeAllCards");
-			this.notifqueue.setSynchronous( 'placeAllCards', 3000 );
+			dojo.subscribe('playCards', this, "notif_placeAllCards");
+			dojo.subscribe('cleanUpCards', this, "notif_placeAllCards");
+			dojo.subscribe('drawSpecialCard', this, "notif_placeAllCards");
+			this.notifqueue.setSynchronous( 'playCards', 3000 );
+			this.notifqueue.setSynchronous( 'cleanUpCards', 3000 );
+			this.notifqueue.setSynchronous( 'drawSpecialCard', 3000 );
 			dojo.subscribe('cardsPlayed', this, "notif_cardsPlayed");
 			dojo.subscribe('cardFlipped', this, "notif_cardFlipped");
 			this.notifqueue.setSynchronous( 'cardFlipped', 1000 );
@@ -358,6 +421,7 @@ function (dojo, declare) {
 
 		notif_placeAllCards: function(notif) {
 			this.placeAllCards(notif.args.cards);
+			this.updateFlippedStatus(notif.args.flippedState);
 		},
         
         notif_cardsPlayed: function(notif) {
