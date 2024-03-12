@@ -71,7 +71,8 @@
     position: absolute;
     width: 185px;
     height: 270px;
-    background-image: url('img/placeholderCards.jpg'); 
+    background-image: url('img/placeholderCards.jpg');
+	z-index: 1;
 }
 
 #cardontable_1 {
@@ -130,9 +131,93 @@
 	background-position-x: -2405px;
 }
 
-/* Adds a tint to the top portion of the div */
+#standard_battlefield {
+	padding: 100px 50px;
+}
+
+.field_position {
+	position: relative;
+	width: 590px;
+	height: 75px;
+}
+
+.red_field_position {
+	position: absolute;
+	left: 0;
+	top: 7px;
+	width: 270px;
+}
+
+.blue_field_position {
+	position: absolute;
+	top: 68px;
+	right: 0;
+	width: 270px;
+}
+
+.field_position::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 25px;
+	height: 25px;
+	background-color: black;
+	transform: translate(-50%, -50%);
+}
+
+.samurai_card {
+	position: absolute;
+	background-image: url('img/placeholder_SamuraiCards.jpg'); 
+	width: 185px;
+	height: 270px;
+	z-index: 1;
+}
+
+#red_samurai {
+	background-position-x: -0px;
+}
+
+#blue_samurai {
+	background-position-x: -185px;
+}
+
+.heaven_stance {
+	/* Rotate the image 45 deg counter clockwise */
+	transform: rotate(-45deg);
+}
+
+.earth_stance {
+	/* Rotate the image 135 deg clockwise */
+	transform: rotate(135deg);
+}
+
 .topPicked {
-	
+	position: relative;
+}
+
+.topPicked::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 33%; /* Adjust this to control the height of the tint */
+	background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), transparent); /* Adjust colors and opacity as needed */
+}
+
+.bottomPicked {
+	position: relative;
+}
+
+.bottomPicked::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 33%; /* Adjust this to control the height of the tint */
+	background: linear-gradient(to top, rgba(255, 255, 255, 0.7), transparent); /* Adjust colors and opacity as needed */
 }
 
 .cardrow {

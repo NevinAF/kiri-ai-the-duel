@@ -45,12 +45,42 @@ This is your game interface. You can edit this HTML in your ".tpl" file.
 
 	<div id="redDamageContainer">
 		<h3>Red Damage</h3>
-		<div id="redDamage"></div>
+		<div id="red_samurai_damage"></div>
 	</div>
 
 	<div id="blueDamageContainer">
 		<h3>Blue Damage</h3>
-		<div id="blueDamage"></div>
+		<div id="blue_samurai_damage"></div>
+	</div>
+
+	<div id="standard_battlefield">
+		<div class="field_position">
+			<div  id="red_samurai_field_position_5" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_5" class="blue_field_position"> </div>
+		</div>
+		<div class="field_position">
+			<div  id="red_samurai_field_position_4" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_4" class="blue_field_position"> </div>
+		</div>
+		<div class="field_position">
+			<div  id="red_samurai_field_position_3" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_3" class="blue_field_position"> </div>
+		</div>
+		<div class="field_position">
+			<div  id="red_samurai_field_position_2" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_2" class="blue_field_position"> </div>
+		</div>
+		<div class="field_position">
+			<div  id="red_samurai_field_position_1" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_1" class="blue_field_position"> </div>
+		</div>
+		<div class="field_position">
+			<div  id="red_samurai_field_position_0" class="red_field_position"> </div>
+			<div id="blue_samurai_field_position_0" class="blue_field_position"> </div>
+		</div>
+
+		<div id="red_samurai"  class="samurai_card"></div>
+		<div id="blue_samurai" class="samurai_card"></div>
 	</div>
 		
 

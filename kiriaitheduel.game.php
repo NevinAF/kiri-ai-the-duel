@@ -22,6 +22,9 @@ require_once( APP_GAMEMODULE_PATH.'module/table/table.game.php' );
 
 class KiriaiTheDuel extends Table
 {
+	protected $cards;
+	protected $cardNames;
+
 	function __construct( )
 	{
         // Your global variables labels:
@@ -82,7 +85,7 @@ class KiriaiTheDuel extends Table
             $color = array_shift( $default_colors );
             $values[] = "('".$player_id."','$color','".$player['player_canal']."','".addslashes( $player['player_name'] )."','".addslashes( $player['player_avatar'] )."')";
         }
-        $sql .= implode( $values, ',' );
+        $sql .= implode( ',', $values );
         self::DbQuery( $sql );
         self::reattributeColorsBasedOnPreferences( $players, $gameinfos['player_colors'] );
         self::reloadPlayersBasicInfos();
@@ -94,8 +97,8 @@ class KiriaiTheDuel extends Table
         // Init global values with their initial values
         self::setGameStateInitialValue( 'redSamuraiDamage', 0 );
 		self::setGameStateInitialValue( 'blueSamuraiDamage', 0 );
-		self::setGameStateInitialValue( 'redSamuraiPosition', 0 ); // Standard, at the end
-		self::setGameStateInitialValue( 'blueSamuraiPosition', 5 ); // Standard, at the end
+		self::setGameStateInitialValue( 'redSamuraiPosition', 5 ); // Standard, at the end
+		self::setGameStateInitialValue( 'blueSamuraiPosition', 0 ); // Standard, at the end
 		self::setGameStateInitialValue( 'redSamuraiStance', 0 ); // 0 = Heaven Stance, 1 = Earth Stance
 		self::setGameStateInitialValue( 'blueSamuraiStance', 0 ); // 0 = Heaven Stance, 1 = Earth Stance
 
@@ -135,15 +138,15 @@ class KiriaiTheDuel extends Table
 		$blueCards = array();
 		$deckCards = array();
 
-		// Initialize players hands (0-4 and 5-9)
+		// Initialize players hands (1-5 and 6-10)
 		for ($i = 0; $i < 5; $i++) {
-			$redCards[] = array('type' => $i, 'type_arg' => 0, 'nbr' => 1 );
-			$blueCards[] = array('type' => $i + 5, 'type_arg' => 1, 'nbr' => 1 );
+			$redCards[] = array('type' => 0, 'type_arg' => 0, 'nbr' => 1 );
+			$blueCards[] = array('type' => 0, 'type_arg' => 0, 'nbr' => 1 );
 		}
 
-		// Initialize Special cards (10-12)
+		// Initialize Special cards (11-13)
 		for ($i = 10; $i < 13; $i++) {
-			$deckCards[] = array('type' => $i, 'type_arg' => 3, 'nbr' => 1);
+			$deckCards[] = array('type' => 0, 'type_arg' => 0, 'nbr' => 1);
 		}
 
 		$this->cards->createCards( $redCards, 'hand', $redPlayer );
@@ -180,59 +183,63 @@ class KiriaiTheDuel extends Table
 		$result['redPlayer'] = self::getGameStateValue( 'redPlayer' );
 		$result['bluePlayer'] = self::getGameStateValue( 'bluePlayer' );
 
-        $result['redSamuraiDamage'] = self::getGameStateValue( 'redSamuraiDamage' );
-		$result['blueSamuraiDamage'] = self::getGameStateValue( 'blueSamuraiDamage' );
-		$result['redSamuraiPosition'] = self::getGameStateValue( 'redSamuraiPosition' );
-		$result['blueSamuraiPosition'] = self::getGameStateValue( 'blueSamuraiPosition' );
-		$result['redSamuraiStance'] = self::getGameStateValue( 'redSamuraiStance' );
-		$result['blueSamuraiStance'] = self::getGameStateValue( 'blueSamuraiStance' );
+		$result['state'] = self::getCurrentCards($this->getCurrentPlayerId());
 
-		list($result['cards'], $result['flippedState']) = self::getCurrentCards($this->getCurrentPlayerId());
-
-  
         return $result;
     }
 
 	protected function getCurrentCards($current_player_id, $hidePlayedCards = true)
 	{
-        $result = array();
+		// TODO only send updated information??
+
+        $cards = array();
 		$flippedState = array();
+		$stances = array();
+		$positions = array();
+		$damage = array();
+		
+		$positions['red_samurai'] = self::getGameStateValue( 'redSamuraiPosition' );
+		$positions['blue_samurai'] = self::getGameStateValue( 'blueSamuraiPosition' );
+		$stances['red_samurai'] = self::getGameStateValue( 'redSamuraiStance' );
+		$stances['blue_samurai'] = self::getGameStateValue( 'blueSamuraiStance' );
+		$damage['red_samurai'] = self::getGameStateValue( 'redSamuraiDamage' );
+		$damage['blue_samurai'] = self::getGameStateValue( 'blueSamuraiDamage' );
 
 		$redPlayer = self::getGameStateValue( 'redPlayer' );
 		$bluePlayer = self::getGameStateValue( 'bluePlayer' );
 		$otherPlayer = $current_player_id == $redPlayer ? $bluePlayer : $redPlayer;
 
-		$result['redHand'] = self::getCardIdsInLocation('hand', $redPlayer, $current_player_id == $redPlayer ? -1 : 97);
-		$result['blueHand'] = self::getCardIdsInLocation('hand', $bluePlayer, $current_player_id == $bluePlayer ? -1 : 98);
+		$cards['redHand'] = self::getCardIdsInLocation('hand', $redPlayer, $current_player_id == $redPlayer ? -1 : 97);
+		$cards['blueHand'] = self::getCardIdsInLocation('hand', $bluePlayer, $current_player_id == $bluePlayer ? -1 : 98);
 
-		$result['redPlayed']= array(
+		$cards['redPlayed']= array(
 			'0' => self::getCardIdInLocation('firstPlayed', $redPlayer),
 			'1' => self::getCardIdInLocation('secondPlayed', $redPlayer)
 		);
-		$result['bluePlayed']= array(
+		$cards['bluePlayed']= array(
 			'0' => self::getCardIdInLocation('firstPlayed', $bluePlayer),
 			'1' => self::getCardIdInLocation('secondPlayed', $bluePlayer)
 		);
 
-		$result['redDiscard'] = self::getCardIdsInLocation('discard', $redPlayer);
-		$result['blueDiscard'] = self::getCardIdsInLocation('discard', $bluePlayer);
+		$cards['redDiscard'] = self::getCardIdsInLocation('discard', $redPlayer);
+		$cards['blueDiscard'] = self::getCardIdsInLocation('discard', $bluePlayer);
 
-		$result['deck'] = self::getCardIdsInLocation( 'deck', -1, 99 );
+		$cards['deck'] = self::getCardIdsInLocation( 'deck', -1, 99 );
 
 		// If we are picking cards and the other player has already picked, we need to add the cards played back to their hand to avoid showing their cards played before the player has picked.
 		$state = $this->gamestate->state();
 		if( $hidePlayedCards && $state['name'] == 'pickCards' )
 		{
-			$otherPlayed = $result[$otherPlayer == $redPlayer ? 'redPlayed' : 'bluePlayed'];
+			$otherPlayed = $cards[$otherPlayer == $redPlayer ? 'redPlayed' : 'bluePlayed'];
 
 			if ($otherPlayed[0] != -1 || $otherPlayed[1] != -1)
 			{
 				// Merge and Sort $otherHand by ID so there is no additional information given to the player
-				$otherHand = array_merge($result[$otherPlayer == $redPlayer ? 'redHand' : 'blueHand'], $otherPlayed);
+				$otherHand = array_merge($cards[$otherPlayer == $redPlayer ? 'redHand' : 'blueHand'], $otherPlayed);
 				sort($otherHand);
 
-				$result[$otherPlayer == $redPlayer ? 'redHand' : 'blueHand'] = $otherHand;
-				$result[$otherPlayer == $redPlayer ? 'redPlayed' : 'bluePlayed'] = array(-1, -1);
+				$cards[$otherPlayer == $redPlayer ? 'redHand' : 'blueHand'] = $otherHand;
+				$cards[$otherPlayer == $redPlayer ? 'redPlayed' : 'bluePlayed'] = array(-1, -1);
 			}
 
 			if ($current_player_id == $redPlayer)
@@ -256,7 +263,13 @@ class KiriaiTheDuel extends Table
 			$flippedState['bluePlayed_1_Flipped'] = self::getGameStateValue( 'blueSecondPlayedFlipped' );
 		}
 
-		return array($result, $flippedState);
+		return array(
+			'cards' => $cards,
+			'flippedState' => $flippedState,
+			'positions' => $positions,
+			'stances' => $stances,
+			'damage' => $damage
+		);
 	}
 
 	protected function getCardIdsInLocation($location, $player_id, $hideSpecialAs = -1)
@@ -265,7 +278,7 @@ class KiriaiTheDuel extends Table
 		$result = array();
 		foreach ($cards as $card)
 		{
-			if ($card['type'] > 9 && $hideSpecialAs != -1)
+			if ($card['id'] > 10 && $hideSpecialAs != -1)
 				$result[] = $hideSpecialAs;
 			else $result[] = $card['id'];
 		}
@@ -325,12 +338,14 @@ class KiriaiTheDuel extends Table
         (note: each method below must match an input method in kiriaitheduel.action.php)
     */
 
-    function pickedCards( $firstCard_id, $secondCard_id )
-    {
+	function pickedCards( $firstCard_id, $secondCard_id )
+	{
 		self::checkAction( 'pickedCards' );
+		self::doPickedCards( $this->getCurrentPlayerId(), $firstCard_id, $secondCard_id );
+	}
 
-		$player_id = $this->getCurrentPlayerId();
-
+    function doPickedCards( $player_id,  $firstCard_id, $secondCard_id )
+    {
 		$redPlayer = self::getGameStateValue( 'redPlayer' );
 		$bluePlayer = self::getGameStateValue( 'bluePlayer' );
 
@@ -378,28 +393,7 @@ class KiriaiTheDuel extends Table
 
 		if ($this->gamestate->setPlayerNonMultiactive( $player_id, ''))
 		{
-			// Flip over any cards that are special in the play area
-
-			self::notifyCardFlip('firstPlayed', $redPlayer, 97, $bluePlayer);
-			self::notifyCardFlip('secondPlayed', $redPlayer, 97, $bluePlayer);
-			self::notifyCardFlip('firstPlayed', $bluePlayer, 98, $redPlayer);
-			self::notifyCardFlip('secondPlayed', $bluePlayer, 98, $redPlayer);
-
-			self::resetAndNotify(
-				$redPlayer,
-				'playCards',
-				'Moving picked cards to play area',
-				array( ),
-				false
-			);
-
-			self::resetAndNotify(
-				$bluePlayer,
-				'playCards',
-				'Moving picked cards to play area',
-				array( ),
-				false
-			);
+			// Flip over any cards that are special in the play area not working here??
 		}
 	}
 
@@ -408,14 +402,14 @@ class KiriaiTheDuel extends Table
 		$cards = $this->cards->getCardsInLocation( $location, $player_id );
 
 		foreach ($cards as $card) {
-			if ($card['type'] > 9) {
+			if ($card['id'] >= 11) {
 				$players = self::loadPlayersBasicInfos();
 				self::notifyPlayer( $otherPlayerId, "cardFlipped", clienttranslate( 'The ${card_name} special card was played by ${player_name' ), array(
 					'player_id' => $player_id,
 					'player_name' => $players[$player_id]['player_name'],
 					'back_card_id' => $pseudoId,
 					'card_id' => $card['id'],
-					'card_name' => $this->cardNames[$card['type']]
+					'card_name' => $this->cardNames[$card['id']]
 				) );
 			}
 		}
@@ -479,14 +473,14 @@ class KiriaiTheDuel extends Table
 			'You started the game with the ${card_name} special card',
 			array( 
 				'card' => $card,
-				'card_name' => $this->cardNames[$card['type']]
+				'card_name' => $this->cardNames[$card['id']]
 			)
 		);
 	}
 
 	function resetAndNotify($player_id, $type, $message, $message_args, $hidePlayedCards = true)
 	{
-		list($message_args['cards'], $message_args['flippedState']) = self::getCurrentCards($player_id, $hidePlayedCards);
+		$message_args['state'] = self::getCurrentCards($player_id, $hidePlayedCards);
 		self::notifyPlayer($player_id, $type, clienttranslate( $message ), $message_args );
 	}
 
@@ -494,70 +488,401 @@ class KiriaiTheDuel extends Table
 		$this->gamestate->setAllPlayersMultiactive();
 	}
 
+	function getFirstCard($cards) {
+		foreach ($cards as $card) {
+			return $card;
+		}
+		throw new BgaUserException( self::_("Player has no cards in their hand? This should not be possible.") );
+	}
+
 	function stResolveCards()
 	{
 		$redPlayer = self::getGameStateValue( 'redPlayer' );
 		$bluePlayer = self::getGameStateValue( 'bluePlayer' );
 
-		// TODO: GAME LOGIC??
+		$redDiscardCards = $this->cards->getCardsInLocation( 'discard', $redPlayer );
+		$redFirstCards = $this->cards->getCardsInLocation( 'firstPlayed', $redPlayer );
+		$redSecondCards = $this->cards->getCardsInLocation( 'secondPlayed', $redPlayer );
 
-		// -
+		$blueDiscardCards = $this->cards->getCardsInLocation( 'discard', $bluePlayer );
+		$blueFirstCards = $this->cards->getCardsInLocation( 'firstPlayed', $bluePlayer );
+		$blueSecondCards = $this->cards->getCardsInLocation( 'secondPlayed', $bluePlayer );
 
-		// Move any non special cards in their discard pile to their hand (should always be one or zero)
-		// Move the first card back to the player's hand and the second card to the discard pile
-		// If the first card is a special card, move it to the discard pile
-		self::resetPlayerCards($redPlayer);
-		self::resetPlayerCards($bluePlayer);
+		//
+		// VALIDATE
+		//
+
+		if (count($redFirstCards) != 1) {
+			throw new BgaUserException( self::_("Red player did not play a card in the first slot? This should not be possible.") );
+		}
+		if (count($redSecondCards) != 1) {
+			throw new BgaUserException( self::_("Red player did not play a card in the second slot? This should not be possible.") );
+		}
+		if (count($redDiscardCards) > 2) {
+			throw new BgaUserException( self::_("Red player has more than two cards in their discard pile? This should not be possible.") );
+		}
+
+		if (count($blueFirstCards) != 1) {
+			throw new BgaUserException( self::_("Blue player did not play a card in the first slot? This should not be possible.") );
+		}
+		if (count($blueSecondCards) != 1) {
+			throw new BgaUserException( self::_("Blue player did not play a card in the second slot? This should not be possible.") );
+		}
+		if (count($blueDiscardCards) > 2) {
+			throw new BgaUserException( self::_("Blue player has more than two cards in their discard pile? This should not be possible.") );
+		}
+
+		self::notifyCardFlip('firstPlayed', $redPlayer, 97, $bluePlayer);
+		self::notifyCardFlip('secondPlayed', $redPlayer, 97, $bluePlayer);
+		self::notifyCardFlip('firstPlayed', $bluePlayer, 98, $redPlayer);
+		self::notifyCardFlip('secondPlayed', $bluePlayer, 98, $redPlayer);
+
+		self::resetAndNotify(
+			$redPlayer,
+			'playCards',
+			'Moving picked cards to play area: red -> ' . self::getFirstCard($redFirstCards)['id'] . ' and ' . self::getFirstCard($redSecondCards)['id'] . ' blue -> ' . self::getFirstCard($blueFirstCards)['id'] . ' and ' . self::getFirstCard($blueSecondCards)['id'],
+			array( ),
+			false
+		);
+
+		self::resetAndNotify(
+			$bluePlayer,
+			'playCards',
+			'Moving picked cards to play area',
+			array( ),
+			false
+		);
+
+		//
+		// Resolve First Card
+		//
+
+		$isRedFirstTop = self::getGameStateValue( 'redFirstPlayedFlipped' ) == 0;
+		$isBlueFirstTop = self::getGameStateValue( 'blueFirstPlayedFlipped' ) == 0;
+
+		self::DoCards(
+			$this->getFirstCard($redFirstCards)['id'],
+			$isRedFirstTop,
+			$this->getFirstCard($blueFirstCards)['id'],
+			$isBlueFirstTop
+		);
+
+		// Notify
+
+		self::resetAndNotify(
+			$redPlayer,
+			'cardsResolved',
+			'First cards played resolved.',
+			array( )
+		);
+		self::resetAndNotify(
+			$bluePlayer,
+			'cardsResolved',
+			'First cards played resolved.',
+			array( )
+		);
+
+
+		// Return the first played card to hand iff it is not a special card
+
+		foreach ($redFirstCards as $card) {
+			if ($card['id'] <= 10) {
+				$this->cards->moveCard( $card['id'], 'hand', $redPlayer );
+			}
+			else {
+				$this->cards->moveCard( $card['id'], 'discard', $redPlayer );
+			}
+		}
+
+		foreach ($blueFirstCards as $card) {
+			if ($card['id'] <= 10) {
+				$this->cards->moveCard( $card['id'], 'hand', $bluePlayer );
+			}
+			else {
+				$this->cards->moveCard( $card['id'], 'discard', $bluePlayer );
+			}
+		}
+
+		// Notify
+
+		self::resetAndNotify(
+			$redPlayer,
+			'cardsResolved',
+			'First cards discarded.',
+			array( )
+		);
+		self::resetAndNotify(
+			$bluePlayer,
+			'cardsResolved',
+			'First cards discarded.',
+			array( )
+		);
+
+		//
+		// Resolve Second Card
+		//
+
+		$isRedSecondTop = self::getGameStateValue( 'redSecondPlayedFlipped' ) == 0;
+		$isBlueSecondTop = self::getGameStateValue( 'blueSecondPlayedFlipped' ) == 0;
+
+		self::DoCards(
+			$this->getFirstCard($redSecondCards)['id'],
+			$isRedSecondTop,
+			$this->getFirstCard($blueSecondCards)['id'],
+			$isBlueSecondTop
+		);
+
+		self::resetAndNotify(
+			$redPlayer,
+			'cardsResolved',
+			'Second cards played resolved.',
+			array( )
+		);
+		self::resetAndNotify(
+			$bluePlayer,
+			'cardsResolved',
+			'Second cards played resolved.',
+			array( )
+		);
+
+		// Return discarded cards to the player's hand and discard the second card
+
+		foreach ($redDiscardCards as $card) {
+			if ($card['id'] <= 10)
+				$this->cards->moveCard( $card['id'], 'hand', $redPlayer );
+		}
+		foreach ($redSecondCards as $card)
+			$this->cards->moveCard( $card['id'], 'discard', $redPlayer );
+
+		foreach ($blueDiscardCards as $card) {
+			if ($card['id'] <= 10)
+				$this->cards->moveCard( $card['id'], 'hand', $bluePlayer );
+		}
+		foreach ($blueSecondCards as $card)
+			$this->cards->moveCard( $card['id'], 'discard', $bluePlayer );
 
 		// Notify all players about the card played
 		self::resetAndNotify(
 			$redPlayer,
-			'cleanUpCards',
+			'cardsResolved',
 			'Round has ended, resetting played cards',
 			array( )
 		);
 		self::resetAndNotify(
 			$bluePlayer,
-			'cleanUpCards',
+			'cardsResolved',
 			'Round has ended, resetting played cards',
 			array( )
 		);
 		$this->gamestate->nextState( "pickCards" );
 	}
 
-	function resetPlayerCards($player_id)
+	function DoCards($red_card, $redIsTop, $blue_card, $blueIsTop)
 	{
-		$discardCards = $this->cards->getCardsInLocation( 'discard', $player_id );
-		$firstCards = $this->cards->getCardsInLocation( 'firstPlayed', $player_id );
-		$secondCards = $this->cards->getCardsInLocation( 'secondPlayed', $player_id );
+		$red_card -= 1;
+		$blue_card -= 1;
 
-		// VALIDATE
-		if (count($firstCards) != 1) {
-			throw new BgaUserException( self::_("Player did not play a card in the first slot? This should not be possible.") );
-		}
-		if (count($secondCards) != 1) {
-			throw new BgaUserException( self::_("Player did not play a card in the second slot? This should not be possible.") );
-		}
-		if (count($discardCards) > 2) {
-			throw new BgaUserException( self::_("Player has more than two cards in their discard pile? This should not be possible.") );
-		}
+		$redStance = self::getGameStateValue( 'redSamuraiStance' );
+		$blueStance = self::getGameStateValue( 'blueSamuraiStance' );
+		$redPosition = self::getGameStateValue( 'redSamuraiPosition' );
+		$bluePosition = self::getGameStateValue( 'blueSamuraiPosition' );
+	
+		//
+		// MOVEMENT
+		//
 
-		foreach ($discardCards as $card) {
-			if ($card['type'] <= 9)
-				$this->cards->moveCard( $card['id'], 'hand', $player_id );
-		}
+		// Charge: Move two spaces forward (-2 for red, +2 for blue)
 
-		foreach ($firstCards as $card) {
-			if ($card['type'] <= 9) {
-				$this->cards->moveCard( $card['id'], 'hand', $player_id );
+		$isRedCharge = $red_card == 1 && $redIsTop;
+		$isBlueCharge = $blue_card == 6 && $blueIsTop;
+
+		if ($isRedCharge && $isBlueCharge)
+		{
+			if ($redStance == $blueStance) // Both move at the same time.
+			{
+				if ($redPosition - $bluePosition <= 1) {} // There is not enough room to move
+				else if ($redPosition - $bluePosition <= 3) // Both can move only once.
+				{
+					$redPosition -= 1;
+					$bluePosition += 1;
+				}
+				else { // Move full amount
+					$redPosition -= 2;
+					$bluePosition += 2;
+				}
 			}
-			else {
-				$this->cards->moveCard( $card['id'], 'discard', $player_id );
+
+			else if ($redStance == 0) // Red Player moves first
+			{
+				$redPosition = max($redPosition - 2, $bluePosition);
+				$bluePosition = min($bluePosition + 2, $redPosition);
+			}
+
+			else // Blue Player moves first
+			{
+				$bluePosition = min($bluePosition + 2, $redPosition);
+				$redPosition = max($redPosition - 2, $bluePosition);
 			}
 		}
 
-		foreach ($secondCards as $card)
-			$this->cards->moveCard( $card['id'], 'discard', $player_id );
+		else if ($isRedCharge)
+		{
+			$redPosition = max($redPosition - 2, $bluePosition);
+		}
+
+		else if ($isBlueCharge)
+		{
+			$bluePosition = min($bluePosition + 2, $redPosition);
+		}
+
+		// Approach/Retreat: Move one space forward/backward (-1 for red, +1 for blue)
+
+		$redMove = $red_card != 0 ?
+			0 : // Not an Approach/Retreat card
+			($redIsTop ? -1 : 1); // Approach : Retreat
+		$blueMove = $blue_card != 5 ?
+			0 : // Not an Approach/Retreat card
+			($blueIsTop ? 1 : -1); // Approach : Retreat
+
+		if ($redMove != 0 && $blueMove != 0)
+		{
+			if ($redStance == $blueStance) // Both move at the same time.
+			{
+				if ($redIsTop && $blueIsTop) // Both played Approach
+				{
+					if ($redPosition - $bluePosition <= 1) {} // There is not enough room to move
+					else
+					{
+						$redPosition -= 1;
+						$bluePosition += 1;
+					}
+				}
+				else { // Otherwise, both players can move according to card without interference
+					$redPosition = max(min($redPosition + $redMove, 5), 0);
+					$bluePosition = max(min($bluePosition + $blueMove, 5), 0);
+				}
+			}
+
+			else if ($redStance == 0) // Red Player moves first
+			{
+				$redPosition = max(min($redPosition + $redMove, 5), $bluePosition);
+				$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 0);
+			}
+
+			else // Blue Player moves first
+			{
+				$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 0);
+				$redPosition = max(min($redPosition + $redMove, 5), $bluePosition);
+			}
+		}
+
+		else // Only one or the other is trying to move...
+		{
+			$redPosition = max(min($redPosition + $redMove, 5), $bluePosition);
+			$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 0);
+		}
+
+		// Change stance: Invert the current stance
+
+		if ($red_card == 1 && !$redIsTop)
+			$redStance = 1 - $redStance;
+		if ($blue_card == 6 && !$blueIsTop)
+			$blueStance = 1 - $blueStance;
+
+		//
+		// ATTACKS
+		//
+
+		$redHit = false;
+		$blueHit = false;
+		$distance = $redPosition - $bluePosition;
+
+		// High Strike: If the opponent is two spaces away and in heaven stance, deal 1 damage
+
+		if ($red_card == 2 && $redStance == 0 && $distance == 2)
+			$redHit = true;
+		if ($blue_card == 2 && $blueStance == 0 && $distance == 2)
+			$blueHit = true;
+
+		// Low Strike: If the opponent is one space away and in earth stance, deal 1 damage
+
+		if ($red_card == 3 && $redStance == 1 && $distance == 1)
+			$redHit = true;
+		if ($blue_card == 3 && $blueStance == 1 && $distance == 1)
+			$blueHit = true;
+
+		// Balanced Strike: If the opponent is on the same space, deal 1 damage
+
+		if ($red_card == 4 && $distance == 0)
+			$redHit = true;
+		if ($blue_card == 4 && $distance == 0)
+			$blueHit = true;
+
+		// Kesa Strike: If the opponent is zero or one space away and in heaven stance, deal 1 damage. Switch to earth stance.
+
+		if ($red_card == 10)
+		{
+			if ($redStance == 0 && $distance <= 1)
+				$redHit = true;
+			$redStance = 1;
+		}
+
+		if ($blue_card == 10)
+		{
+			if ($blueStance == 0 && $distance <= 1)
+				$blueHit = true;
+			$blueStance = 1;
+		}
+
+		// Zan-Tetsu Strike: If the opponent is two or three spaces away and in earth stance, deal 1 damage. Switch to heaven stance.
+
+		if ($red_card == 11)
+		{
+			if ($redStance == 1 && ($distance == 2 || $distance == 3))
+				$redHit = true;
+			$redStance = 0;
+		}
+
+		if ($blue_card == 11)
+		{
+			if ($blueStance == 1 && ($distance == 2 || $distance == 3))
+				$blueHit = true;
+			$blueStance = 0;
+		}
+
+		// Counterattack: If the opponent played a card that would hit you, deal 1 damage and negate the opponent's card
+
+		if ($red_card == 12)
+		{
+			if ($blueHit)
+			{
+				$redHit = true;
+				$blueHit = false;
+			}
+		}
+
+		if ($blue_card == 12)
+		{
+			if ($redHit)
+			{
+				$blueHit = true;
+				$redHit = false;
+			}
+		}
+
+		//
+		// Set state values
+		//
+
+		self::setGameStateValue( 'redSamuraiStance', $redStance );
+		self::setGameStateValue( 'blueSamuraiStance', $blueStance );
+		self::setGameStateValue( 'redSamuraiPosition', $redPosition );
+		self::setGameStateValue( 'blueSamuraiPosition', $bluePosition );
+
+		if ($redHit) self::incGameStateValue( 'redSamuraiDamage', 1 );
+		if ($blueHit) self::incGameStateValue( 'blueSamuraiDamage', 1 );
+
+		// TODO Game end
 	}
     
     /*
@@ -593,21 +918,25 @@ class KiriaiTheDuel extends Table
     function zombieTurn( $state, $active_player )
     {
     	$statename = $state['name'];
-    	
-        if ($state['type'] === "activeplayer") {
-            switch ($statename) {
-                default:
-                    $this->gamestate->nextState( "zombiePass" );
-                	break;
-            }
-
-            return;
-        }
 
         if ($state['type'] === "multipleactiveplayer") {
-            // Make sure player is in a non blocking status for role turn
-            $this->gamestate->setPlayerNonMultiactive( $active_player, '' );
-            
+
+			$hand = $this->cards->getCardsInLocation( 'hand', $active_player );
+
+			// Pick two random cards to play
+			$first_id = bga_rand(0, count($hand) - 1);
+			$second_id = $first_id;
+
+			while ($second_id == $first_id)
+				$second_id = bga_rand(0, count($hand) - 1);
+
+			// Randomly decide if the cards are flipped
+			if (bga_rand(0, 1) == 1)
+				$first_id = -1 * $first_id;
+			if (bga_rand(0, 1) == 1)
+				$second_id = -1 * $second_id;
+
+			self::doPickedCards( $active_player, $first_id, $second_id );
             return;
         }
 

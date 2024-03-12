@@ -68,10 +68,7 @@ function (dojo, declare) {
 
 			dojo.connect($('confirmSelectionButton'), 'onclick', this, 'confirmPlayedCards');
 
-			this.placeAllCards(gamedatas.cards);
-
-			$('redDamage').innerHTML = gamedatas.redSamuraiDamage;
-			$('blueDamage').innerHTML = gamedatas.blueSamuraiDamage;
+			this.updateAll(gamedatas.state);
 
             console.log( "Ending game setup" );
         },
@@ -170,7 +167,7 @@ function (dojo, declare) {
 
 		revealCard : function(back_card_id, new_card_id) {
 
-			dojo.placeOnObject('cardontable_' + new_card_id, 'cardontable_' + back_card_id);
+			this.placeOnObject('cardontable_' + new_card_id, 'cardontable_' + back_card_id);
 
 			dojo.destroy('cardontable_' + back_card_id);
 				// Maybe return this to a hidden area?
@@ -205,6 +202,19 @@ function (dojo, declare) {
             this.slideToObject('cardontable_' + card_id, to).play();
         },
 
+		updateAll : function(state)
+		{
+			this.placeAllCards(state.cards);
+			this.updateFlippedStatus(state.flippedState);
+			this.updateStance(state.stances);
+			this.updatePosition(state.positions);
+
+			for (let id in state.damage)
+			{
+				$(id + "_damage").innerHTML = state.damage[id];
+			}
+		},
+
 		placeAllCards : function(cards)
 		{
 			for (let i in cards) // i = 'redHand', 'blueHand', 'redPlayed'...
@@ -236,6 +246,45 @@ function (dojo, declare) {
 					dojo.addClass(cardDiv, 'bottomPicked');
 					dojo.removeClass(cardDiv, 'topPicked');
 				}
+			}
+		},
+
+		updateStance: function(stances)
+		{
+			for (let id in stances)
+			{
+				let div = $(id);
+				if (div == null)
+				{
+					console.log('Div "' + id + '" does not exist.');
+					continue;
+				}
+
+				if (stances[id] == 0)
+				{
+					dojo.addClass(div, 'heaven_stance');
+					dojo.removeClass(div, 'earth_stance');
+				}
+				else
+				{
+					dojo.addClass(div, 'earth_stance');
+					dojo.removeClass(div, 'heaven_stance');
+				}
+			}
+		},
+
+		updatePosition: function(positions)
+		{
+			for (let id in positions)
+			{
+				let div = $(id);
+				let divFrom = div.parentNode;
+				let divTo = $(id + "_field_position_" + positions[id]);
+
+				dojo.place(div, divTo);
+
+				this.placeOnObject(div, divFrom);
+				this.slideToObject(div, divTo).play();
 			}
 		},
 
@@ -395,17 +444,15 @@ function (dojo, declare) {
             console.log( 'notifications subscriptions setup' );
 
 			dojo.subscribe('playCards', this, "notif_placeAllCards");
-			dojo.subscribe('cleanUpCards', this, "notif_placeAllCards");
+			dojo.subscribe('cardsResolved', this, "notif_placeAllCards");
 			dojo.subscribe('drawSpecialCard', this, "notif_placeAllCards");
 			this.notifqueue.setSynchronous( 'playCards', 3000 );
-			this.notifqueue.setSynchronous( 'cleanUpCards', 3000 );
+			this.notifqueue.setSynchronous( 'cardsResolved', 3000 );
 			this.notifqueue.setSynchronous( 'drawSpecialCard', 3000 );
 			dojo.subscribe('cardsPlayed', this, "notif_cardsPlayed");
 			dojo.subscribe('cardFlipped', this, "notif_cardFlipped");
 			this.notifqueue.setSynchronous( 'cardFlipped', 1000 );
-			
 
-            
             // Example 1: standard notification handling
             // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
             
@@ -420,8 +467,8 @@ function (dojo, declare) {
         // TODO: from this point and below, you can write your game notifications handling methods
 
 		notif_placeAllCards: function(notif) {
-			this.placeAllCards(notif.args.cards);
-			this.updateFlippedStatus(notif.args.flippedState);
+			console.log('notif_placeAllCards', notif);
+			this.updateAll(notif.args.state);
 		},
         
         notif_cardsPlayed: function(notif) {
