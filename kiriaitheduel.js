@@ -194,12 +194,21 @@ function (dojo, declare) {
 				return;
 			}
 
-			let divFrom = target.parentNode;
+			// Calculate the position of the target relative to divTo
+			let targetPosition = target.getBoundingClientRect();
+			let divToPosition = divTo.getBoundingClientRect();
+
+			let relativePosition = {
+				top: targetPosition.top - divToPosition.top,
+				left: targetPosition.left - divToPosition.left
+			};
 
 			dojo.place(target, divTo);
 
-			this.placeOnObject('cardontable_' + card_id, divFrom);
-            this.slideToObject('cardontable_' + card_id, to).play();
+			dojo.style(target, 'top', relativePosition.top + 'px');
+			dojo.style(target, 'left', relativePosition.left + 'px');
+
+			this.slideToObject('cardontable_' + card_id, to).play();
         },
 
 		updateAll : function(state)

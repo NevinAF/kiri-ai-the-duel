@@ -495,6 +495,16 @@ class KiriaiTheDuel extends Table
 		throw new BgaUserException( self::_("Player has no cards in their hand? This should not be possible.") );
 	}
 
+	// get score
+	function dbGetScore($player_id) {
+		return $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
+	}
+
+	// set score
+	function dbSetScore($player_id, $count) {
+		$this->DbQuery("UPDATE player SET player_score='$count' WHERE player_id='$player_id'");
+	}
+
 	function stResolveCards()
 	{
 		$redPlayer = self::getGameStateValue( 'redPlayer' );
