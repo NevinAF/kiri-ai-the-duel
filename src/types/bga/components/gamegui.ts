@@ -1,5 +1,15 @@
-/// <reference path="framework.d.ts" />
-/// <reference path="counter.d.ts" />
+/// <reference path="../../index.d.ts" />
+
+// FIXME: This class should really be an interface but I can't figure out how to extend this class without needing to define the interface components. See below.
+
+// This class should be defined as an interface which is implemented, but typescript limitations make this a much better solution. This is an actual class which gets compiled and extended, but ends up containing no actual code outside of the class boilerplate:
+// var Game = (function () {
+//     function Game() {
+//     }
+//     return Game;
+// }());
+
+// In addition, this class is not defined in the types folder as an actual class needs to be compiled or extending this class will result in an undefined class error. This is a limitation of typescript and occurs due to how the BGA framework is designed. This adds minimal overhead.
 
 /**
  * The main class for a game interface. This should always define:
@@ -23,7 +33,7 @@
  * 
  * For performance reasons, when deploying a game the javascript code is minimized using {@link https://github.com/terser/terser | terser}. This minifier works with modern javascript syntax. From your project "Manage game" page, you can now test a minified version of your javascript on the studio (and revert to the original).
  */
-declare abstract class Game {
+abstract class Gamegui {
 
 	/** The name of the game currently being played. */
 	game_name: string;
@@ -31,7 +41,7 @@ declare abstract class Game {
 	//#region Core Functions
 
 	/** Initialize and define global variables. No base class fields are initialized yet! Use `setup` for any initialization that needs base fields. */
-	constructor();
+	constructor() {}
 
 	/**
 	 * Called once as soon as the page is loaded and base fields have been defined.
@@ -50,7 +60,7 @@ declare abstract class Game {
 	 * @param args The arguments passed from the server for this state, or from this client if this is a client state.
 	 * @see {@link https://en.doc.boardgamearena.com/Your_game_state_machine:_states.inc.php#Difference_between_Single_active_and_Multi_active_states|Difference between Single active and Multi active states}
 	 */
-	abstract onEnteringState(stateName: GameStateName, args?: { args: AnyGameStateArgs }): void;
+	abstract onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void;
 	
 	/**
 	 * This method is called each time we leave a game state. You can use this method to perform some user interface changes at this point (i.e. cleanup).
@@ -64,7 +74,7 @@ declare abstract class Game {
 	 * @param args The arguments passed from the server for this state, or from this client if this is a client state.
 	 * @see {@link https://en.doc.boardgamearena.com/Your_game_state_machine:_states.inc.php#Difference_between_Single_active_and_Multi_active_states|Difference between Single active and Multi active states}
 	 */
-	abstract onUpdateActionButtons(stateName: GameStateName, args?: AnyGameStateArgs): void
+	abstract onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
 
 	/**
 	 * This method associates notifications with notification handlers. For each game notification, you can trigger a javascript method to handle it and update the game interface. This method should be manually invoked during the `setup` function. This method technically should not be included on the base class as it should never be called outside of the game class.
@@ -306,7 +316,7 @@ declare abstract class Game {
 	 * 	arg2: myarg2
 	 * }, this, (result) => {} );
 	 */
-	ajaxcall: <T extends keyof PlayerActions>(actionURL: string, args: PlayerActions[T] & { lock: boolean }, source: Game, onSuccess: Function, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => void, ajax_method?: 'post' | 'get') => void;
+	ajaxcall: <T extends keyof PlayerActions>(actionURL: string, args: PlayerActions[T] & { lock: boolean }, source: Gamegui, onSuccess?: Function, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get') => void;
 
 	/**
 	 * Checks if the player can do the specified action by taking into account:
@@ -355,7 +365,7 @@ declare abstract class Game {
 	//#endregion
 
 	/** The interface used for modifying how notifications are synchronized/sequenced or if they should be filtered/ignored. */
-	notifqueue: NotifQueue;
+	notifqueue: GameNotif;
 
 	/**
 	 * Adds a tooltip to the DOM element. This is a simple text tooltip to display some information about "what is this game element?" and "what happens when I click on this element?". You must specify both of the strings. You can only use one and specify an empty string for the other one. When you pass text directly function _() must be used for the text to be marked for translation! Except for empty string. Parameter "delay" is optional. It is primarily used to specify a zero delay for some game element when the tooltip gives really important information for the game - but remember: no essential information must be placed in tooltips as they won't be displayed in some browsers (see Guidelines).
@@ -450,7 +460,7 @@ declare abstract class Game {
 	 * });
 	 * return; // nothing should be called or done after calling this, all action must be done in the handler
 	 */
-	confirmationDialog: <T>(message: string, yesHandler: (param: T) => void, noHandler?: (param: T) => void, param?: T) => void;
+	confirmationDialog: <T>(message: string, yesHandler: (param: T) => any, noHandler?: (param: T) => any, param?: T) => void;
 
 	/**
 	 * Shows a multiple choice dialog to the user. Note: there is no cancel handler, so make sure you gave user a choice to get out of it.
@@ -538,28 +548,6 @@ declare abstract class Game {
 	 */
 	scoreCtrl: { [key: number]: Counter };
 
-// 	Player's panel disabling/enabling
-// this.disablePlayerPanel(player_id: number): void
-
-// Disable given player panel (the panel background become gray).
-
-// Usually, this is used to signal that this played passes, or will be inactive during a while.
-
-// Note that the only effect of this is visual. There are no consequences on the behaviour of the panel itself.
-
-// this.enablePlayerPanel(player_id:number): void
-
-// Enable a player panel that has been disabled before.
-
-// this.enableAllPlayerPanels(): void
-
-// Enable all player panels that has been disabled before.
-
-// Player order
-// this.updatePlayerOrdering(): void
-
-// This function makes sure that player order in player's panel matches this.gamedatas.playerorder and its normally called by framework. You can call it yoursel if you change this.gamedatas.playerorder from notification. Also you can override this function to change defaults OR insert a non-player panel BGA_Studio_Cookbook#Inserting_non-player_panel.
-
 	/**
 	 * Disables the player panel for a given player. Usually, this is used to signal that this player passes, or will be inactive during a while. Note that the only effect of this is visual. There are no consequences on the behaviour of the panel itself.
 	 * @param player_id The id of the player to disable the panel for.
@@ -571,6 +559,11 @@ declare abstract class Game {
 	 * @param player_id The id of the player to enable the panel for.
 	 */
 	enablePlayerPanel: (player_id: number) => void;
+
+	/**
+	 * Enables all player panels that have been {@link disablePlayerPanel | disabled} before.
+	 */
+	enableAllPlayerPanels: () => void;
 
 	/**
 	 * Updates the player ordering in the player's panel to match the current player order. This is normally called by the framework, but you can call it yourself if you change `this.gamedatas.playerorder` from a notification. Also you can override this function to change defaults OR insert a non-player panel.
@@ -741,7 +734,7 @@ declare abstract class Game {
 // Note: alpha server is also "prod"
 
 	/** A function that can be overridden to manage some resizing on the client side when the browser window is resized. This function is also triggered at load time, so it can be used to adapt to the viewport size at the start of the game too. */
-	onScreenWidthChange(): void;
+	onScreenWidthChange: () => void;
 
 	/** True if the game is in realtime. Note that having a distinct behavior in realtime and turn-based should be exceptional. */
 	bRealtime: boolean;
@@ -751,56 +744,11 @@ declare abstract class Game {
 
 	/** Returns "studio" for studio and "prod" for production environment (i.e. where games current runs). Only useful for debbugging hooks. Note: alpha server is also "prod" */
 	getBgaEnvironment: () => 'studio' | 'prod';
-}
 
-/** The interface used for modifying how notifications are synchronized/sequenced or if they should be filtered/ignored. */
-interface NotifQueue {
-	/**
-	 * This method will set a check whether any of notifications of specific type should be ignored.
-	 * 
-	 * IMPORTANT: Remember that this notification is ignored on the client side, but was still received by the client. Therefore it shouldn't contain any private information as cheaters can get it. In other words this is not a way to hide information.
-	 * IMPORTANT: When a game is reloaded with F5 or when opening a turn based game, old notifications are replayed as history notification. They are used just to update the game log and are stripped of all arguments except player_id, i18n and any argument present in message. If you use and other argument in your predicate you should preserve it as explained here.
-	 * @param notif_type The type of the notification.
-	 * @param predicate A function that will receive notif object and will return true if this specific notification should be ignored.
-	 * @example this.notifqueue.setIgnoreNotificationCheck( 'dealCard', (notif) => (notif.args.player_id == this.player_id) );
-	 */
-	setIgnoreNotificationCheck: <T extends keyof NotifTypes>(notif_type: T, predicate: ((notif: Notif<NotifTypes[T]>) => boolean)) => void;
 
-	/**
-	 * This method will set a check whether any of notifications of specific type should be ignored.
-	 * @param notif_type The type of the notification.
-	 * @param duration The duration in milliseconds to wait after executing the notification handler.
-	 * @example
-	 * // Here's how we do this, right after our subscription:
-	 * dojo.subscribe( 'playDisc', this, "notif_playDisc" );
-	 * this.notifqueue.setSynchronous( 'playDisc', 500 );   // Wait 500 milliseconds after executing the playDisc handler
-	 * @example
-	 * // For this case, use setSynchronous without specifying the duration and use setSynchronousDuration within the notification callback.
-	 * // NOTE: If you forget to invoke setSynchronousDuration, the game will remain paused forever!
-	 * setupNotifications: function () {
-	 * 	dojo.subscribe( 'cardPlayed', this, 'notif_cardPlayed' );
-	 * 	this.notifqueue.setSynchronous( 'cardPlayed' ); // wait time is dynamic
-	 * 	...
-	 * },
-	 * notif_cardPlayed: function (notif) {
-	 * 	// MUST call setSynchronousDuration
-	 * 	// Example 1: From notification args (PHP)
-	 * 	this.notifqueue.setSynchronousDuration(notif.args.duration);
-	 * 	...
-	 * 	// Or, example 2: Match the duration to a Dojo animation
-	 * 	var anim = dojo.fx.combine([
-	 * 	...
-	 * 	]);
-	 * 	anim.play();
-	 * 	this.notifqueue.setSynchronousDuration(anim.duration);
-	 * },
-	 */
-	setSynchronous: (notif_type: keyof NotifTypes, duration?: number) => void;
+	/** Not officially documented! Forces all resize events to activate. */
+	sendResizeEvent: () => void;
 
-	/**
-	 * This method will set a check whether any of notifications of specific type should be ignored.
-	 * @param duration The duration in milliseconds to wait after executing the notification handler.
-	 * @see {@link setSynchronous}
-	 */
-	setSynchronousDuration: (duration: number) => void;
+	/** Not officially documented! Gets the html element for the replay log. */
+	getReplayLogNode: () => HTMLElement | null;
 }

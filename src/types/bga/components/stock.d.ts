@@ -80,7 +80,7 @@ declare class Stock {
 
 	/**
 	 * Initializes the stock component for the specified `game` on a specified `target`
-	 * @param {Game} game The game object
+	 * @param {Gamegui} game The game object
 	 * @param {HTMLElement} container_div The div element to attach the stock to. This element should be empty and normally should be directly defined within the .tpl file.
 	 * @param {number} itemWidth The width of a single item in pixels. This used for displaying the item and for cropping the sprite sheet image of all items when `addItemType`.
 	 * @param {number} itemHeight The height of a single item in pixels. This used for displaying the item and for cropping the sprite sheet image of all items when `addItemType`.
@@ -90,7 +90,7 @@ declare class Stock {
 	 * this.playerHand = new ebg.stock();
 	 * this.playerHand.create( this, $('myhand'), this.cardwidth, this.cardheight );
 	 */
-	create: (game: Game, container_div: any, itemWidth: number, itemHeight: number) => void;
+	create: (game: Gamegui, container_div: any, itemWidth: number, itemHeight: number) => void;
 	
 	/**
 	 * Define a new type of item, `StockItemType`, and add it to the stock with given type id. It is mandatory to define a new item type before adding it to the stock. The list of defined item types are always available in `item_type` property.

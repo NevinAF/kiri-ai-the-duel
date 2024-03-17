@@ -1,4 +1,12 @@
 /**
+ * @gameSpecific The global `dojo` object included in all BGA pages. This object is already defined with a TON of properties and methods, even without including many of the dojo modules as a dependency in the {@link define} function. This object type is a subset of the actual `dojo` object, and should be expanded as needed based on what dojo modules are being used. Make sure to include the `dojo` module as a dependency in the {@link define} function to avoid any unexpected errors.
+ * @example
+ * // Use the '&' operator to combine multiple dojo modules into one type. (intersection of all properties and methods, i.e. use this AND that properties).
+ * declare const dojo: dojo._base.Connect & dojo.DomGeometry & dojo._base.Dojo & dojo._base.Lang;
+ */
+declare const dojo: dojo._base.Connect & dojo.DomGeometry & dojo._base.Dojo & dojo._base.Lang;
+
+/**
  * @gameSpecific Add game specific states here as a number: string literal pair, or in the form number: { name: string, args: object} . See {@link GameStates} for more information.
  * 1: 'gameSetup'; and 99: 'gameEnd'; are already defined in the framework, and should not be modified as stated in the states.inc.php file.
  * @example

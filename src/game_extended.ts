@@ -1,31 +1,36 @@
 /// <reference path="types/index.d.ts" />
 
-abstract class GameExtended extends Game {
+/**
+ * This class extends the Game class and adds some very useful typing and convenience methods recommended by the BGA wiki. Use this class for example usage and to avoid redefining some of the most common methods used in BGA games.
+ * 
+ * See more examples of common BGA recipes here: {@link https://en.doc.boardgamearena.com/BGA_Studio_Cookbook: BGA Studio Cookbook}
+ */
+abstract class GameguiExtended extends Gamegui
+{
 	/**
-	 * This method will attach mobile to a new_parent without destroying, unlike original attachToNewParent which destroys mobile and
-	 * all its connectors (onClick, etc)
+	 * This method will attach mobile to a new_parent without destroying, unlike original attachToNewParent which destroys mobile and all its connectors (onClick, etc).
 	 */
-	attachToNewParentNoDestroy(mobile_in: string | HTMLElement, new_parent_in: string | HTMLElement, relation, place_position): dojo.DomGeometryBox
+	attachToNewParentNoDestroy(mobile_in: string | HTMLElement, new_parent_in: string | HTMLElement, relation?: string | number, place_position?: string): dojo.DomGeometryBox
 	{
 		const mobile = $(mobile_in);
 		const new_parent = $(new_parent_in);
 
-		var src = dojo.position(mobile);
+		let src = dojo.position(mobile);
 		if (place_position)
 			mobile.style.position = place_position;
 		dojo.place(mobile, new_parent, relation);
 		mobile.offsetTop;//force re-flow
-		var tgt = dojo.position(mobile);
-		var box = dojo.marginBox(mobile);
-		var cbox = dojo.contentBox(mobile);
+		let tgt = dojo.position(mobile);
+		let box = dojo.marginBox(mobile);
+		let cbox = dojo.contentBox(mobile);
 
 		if (!box.t || !box.l || !box.w || !box.h || !cbox.w || !cbox.h) {
 			console.error("attachToNewParentNoDestroy: box or cbox has an undefined value (t-l-w-h). This should not happen.");
 			return box;
 		}
 
-		var left = box.l + src.x - tgt.x;
-		var top = box.t + src.y - tgt.y;
+		let left = box.l + src.x - tgt.x;
+		let top = box.t + src.y - tgt.y;
 
 		mobile.style.position = "absolute";
 		mobile.style.left = left + "px";
@@ -36,27 +41,182 @@ abstract class GameExtended extends Game {
 		return box;
 	}
 
-	ajaxAction<T extends keyof PlayerActions>(action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => void, ajax_method?: 'post' | 'get'): void
+	/**
+	 * Typed `ajaxcallWrapper` method recommended by the BGA wiki. This method removes obsolete parameters, simplifies action url, and auto adds the lock parameter the the args if needed. This significantly reduces the amount of code needed to make an ajax call and makes the parameters much more readable.
+	 * @param action The action to be called.
+	 * @param args The arguments to be passed to the server for the action. This does not need to include the `lock` parameter, as it will be added automatically if needed.
+	 * @param callback The callback to be called once a response is received from the server.
+	 * @param ajax_method The method to use for the ajax call. See {@link Game.ajaxcall} for more information.
+	 * @returns True if the action was called, false if the action was not called because it was not a valid player action (see {@link Game.checkAction}).
+	 */
+	ajaxAction<T extends keyof PlayerActions>(action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean
 	{
-		if (!args) {
+		if (!this.checkAction(action))
+			return false;
+
+		if (!args)
 			args = {} as any;
-		}
 
 		if (args.lock === undefined)
 			args.lock = true;
 	
-		if (this.checkAction(action)) {
-			this.ajaxcall<T>(
-				"/" + this.game_name + "/" + this.game_name + "/" + action + ".html",
-				args as PlayerActions[T] & { lock: boolean }, this,
-				() => { }, // No operation on success. Use the callback parameter instead.
-				callback,
-				ajax_method);
-		}
+		this.ajaxcall<T>(
+			`/${this.game_name}/${this.game_name}/${action}.html`,
+			args as PlayerActions[T] & { lock: boolean },
+			this, undefined, callback, ajax_method
+		);
+
+		return true;
 	}
 
-	subscribeNotif<T extends keyof NotifTypes>(event: T, callback: (notif: Notif<NotifTypes[T]>) => void): dojo.Handle
+	/**
+	 * Slightly simplified version of the dojo.subscribe method that is typed for notifications.
+	 * @param event The event that you want to subscribe to.
+	 * @param callback The callback to be called when the event is published. Note that the callback can be the same callback for multiple events as long as the expected parameters for the notifications are the same.
+	 * @returns A handle that can be used to unsubscribe from the event. Not necessary to hold onto this handle if the subscription lasts for the lifetime of the game (or browser lifetime).
+	 */
+	subscribeNotif<T extends keyof NotifTypes>(event: T, callback: (notif: Notif<NotifTypes[T]>) => any): dojo.Handle
 	{
 		return dojo.subscribe(event, this, callback);
+	}
+
+	/**
+	 * This method can be used instead of addActionButton, to add a button which is an image (i.e. resource). Can be useful when player
+	 * need to make a choice of resources or tokens.
+	 */
+	addImageActionButton(id: string, label: string, method: string | Function, destination?: string, blinking?: boolean, color?: 'blue' | 'red' | 'gray' | 'none', tooltip?: string): HTMLElement
+	{
+		if (!color) color = "gray";
+		this.addActionButton(id, label, method, destination, blinking, color);
+
+		const div = $(id);
+
+		dojo.style(div, "border", "none");
+		dojo.addClass(div, "shadow bgaimagebutton");
+
+		if (tooltip) {
+			dojo.attr(div, "title", tooltip);
+		}
+		return div;
+	}
+
+	/** If the current game should never be interactive, i.e., the game is not in a playable/editable state. Returns true for spectators, instant replay (during game), archive mode (after game end). */
+	isReadOnly(): boolean
+	{
+		return this.isSpectator || typeof g_replayFrom !== 'undefined' || g_archive_mode;
+	}
+
+	/** Scrolls a target element into view after a delay. If the game is in instant replay mode, the scroll will be instant. */
+	scrollIntoViewAfter(target: string | HTMLElement, delay?: number): void
+	{
+		if (this.instantaneousMode)
+		  return;
+
+		if (typeof g_replayFrom != "undefined" || !delay || delay <= 0)
+		{
+			$(target).scrollIntoView();
+			return;
+		}
+
+		setTimeout(() => {
+			$(target).scrollIntoView({ behavior: "smooth", block: "center" });
+		}, delay);
+	}
+
+	/**
+	 * Returns a URL for the player avatar image. If the avatar for the player id is not found (element with id `avatar_${playerId}`), then the default avatar picture will be returned.
+	 * @param playerId The player id for the avatar.
+	 * @param size The size of the avatar. Either 32 or 184. Defaults to 184.
+	 * @returns The URL for the player avatar image.
+	 */
+	getPlayerAvatar(playerId: number | string, size: '32' | '184' = '184'): string
+	{
+		let avatarDiv = $('avatar_' + playerId);
+
+		if (avatarDiv == null)
+			return 'https://x.boardgamearena.net/data/data/avatar/default_184.jpg';
+		
+		let smallAvatarURL = dojo.attr(avatarDiv, 'src');
+		if (size === '184')
+			smallAvatarURL = smallAvatarURL.replace('_32.', '_184.');
+
+		return smallAvatarURL;
+	}
+
+
+	/** Gets an html span with the text 'You' formatted and highlighted to match the default styling for `descriptionmyturn` messages with the word `You`. This does preform language translations. */
+	divYou() { return this.divColoredPlayer(this.player_id, __("lang_mainsite", "You")); }
+
+	/**
+	 * Gets an html span with the text `text` highlighted to match the default styling for the given player, like with the `description` messages that show on the title card.
+	 * @param player_id The player id to get the color for.
+	 * @param text The text to be highlighted. If undefined, the {@link Player.name} will be used instead.
+	 */
+	divColoredPlayer(player_id: number, text?: string)
+	{
+		const player = this.gamedatas.players[player_id];
+		if (player === undefined)
+			return "--unknown player--";
+
+		return `<span style="color:${player.color};background-color:#${player.color_back};">${text ?? player.name}</span>`;
+	}
+
+	/**
+	 * Sets the description of the main title card to the given html. This change is only visual and will be replaced on page reload or when the game state changes.
+	 * @param html The html to set the main title to.
+	 */
+	setMainTitle(html: string) { $('pagemaintitletext').innerHTML = html; }
+
+	/**
+	 * Sets the description of the main title card to the given string, formatted using the current {@link CurrentStateArgs.args}. This should only be changed when it is this players turn and you want to display a client only change while the client is making a decision.
+	 * @param description The string to set the main title to.
+	 */
+	setDescriptionOnMyTurn(description: string)
+	{
+		this.gamedatas.gamestate.descriptionmyturn = description;
+
+		let tpl: any = dojo.clone(this.gamedatas.gamestate.args);
+		if (tpl === null)
+			tpl = {};
+
+		if (this.isCurrentPlayerActive() && description !== null)
+			tpl.you = this.divYou(); 
+
+		const title = this.format_string_recursive(description, tpl);
+		this.setMainTitle(title ?? '');
+	}
+
+	/**
+	 * 
+	 */
+	infoDialog(message: string, title: string, callback?: () => any): PopInDialog
+	{
+		// Create the new dialog over the play zone. You should store the handler in a member variable to access it later
+		const myDlg = new ebg.popindialog();
+		console.log(myDlg);
+		myDlg.create( 'myDialogUniqueId' );
+		myDlg.setTitle( _(title) );
+		myDlg.setMaxWidth( 500 ); // Optional
+		
+		// Create the HTML of my dialog. 
+		// The best practice here is to use Javascript templates
+		var html = '<div>' + message + '</div><a href="#" id="info_dialog_button" class="bgabutton bgabutton_blue"><span>Ok</span></a>';
+		
+		// Show the dialog
+		myDlg.setContent( html ); // Must be set before calling show() so that the size of the content is defined before positioning the dialog
+		myDlg.show(!1);
+
+		// Removes the default close icon
+		myDlg.hideCloseIcon();
+
+		// Add a callback to the button
+		dojo.connect($('info_dialog_button'), 'onclick', this, (event) =>
+		{
+			event.preventDefault();
+			callback?.();
+			myDlg.destroy();
+		});
+
+		return myDlg;
 	}
 }

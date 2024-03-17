@@ -1,5 +1,4 @@
-/// <reference path="types/bga/globals.d.ts" />
-/// <reference path="types/dojo/dojo/1.11/index.d.ts" />
+/// <reference path="types/index.d.ts" />
 /// <reference path="kiriaitheduel.ts" />
 
 define([

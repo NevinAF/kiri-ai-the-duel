@@ -2,6 +2,9 @@
 	"include": [
 		"src/define.ts",
 	],
+	"exclude": [
+		"kiriaitheduel.js"
+	],
 	"rootDir": ".",
 	"compilerOptions": {
 		"target": "es5",

@@ -1,5 +1,4 @@
-/// <reference path="types/index.d.ts" />
-// / <reference path="game_extended.ts" />
+/// <reference path="game_extended.ts" />
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
@@ -16,7 +15,7 @@
  * In this file, you are describing the logic of your user interface, in Javascript language.
  *
  */
-class KiriaiTheDuel extends Game
+class KiriaiTheDuel extends GameguiExtended
 {
 	constructor() {
 		super();
@@ -25,7 +24,7 @@ class KiriaiTheDuel extends Game
 
 	setup(gamedatas: Gamedatas)
 	{
-		console.log( "Starting game setup" );
+		console.log( "Starting game setup", gamedatas );
 
 		// Setup game notifications to handle (see "setupNotifications" method below)
 		this.setupNotifications();
@@ -44,9 +43,9 @@ class KiriaiTheDuel extends Game
 	///////////////////////////////////////////////////
 	//// Game & client states
 
-	override onEnteringState(stateName: GameStateName, args?: { args: AnyGameStateArgs }): void
+	override onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
 	{
-		console.log( 'Entering state: '+ stateName );
+		console.log( 'Entering state: '+ stateName, args );
 		
 		switch( stateName )
 		{
@@ -69,50 +68,23 @@ class KiriaiTheDuel extends Game
 
 	onLeavingState(stateName: GameStateName): void
 	{
-		console.log( 'Leaving state: '+stateName );
+		console.log( 'Leaving state: '+ stateName );
 		
 		switch( stateName )
 		{
-		
-		/* Example:
-		
-		case 'myGameState':
-		
-			// Hide the HTML block we are displaying only during this game state
-			dojo.style( 'my_html_block_id', 'display', 'none' );
-			
-			break;
-		*/
-		
-		
 		default:
 			break;
 		}
 	}
 
-	override onUpdateActionButtons(stateName: GameStateName, args?: AnyGameStateArgs): void
+	override onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
 	{
-		console.log( 'onUpdateActionButtons: '+stateName );
+		console.log( 'onUpdateActionButtons: '+stateName, args );
 
 		if( this.isCurrentPlayerActive() )
 		{
 			switch( stateName )
 			{
-				case 'pickCards':
-					const pickCardsArgs = args as GameStateArgs<'pickCards'>;
-					break;
-/*
-				Example:
-
-				case 'myGameState':
-				
-				// Add 3 action buttons in the action status bar:
-				
-				this.addActionButton( 'button_1_id', _('Button 1 label'), 'onMyMethodToCall1' ); 
-				this.addActionButton( 'button_2_id', _('Button 2 label'), 'onMyMethodToCall2' ); 
-				this.addActionButton( 'button_3_id', _('Button 3 label'), 'onMyMethodToCall3' ); 
-				break;
-*/
 			}
 		}
 	}
@@ -187,7 +159,7 @@ class KiriaiTheDuel extends Game
 		}
 	}
 
-	placeAllCards = function()
+	placeAllCards = () =>
 	{
 		const cards = this.gamedatas.state.cards;
 		for (let i in cards) // i = 'redHand', 'blueHand', 'redPlayed'...
@@ -398,11 +370,10 @@ class KiriaiTheDuel extends Game
 		if (dojo.hasClass(secondCard, 'bottomPicked'))
 			secondCardId = -secondCardId;
 
-		this.ajaxcall('/kiriaitheduel/kiriaitheduel/pickedCards.html', {
-			lock : true,
+		this.ajaxAction('pickedCards', {
 			firstCard : firstCardId,
 			secondCard : secondCardId,
-		}, this, function(result) {}, function(is_error) {});
+		});
 	}
 
 	
@@ -413,26 +384,16 @@ class KiriaiTheDuel extends Game
 	{
 		console.log( 'notifications subscriptions setup' );
 
-		dojo.subscribe('playCards', this, "notif_placeAllCards");
-		dojo.subscribe('cardsResolved', this, "notif_placeAllCards");
-		dojo.subscribe('drawSpecialCard', this, "notif_placeAllCards");
+		this.subscribeNotif('playCards',       this.notif_placeAllCards);
+		this.subscribeNotif('cardsResolved',   this.notif_placeAllCards);
+		this.subscribeNotif('drawSpecialCard', this.notif_placeAllCards);
+		this.subscribeNotif('cardsPlayed',     this.notif_cardsPlayed);
+		this.subscribeNotif('cardFlipped',     this.notif_cardFlipped);
+
 		this.notifqueue.setSynchronous( 'playCards', 3000 );
 		this.notifqueue.setSynchronous( 'cardsResolved', 3000 );
 		this.notifqueue.setSynchronous( 'drawSpecialCard', 3000 );
-		dojo.subscribe('cardsPlayed', this, "notif_cardsPlayed");
-		dojo.subscribe('cardFlipped', this, "notif_cardFlipped");
 		this.notifqueue.setSynchronous( 'cardFlipped', 1000 );
-
-		// Example 1: standard notification handling
-		// dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-		
-		// Example 2: standard notification handling + tell the user interface to wait
-		//            during 3 seconds after calling the method in order to let the players
-		//            see what is happening in the game.
-		// dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-		// this.notifqueue.setSynchronous( 'cardPlayed', 3000 );
-		// 
-		
 	}
 	// TODO: from this point and below, you can write your game notifications handling methods
 

@@ -1,3 +1,8 @@
+var Gamegui = (function () {
+    function Gamegui() {
+    }
+    return Gamegui;
+}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -13,6 +18,122 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var GameguiExtended = (function (_super) {
+    __extends(GameguiExtended, _super);
+    function GameguiExtended() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    GameguiExtended.prototype.attachToNewParentNoDestroy = function (mobile_in, new_parent_in, relation, place_position) {
+        var mobile = $(mobile_in);
+        var new_parent = $(new_parent_in);
+        var src = dojo.position(mobile);
+        if (place_position)
+            mobile.style.position = place_position;
+        dojo.place(mobile, new_parent, relation);
+        mobile.offsetTop;
+        var tgt = dojo.position(mobile);
+        var box = dojo.marginBox(mobile);
+        var cbox = dojo.contentBox(mobile);
+        if (!box.t || !box.l || !box.w || !box.h || !cbox.w || !cbox.h) {
+            console.error("attachToNewParentNoDestroy: box or cbox has an undefined value (t-l-w-h). This should not happen.");
+            return box;
+        }
+        var left = box.l + src.x - tgt.x;
+        var top = box.t + src.y - tgt.y;
+        mobile.style.position = "absolute";
+        mobile.style.left = left + "px";
+        mobile.style.top = top + "px";
+        box.l += box.w - cbox.w;
+        box.t += box.h - cbox.h;
+        mobile.offsetTop;
+        return box;
+    };
+    GameguiExtended.prototype.ajaxAction = function (action, args, callback, ajax_method) {
+        if (!this.checkAction(action))
+            return false;
+        if (!args)
+            args = {};
+        if (args.lock === undefined)
+            args.lock = true;
+        this.ajaxcall("/".concat(this.game_name, "/").concat(this.game_name, "/").concat(action, ".html"), args, this, undefined, callback, ajax_method);
+        return true;
+    };
+    GameguiExtended.prototype.subscribeNotif = function (event, callback) {
+        return dojo.subscribe(event, this, callback);
+    };
+    GameguiExtended.prototype.addImageActionButton = function (id, label, method, destination, blinking, color, tooltip) {
+        if (!color)
+            color = "gray";
+        this.addActionButton(id, label, method, destination, blinking, color);
+        var div = $(id);
+        dojo.style(div, "border", "none");
+        dojo.addClass(div, "shadow bgaimagebutton");
+        if (tooltip) {
+            dojo.attr(div, "title", tooltip);
+        }
+        return div;
+    };
+    GameguiExtended.prototype.isReadOnly = function () {
+        return this.isSpectator || typeof g_replayFrom !== 'undefined' || g_archive_mode;
+    };
+    GameguiExtended.prototype.scrollIntoViewAfter = function (target, delay) {
+        if (this.instantaneousMode)
+            return;
+        if (typeof g_replayFrom != "undefined" || !delay || delay <= 0) {
+            $(target).scrollIntoView();
+            return;
+        }
+        setTimeout(function () {
+            $(target).scrollIntoView({ behavior: "smooth", block: "center" });
+        }, delay);
+    };
+    GameguiExtended.prototype.getPlayerAvatar = function (playerId, size) {
+        if (size === void 0) { size = '184'; }
+        var avatarDiv = $('avatar_' + playerId);
+        if (avatarDiv == null)
+            return 'https://x.boardgamearena.net/data/data/avatar/default_184.jpg';
+        var smallAvatarURL = dojo.attr(avatarDiv, 'src');
+        if (size === '184')
+            smallAvatarURL = smallAvatarURL.replace('_32.', '_184.');
+        return smallAvatarURL;
+    };
+    GameguiExtended.prototype.divYou = function () { return this.divColoredPlayer(this.player_id, __("lang_mainsite", "You")); };
+    GameguiExtended.prototype.divColoredPlayer = function (player_id, text) {
+        var player = this.gamedatas.players[player_id];
+        if (player === undefined)
+            return "--unknown player--";
+        return "<span style=\"color:".concat(player.color, ";background-color:#").concat(player.color_back, ";\">").concat(text !== null && text !== void 0 ? text : player.name, "</span>");
+    };
+    GameguiExtended.prototype.setMainTitle = function (html) { $('pagemaintitletext').innerHTML = html; };
+    GameguiExtended.prototype.setDescriptionOnMyTurn = function (description) {
+        this.gamedatas.gamestate.descriptionmyturn = description;
+        var tpl = dojo.clone(this.gamedatas.gamestate.args);
+        if (tpl === null)
+            tpl = {};
+        if (this.isCurrentPlayerActive() && description !== null)
+            tpl.you = this.divYou();
+        var title = this.format_string_recursive(description, tpl);
+        this.setMainTitle(title !== null && title !== void 0 ? title : '');
+    };
+    GameguiExtended.prototype.infoDialog = function (message, title, callback) {
+        var myDlg = new ebg.popindialog();
+        console.log(myDlg);
+        myDlg.create('myDialogUniqueId');
+        myDlg.setTitle(_(title));
+        myDlg.setMaxWidth(500);
+        var html = '<div>' + message + '</div><a href="#" id="info_dialog_button" class="bgabutton bgabutton_blue"><span>Ok</span></a>';
+        myDlg.setContent(html);
+        myDlg.show(!1);
+        myDlg.hideCloseIcon();
+        dojo.connect($('info_dialog_button'), 'onclick', this, function (event) {
+            event.preventDefault();
+            callback === null || callback === void 0 ? void 0 : callback();
+            myDlg.destroy();
+        });
+        return myDlg;
+    };
+    return GameguiExtended;
+}(Gamegui));
 var KiriaiTheDuel = (function (_super) {
     __extends(KiriaiTheDuel, _super);
     function KiriaiTheDuel() {
@@ -64,10 +185,10 @@ var KiriaiTheDuel = (function (_super) {
             }
         };
         _this.placeAllCards = function () {
-            var cards = this.gamedatas.state.cards;
+            var cards = _this.gamedatas.state.cards;
             for (var i in cards)
                 for (var j in cards[i])
-                    this.moveCard(cards[i][j], i + "_" + j);
+                    _this.moveCard(cards[i][j], i + "_" + j);
         };
         _this.updateFlippedStatus = function () {
             var flippedState = _this.gamedatas.state.flippedState;
@@ -213,22 +334,21 @@ var KiriaiTheDuel = (function (_super) {
                 firstCardId = -firstCardId;
             if (dojo.hasClass(secondCard, 'bottomPicked'))
                 secondCardId = -secondCardId;
-            _this.ajaxcall('/kiriaitheduel/kiriaitheduel/pickedCards.html', {
-                lock: true,
+            _this.ajaxAction('pickedCards', {
                 firstCard: firstCardId,
                 secondCard: secondCardId,
-            }, _this, function (result) { }, function (is_error) { });
+            });
         };
         _this.setupNotifications = function () {
             console.log('notifications subscriptions setup');
-            dojo.subscribe('playCards', _this, "notif_placeAllCards");
-            dojo.subscribe('cardsResolved', _this, "notif_placeAllCards");
-            dojo.subscribe('drawSpecialCard', _this, "notif_placeAllCards");
+            _this.subscribeNotif('playCards', _this.notif_placeAllCards);
+            _this.subscribeNotif('cardsResolved', _this.notif_placeAllCards);
+            _this.subscribeNotif('drawSpecialCard', _this.notif_placeAllCards);
+            _this.subscribeNotif('cardsPlayed', _this.notif_cardsPlayed);
+            _this.subscribeNotif('cardFlipped', _this.notif_cardFlipped);
             _this.notifqueue.setSynchronous('playCards', 3000);
             _this.notifqueue.setSynchronous('cardsResolved', 3000);
             _this.notifqueue.setSynchronous('drawSpecialCard', 3000);
-            dojo.subscribe('cardsPlayed', _this, "notif_cardsPlayed");
-            dojo.subscribe('cardFlipped', _this, "notif_cardFlipped");
             _this.notifqueue.setSynchronous('cardFlipped', 1000);
         };
         _this.notif_placeAllCards = function (notif) {
@@ -245,7 +365,7 @@ var KiriaiTheDuel = (function (_super) {
         return _this;
     }
     KiriaiTheDuel.prototype.setup = function (gamedatas) {
-        console.log("Starting game setup");
+        console.log("Starting game setup", gamedatas);
         this.setupNotifications();
         for (var i = 1; i < 14; i++) {
             dojo.connect($('cardontable_' + i), 'onclick', this, 'onCardClick');
@@ -255,7 +375,7 @@ var KiriaiTheDuel = (function (_super) {
         console.log("Ending game setup");
     };
     KiriaiTheDuel.prototype.onEnteringState = function (stateName, args) {
-        console.log('Entering state: ' + stateName);
+        console.log('Entering state: ' + stateName, args);
         switch (stateName) {
             default:
                 break;
@@ -269,17 +389,14 @@ var KiriaiTheDuel = (function (_super) {
         }
     };
     KiriaiTheDuel.prototype.onUpdateActionButtons = function (stateName, args) {
-        console.log('onUpdateActionButtons: ' + stateName);
+        console.log('onUpdateActionButtons: ' + stateName, args);
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
-                case 'pickCards':
-                    var pickCardsArgs = args;
-                    break;
             }
         }
     };
     return KiriaiTheDuel;
-}(Game));
+}(GameguiExtended));
 define([
     "dojo",
     "dojo/_base/declare",
