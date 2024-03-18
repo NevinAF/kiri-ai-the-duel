@@ -1,16 +1,3 @@
-/// <reference path="../../index.d.ts" />
-
-// FIXME: This class should really be an interface but I can't figure out how to extend this class without needing to define the interface components. See below.
-
-// This class should be defined as an interface which is implemented, but typescript limitations make this a much better solution. This is an actual class which gets compiled and extended, but ends up containing no actual code outside of the class boilerplate:
-// var Game = (function () {
-//     function Game() {
-//     }
-//     return Game;
-// }());
-
-// In addition, this class is not defined in the types folder as an actual class needs to be compiled or extending this class will result in an undefined class error. This is a limitation of typescript and occurs due to how the BGA framework is designed. This adds minimal overhead.
-
 /**
  * The main class for a game interface. This should always define:
  * - How to setup user interface.
@@ -32,25 +19,55 @@
  * In addition, the BGA framework defines a jQuery-like function $ that you can use to access the DOM. This function is available in all BGA pages and is the standard way to access the DOM in BGA. You can use getElementById but a longer to type and less handy as it does not do some checks.
  * 
  * For performance reasons, when deploying a game the javascript code is minimized using {@link https://github.com/terser/terser | terser}. This minifier works with modern javascript syntax. From your project "Manage game" page, you can now test a minified version of your javascript on the studio (and revert to the original).
+ * 
+ * @constructor
+ * Initialize and define global variables. No base class fields are initialized yet! Use `setup` for any initialization that needs base fields.
+ * Any global variables should be added to the class as fields, like normal for typescript.
+ * @example
+ * constructor(){
+ * 	super();
+ * 	console.log('yourgamename constructor');
+ * 
+ * 	this.myGlobalValue = 0;
+ * }
  */
-abstract class Gamegui {
+interface Gamegui {
 
 	/** The name of the game currently being played. */
 	game_name: string;
 
+	/** The component used for modifying how notifications are synchronized/sequenced or if they should be filtered/ignored. */
+	notifqueue: GameNotif;
+
 	//#region Core Functions
 
-	/** Initialize and define global variables. No base class fields are initialized yet! Use `setup` for any initialization that needs base fields. */
-	constructor() {}
+	/** Defines the constructor for classes that implement this interface. This comment is not visible in mode current versions of JSDoc. See the interface comment instead. */
+	new(): Gamegui;
 
 	/**
-	 * Called once as soon as the page is loaded and base fields have been defined.
+	 * Called once as soon as the page is loaded and base fields have been defined. This method must set up the game user interface according to current game situation specified in parameters.
 	 * - When the game starts.
 	 * - When a player opens the game in the browser (or returns to the game after a refresh).
 	 * - When player does a server side undo.
 	 * @param gamedatas The data from the server that is used to initialize the game client. This is the same as `this.gamedatas`.
+	 * @example
+	 * setup(gamedatas: Gamedatas): void {
+	 * 	console.log( "Starting game setup", gamedatas );
+	 * 	
+	 * 	// Setting up player boards
+	 * 	for( var player_id in gamedatas.players )
+	 * 	{
+	 * 		var player = gamedatas.players[player_id];
+	 * 		// Setting up players boards if needed
+	 * 	}
+	 * 	
+	 * 	// Set up your game interface here, according to "gamedatas"
+	 * 	
+	 * 	// Setup game notifications to handle (see "setupNotifications" method below)
+	 * 	this.setupNotifications();
+	 * }
 	 */
-	abstract setup(gamedatas: Gamedatas): void;
+	setup(gamedatas: Gamedatas): void;
 
 	/**
 	 * This method is called each time we enter a new game state. You can use this method to perform some user interface changes at this moment. To access state arguments passed via calling php arg* method use args?.args. Typically you would do something only for active player, using this.isCurrentPlayerActive() check. It is also called (for the current game state only) when doing a browser refresh (after the setup method is called).
@@ -59,27 +76,84 @@ abstract class Gamegui {
 	 * @param stateName The name of the state we are entering.
 	 * @param args The arguments passed from the server for this state, or from this client if this is a client state.
 	 * @see {@link https://en.doc.boardgamearena.com/Your_game_state_machine:_states.inc.php#Difference_between_Single_active_and_Multi_active_states|Difference between Single active and Multi active states}
+	 * @example
+	 * onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
+	 * {
+	 * 	console.log( 'Entering state: ' + stateName, args );
+	 * 	switch( stateName )
+	 * 	{
+	 * 	case 'myGameState':
+	 * 		// Show some HTML block at this game state
+	 * 		dojo.style( 'my_html_block_id', 'display', 'block' );
+	 * 		break;
+	 * 	case 'dummmy':
+	 * 		break;
+	 * 	}
+	 * }
 	 */
-	abstract onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void;
+	onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void;
 	
 	/**
 	 * This method is called each time we leave a game state. You can use this method to perform some user interface changes at this point (i.e. cleanup).
 	 * @param stateName The name of the state we are leaving.
+	 * @example
+	 * onLeavingState(stateName: GameStateName): void
+	 * {
+	 * 	console.log( 'Leaving state: ' + stateName );
+	 * 	switch( stateName )
+	 * 	{
+	 * 	case 'myGameState':
+	 * 		// Hide the HTML block we are displaying only during this game state
+	 * 		dojo.style( 'my_html_block_id', 'display', 'none' );
+	 * 		break;
+	 * 	case 'dummmy':
+	 * 		break;
+	 * 	}
+	 * }
 	 */
-	abstract onLeavingState(stateName: GameStateName): void;
+	onLeavingState(stateName: GameStateName): void;
 
 	/**
-	 * In this method you can manage "action buttons" that are displayed in the action status bar and highlight active UI elements. To access state arguments passed via calling php arg* method use args parameter. Note: args can be null! For game states and when you don't supply state args function - it is null. This method is called when the active or multiactive player changes. In a classic "activePlayer" state this method is called before the onEnteringState state. In multipleactiveplayer state it is a mess. The sequencing of calls depends on whether you get into that state from transitions OR from reloading the whole game (i.e. F5).
+	 * In this method you, can manage "action buttons" that are displayed in the action status bar and highlight active UI elements. To access state arguments passed via calling php arg* method use args parameter. Note: args can be null! For game states and when you don't supply state args function - it is null. This method is called when the active or multiactive player changes. In a classic "activePlayer" state this method is called before the onEnteringState state. In multipleactiveplayer state it is a mess. The sequencing of calls depends on whether you get into that state from transitions OR from reloading the whole game (i.e. F5).
 	 * @param stateName The name of the state we are updating the button actions for.
 	 * @param args The arguments passed from the server for this state, or from this client if this is a client state.
 	 * @see {@link https://en.doc.boardgamearena.com/Your_game_state_machine:_states.inc.php#Difference_between_Single_active_and_Multi_active_states|Difference between Single active and Multi active states}
+	 * @example
+	 * onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
+	 * {
+	 * 	console.log( 'onUpdateActionButtons: ' + stateName, args );
+	 * 	if( this.isCurrentPlayerActive() )
+	 * 	{
+	 * 		switch( stateName )
+	 * 		{
+	 * 		case 'myGameState':
+	 * 			// Add 3 action buttons in the action status bar:
+	 * 			this.addActionButton( 'button_1_id', _('Button 1 label'), 'onMyMethodToCall1' ); 
+	 * 			this.addActionButton( 'button_2_id', _('Button 2 label'), 'onMyMethodToCall2' ); 
+	 * 			this.addActionButton( 'button_3_id', _('Button 3 label'), 'onMyMethodToCall3' ); 
+	 * 			break;
+	 * 		}
+	 * 	}
+	 * }
 	 */
-	abstract onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
+	onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
 
 	/**
 	 * This method associates notifications with notification handlers. For each game notification, you can trigger a javascript method to handle it and update the game interface. This method should be manually invoked during the `setup` function. This method technically should not be included on the base class as it should never be called outside of the game class.
+	 * @example
+	 * setupNotifications()
+	 * {
+	 * 	console.log( 'notifications subscriptions setup' );
+	 * 
+	 * 	// Example 1: standard notification handling
+	 * 	dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
+	 * 
+	 * 	// Example 2: standard notification handling + tell the user interface to wait during 3 seconds after calling the method in order to let the players see what is happening in the game.
+	 * 	dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
+	 * 	this.notifqueue.setSynchronous( 'cardPlayed', 3000 );
+	 * }
 	 */
-	abstract setupNotifications(): void;
+	setupNotifications(): void;
 
 	//#endregion
 
@@ -302,6 +376,10 @@ abstract class Gamegui {
 	 */
 	disconnectAll: () => void;
 
+	//#endregion
+
+	//#region Player Actions
+
 	/**
 	 * Sends a client side notification to the server in the form of a player action. This should be used only in reaction to a user action in the interface to prevent race conditions or breaking replay game and tutorial features.
 	 * @param actionURL The relative URL of the action to perform. Usually, it must be: "/<mygame>/<mygame>/myAction.html"
@@ -364,8 +442,7 @@ abstract class Gamegui {
 
 	//#endregion
 
-	/** The interface used for modifying how notifications are synchronized/sequenced or if they should be filtered/ignored. */
-	notifqueue: GameNotif;
+	//#region Builtin DOM Controls
 
 	/**
 	 * Adds a tooltip to the DOM element. This is a simple text tooltip to display some information about "what is this game element?" and "what happens when I click on this element?". You must specify both of the strings. You can only use one and specify an empty string for the other one. When you pass text directly function _() must be used for the text to be marked for translation! Except for empty string. Parameter "delay" is optional. It is primarily used to specify a zero delay for some game element when the tooltip gives really important information for the game - but remember: no essential information must be placed in tooltips as they won't be displayed in some browsers (see Guidelines).
@@ -526,6 +603,66 @@ abstract class Gamegui {
 	showBubble: (anchor: string, message: string, delay?: number, duration?: number, custom_class?: string) => void;
 
 	/**
+	 * Adds an action button to the main action status bar (or other places).
+	 * @param id The id of the created button, which should be unique in your HTML DOM document.
+	 * @param label The text of the button. Should be translatable (use _() function). Note: this can also be any html, such as "<img src='img.png'>", see example below on how to make image action buttons.
+	 * @param method The name of your method that must be triggered when the player clicks on this button (can be name of the method on game class or handler).
+	 * @param destination (optional) The id of the parent on where to add the button, ONLY use in rare cases if location is not action bar. Use null as value if you need to specify other arguments.
+	 * @param blinking (optional) If set to true, the button is going blink to catch player's attention. Please DO NOT abuse blinking button. If you need button to blink after some time passed add class 'blinking' to the button later.
+	 * @param color (optional) The color of the button. Could be blue (default), red, gray or none.
+	 * @example
+	 * this.addActionButton( 'giveCards_button', _('Give selected cards'), 'onGiveCards' );
+	 * @example
+	 * this.addActionButton( 'pass_button', _('Pass'), () => this.ajaxcallwrapper('pass') );
+	 * @example
+	 * // You should only use this method in your "onUpdateActionButtons" method. Usually, you use it like this:
+	 * onUpdateActionButtons: function( stateName, args ) {
+	 * 	if (this.isCurrentPlayerActive()) {
+	 * 		switch( stateName ) {
+	 * 		case 'giveCards':
+	 * 			this.addActionButton( 'giveCards_button', _('Give selected cards'), 'onGiveCards' );
+	 * 			this.addActionButton( 'pass_button', _('Pass'), () => this.ajaxcallwrapper('pass') );
+	 * 			break;
+	 * 		}
+	 * 	}
+	 * },
+	 * // In the example above, we are adding a "Give selected cards" button in the case we are on game state "giveCards". When player clicks on this button, it triggers our "onGiveCards" method.
+	 * @example
+	 * // Example using blinking red button:
+	 * this.addActionButton( 'button_confirm', _('Confirm?'), 'onConfirm', null, true, 'red');
+	 * @example
+	 * // If you want to call the handled with arguments, you can use arrow functions, like this:
+	 * this.addActionButton( 'commit_button', _('Confirm'), () => this.onConfirm(this.selectedCardId), null, false, 'red');
+	 */
+	addActionButton: (id: string, label: string, method: string | Function, destination?: string, blinking?: boolean, color?: 'blue' | 'red' | 'gray' | 'none') => void;
+
+	/** Removes all buttons from the title bar. */
+	removeActionButtons: () => void;
+
+	/**
+	 * Updates the current page title and turn description according to the game state arguments. If the current game state description `this.gamedatas.gamestate.descriptionmyturn` is modified before calling this function it allows to update the turn description without changing state. This will handle arguments substitutions properly.
+	 * Note: this functional also will calls `this.onUpdateActionButtons`, if you want different buttons then state defaults, use method in example to replace them, if it becomes too clumsy use client states (see above).
+	 * @example
+	 * onClickFavorTile: function( evt ) {
+	 * 	...
+	 * 	if ( ... ) {
+	 * 		this.gamedatas.gamestate.descriptionmyturn = _('Special action: ') + _('Advance 1 space on a Cult track');
+	 * 		this.updatePageTitle();
+	 * 		this.removeActionButtons();
+	 * 		this.addActionButton( ... );
+	 * 		...
+	 * 		return;
+	 * 	}
+	 * 	...
+	 * }
+	 */
+	updatePageTitle: () => void;
+
+	//#endregion
+
+	//#region Player Panel and Score Counters
+
+	/**
 	 * A dictionary of {@link Counter} objects which show on the built-in player cards. The dictionary key is the player id. This is initialized by the framework but manually needs to be updated when a player's score changes.
 	 * @example
 	 * // Increase a player score (with a positive or negative number).
@@ -590,39 +727,9 @@ abstract class Gamegui {
 	 */
 	updateCounters: (counters: { [key: string]: { counter_name: string, counter_value: string | number }}) => void;
 
-	/**
-	 * Adds an action button to the main action status bar (or other places).
-	 * @param id The id of the created button, which should be unique in your HTML DOM document.
-	 * @param label The text of the button. Should be translatable (use _() function). Note: this can also be any html, such as "<img src='img.png'>", see example below on how to make image action buttons.
-	 * @param method The name of your method that must be triggered when the player clicks on this button (can be name of the method on game class or handler).
-	 * @param destination (optional) The id of the parent on where to add the button, ONLY use in rare cases if location is not action bar. Use null as value if you need to specify other arguments.
-	 * @param blinking (optional) If set to true, the button is going blink to catch player's attention. Please DO NOT abuse blinking button. If you need button to blink after some time passed add class 'blinking' to the button later.
-	 * @param color (optional) The color of the button. Could be blue (default), red, gray or none.
-	 * @example
-	 * this.addActionButton( 'giveCards_button', _('Give selected cards'), 'onGiveCards' );
-	 * @example
-	 * this.addActionButton( 'pass_button', _('Pass'), () => this.ajaxcallwrapper('pass') );
-	 * @example
-	 * // You should only use this method in your "onUpdateActionButtons" method. Usually, you use it like this:
-	 * onUpdateActionButtons: function( stateName, args ) {
-	 * 	if (this.isCurrentPlayerActive()) {
-	 * 		switch( stateName ) {
-	 * 		case 'giveCards':
-	 * 			this.addActionButton( 'giveCards_button', _('Give selected cards'), 'onGiveCards' );
-	 * 			this.addActionButton( 'pass_button', _('Pass'), () => this.ajaxcallwrapper('pass') );
-	 * 			break;
-	 * 		}
-	 * 	}
-	 * },
-	 * // In the example above, we are adding a "Give selected cards" button in the case we are on game state "giveCards". When player clicks on this button, it triggers our "onGiveCards" method.
-	 * @example
-	 * // Example using blinking red button:
-	 * this.addActionButton( 'button_confirm', _('Confirm?'), 'onConfirm', null, true, 'red');
-	 * @example
-	 * // If you want to call the handled with arguments, you can use arrow functions, like this:
-	 * this.addActionButton( 'commit_button', _('Confirm'), () => this.onConfirm(this.selectedCardId), null, false, 'red');
-	 */
-	addActionButton: (id: string, label: string, method: string | Function, destination?: string, blinking?: boolean, color?: 'blue' | 'red' | 'gray' | 'none') => void;
+	//#endregion
+
+	//#region Game Images and Sounds
 
 	/**
 	 * Sets an image to not be preloaded in the game. This is particularly useful if for example you have 2 different themes for a game. To accelerate the loading of the game, you can specify to not preload images corresponding to the other theme.
@@ -664,6 +771,10 @@ abstract class Gamegui {
 	/** Disables the standard "move" sound or this move (so it can be replaced with a custom sound). This only disables the sound for the next move. */
 	disableNextMoveSound: () => void;
 
+	//#endregion
+
+	//#region Client States
+
 	/**
 	 * Changes the current client state without sending anything to the server. Client states is a way to simulate the state transition but without actually going to server. It is useful when you need to ask user multiple questions before you send things to server.
 	 * @param newState The new state to transition to.
@@ -682,56 +793,9 @@ abstract class Gamegui {
 	/** Boolean indicating that we are in client state, i.e. we have called {@link setClientState} and have not yet sent anything to the server. */
 	on_client_state: boolean;
 
-	/** Removes all buttons from the title bar. */
-	removeActionButtons: () => void;
+	//#endregion
 
-	/**
-	 * Updates the current page title and turn description according to the game state arguments. If the current game state description `this.gamedatas.gamestate.descriptionmyturn` is modified before calling this function it allows to update the turn description without changing state. This will handle arguments substitutions properly.
-	 * Note: this functional also will calls `this.onUpdateActionButtons`, if you want different buttons then state defaults, use method in example to replace them, if it becomes too clumsy use client states (see above).
-	 * @example
-	 * onClickFavorTile: function( evt ) {
-	 * 	...
-	 * 	if ( ... ) {
-	 * 		this.gamedatas.gamestate.descriptionmyturn = _('Special action: ') + _('Advance 1 space on a Cult track');
-	 * 		this.updatePageTitle();
-	 * 		this.removeActionButtons();
-	 * 		this.addActionButton( ... );
-	 * 		...
-	 * 		return;
-	 * 	}
-	 * 	...
-	 * }
-	 */
-	updatePageTitle: () => void;
-
-// 	onScreenWidthChange()
-// This function can be overridden in your game to manage some resizing on the client side when the browser window is resized. This function is also triggered at load time, so it can be used to adapt to the :viewport size at the start of the game too.
-
-
-// this.bRealtime
-// Return true if the game is in realtime. Note that having a distinct behavior in realtime and turn-based should be exceptional.
-// g_replayFrom
-// Global contains reply number in live game, it is set to undefined (i.e. not set) when it is not a reply mode, so consequentially the good check is typeof g_replayFrom != 'undefined' which returns true if the game is in replay mode during the game (the game is ongoing but the user clicked "reply from this move" in the log)
-// g_archive_mode
-// Returns true if the game is in archive mode after the game (the game has ended)
-
-// this.instantaneousMode
-// Returns true during replay/archive mode if animations should be skipped. Only needed if you are doing custom animations. (The BGA-provided animation functions like this.slideToObject() automatically handle instantaneous mode.)
-// Technically, when you click "replay from move #20", the system replays the game from the very beginning with moves 0 - 19 happening in instantaneous mode and moves 20+ happening in normal mode.
-// g_tutorialwritten
-// Returns an object like the below if the game is in tutorial mode, or undefined otherwise. Tutorial mode is a special case of archive mode where comments have been added to a previous game to teach new players the rules.
-//    {
-//        author: "91577332",
-//        id: "576",
-//        mode: "view"
-//        status: "alpha"
-//        version_override: null
-//        viewer_id: "84554161"
-//    }
-// getBgaEnvironment(): string
-
-// Returns "studio" for studio and "prod" for production environment (i.e. where games current runs). Only useful for debbugging hooks.
-// Note: alpha server is also "prod"
+	//#region Environment State and Callbacks
 
 	/** A function that can be overridden to manage some resizing on the client side when the browser window is resized. This function is also triggered at load time, so it can be used to adapt to the viewport size at the start of the game too. */
 	onScreenWidthChange: () => void;
@@ -745,10 +809,11 @@ abstract class Gamegui {
 	/** Returns "studio" for studio and "prod" for production environment (i.e. where games current runs). Only useful for debbugging hooks. Note: alpha server is also "prod" */
 	getBgaEnvironment: () => 'studio' | 'prod';
 
-
 	/** Not officially documented! Forces all resize events to activate. */
 	sendResizeEvent: () => void;
 
 	/** Not officially documented! Gets the html element for the replay log. */
 	getReplayLogNode: () => HTMLElement | null;
+
+	//#endregion
 }

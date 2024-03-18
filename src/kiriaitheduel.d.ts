@@ -1,3 +1,5 @@
+/// <reference path="types/index.d.ts" />
+
 /**
  * @gameSpecific The global `dojo` object included in all BGA pages. This object is already defined with a TON of properties and methods, even without including many of the dojo modules as a dependency in the {@link define} function. This object type is a subset of the actual `dojo` object, and should be expanded as needed based on what dojo modules are being used. Make sure to include the `dojo` module as a dependency in the {@link define} function to avoid any unexpected errors.
  * @example

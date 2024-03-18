@@ -2,7 +2,7 @@
 	"name": "kiriaitheduel",
 	"version": "1.0.0",
 	"description": "",
-	"main": "kiriaitheduel.js",
+	"main": "../kiriaitheduel.js",
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc -w"

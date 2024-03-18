@@ -1,21 +1,15 @@
-/// <reference path="game_extended.ts" />
+/// <reference path="kiriaitheduel.d.ts" />
+/// <reference path="cookbook/common.ts" />
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © <Your name here> <Your email address here>
+ * KiriaiTheDuel implementation : © Nevin Foster - nevin.foster2@gmail.com
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
- *
- * kiriaitheduel.js
- *
- * KiriaiTheDuel user interface script
- * 
- * In this file, you are describing the logic of your user interface, in Javascript language.
- *
  */
-class KiriaiTheDuel extends GameguiExtended
+class KiriaiTheDuel extends GameguiCookbook
 {
 	constructor() {
 		super();
@@ -43,7 +37,7 @@ class KiriaiTheDuel extends GameguiExtended
 	///////////////////////////////////////////////////
 	//// Game & client states
 
-	override onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
+	onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
 	{
 		console.log( 'Entering state: '+ stateName, args );
 		
@@ -77,7 +71,7 @@ class KiriaiTheDuel extends GameguiExtended
 		}
 	}
 
-	override onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
+	onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
 	{
 		console.log( 'onUpdateActionButtons: '+stateName, args );
 
@@ -380,7 +374,7 @@ class KiriaiTheDuel extends GameguiExtended
 	///////////////////////////////////////////////////
 	//// Reaction to cometD notifications
 
-	setupNotifications = () =>
+	setupNotifications()
 	{
 		console.log( 'notifications subscriptions setup' );
 

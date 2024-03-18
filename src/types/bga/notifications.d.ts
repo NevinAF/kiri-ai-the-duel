@@ -45,4 +45,4 @@ interface Notif<T extends ExcludeEmpty<NotifTypes[keyof NotifTypes]> | null = nu
 }
 
 /** A Notif type without generic arguments, used to represent any notification type, where the args is an intersection of all possible args. */
-type AnyNotif =  Notif<AnyOf<NotifTypes[keyof NotifTypes]> | null>;
+type AnyNotif =  Notif<AnyOf<NotifTypes[keyof NotifTypes]>>;

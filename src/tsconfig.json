@@ -1,9 +1,6 @@
 {
 	"include": [
-		"src/define.ts",
-	],
-	"exclude": [
-		"kiriaitheduel.js"
+		"define.ts", // This will include whatever is needed
 	],
 	"rootDir": ".",
 	"compilerOptions": {
@@ -16,9 +13,9 @@
 		],
 		"sourceMap": false,
 		"typeRoots": [
-			"src/types/**",
+			"types/**",
 			"./node_modules/@types"
 		],
-		"outFile": "kiriaitheduel.js"
+		"outFile": "../kiriaitheduel.js"
 	},
 }

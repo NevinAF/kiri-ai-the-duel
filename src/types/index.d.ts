@@ -5,7 +5,7 @@
 
 /// <reference path="bga/components/counter.d.ts" />
 /// <reference path="bga/components/draggable.d.ts" />
-/// <reference path="bga/components/gamegui.ts" />
+/// <reference path="bga/components/gamegui.d.ts" />
 /// <reference path="bga/components/gamenotif.d.ts" />
 /// <reference path="bga/components/popindialog.d.ts" />
 /// <reference path="bga/components/resizable.d.ts" />
@@ -20,5 +20,3 @@
 /// <reference path="bga/globals.d.ts" />
 /// <reference path="bga/dependencies.d.ts" />
 /// <reference path="bga/ebg.d.ts" />
-
-/// <reference path="kiriaitheduel.d.ts" />
