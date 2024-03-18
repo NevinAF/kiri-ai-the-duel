@@ -1,5 +1,5 @@
 declare namespace doh {
-	/* TODO: This is a very rough job of typing, there maybe little value in typing D.O.H */
+	/* This is a very rough job of typing, there maybe little value in typing D.O.H */
 	interface Robot {
 		_robotLoaded: boolean;
 		_robotInitialized: boolean;

@@ -718,7 +718,7 @@ declare namespace dojo {
 
 		/* dojo/data/ObjectStore */
 
-		/* TODO: Replace with Store API when Typed */
+		/* WIP: Replace with Store API when Typed */
 		interface Store { }
 
 		interface ObjectStoreOptions {

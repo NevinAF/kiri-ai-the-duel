@@ -468,7 +468,7 @@ declare namespace dojo {
 
 		interface Connect {
 			/**
-			 * TODO: Type this better
+			 * WIP: Type this better
 			 */
 			_keypress(object: any, listener: EventListener): Handle;
 
@@ -1505,8 +1505,6 @@ declare namespace dojo {
 			require(mid: string, require: any, loaded: (...modules: any[]) => void): void;
 			loadInit(mid: string, require: any, loaded: (...modules: any[]) => void): void;
 		}
-
-		/* TODO: dojo/_base/NodeList only extends query.NodeList */
 
 		/* dojo/_base/query aliases dojo/query */
 

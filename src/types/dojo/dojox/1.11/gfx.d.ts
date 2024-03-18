@@ -33,9 +33,9 @@ declare namespace dojox {
 		interface Font extends SimpleShape {
 			family?: string;
 			size?: string;
-			style?: string; // TODO: enum
-			variant?: string; // TODO: enum
-			weight?: string; // TODO: enum
+			style?: string; // WIP: enum
+			variant?: string; // WIP: enum
+			weight?: string; // WIP: enum
 		}
 
 		interface GradientOffsetColor {
@@ -54,7 +54,7 @@ declare namespace dojox {
 
 		interface LinearFill {
 			colors: string[] | dojo._base.Color[];
-			type: string; // TODO: enum
+			type: string; // WIP: enum
 			x1: number;
 			x2: number;
 			y1: number;
@@ -83,14 +83,14 @@ declare namespace dojox {
 			y: number;
 		}
 
-		// TODO: is this type necessary? It only matches the logic in 'dojox/gfx/gradutils.getColor',
+		// WIP: is this type necessary? It only matches the logic in 'dojox/gfx/gradutils.getColor',
 		// which itself is not actually called anywhere within 'dojox/gfx'.
 		interface RadialFill {
 			colors?: string[] | dojo._base.Color[];
 			cx?: number;
 			cy?: number;
 			r?: number;
-			type?: string; // TODO: enum
+			type?: string; // WIP: enum
 		}
 
 		interface RadialGradient extends SimpleShape {
@@ -100,7 +100,7 @@ declare namespace dojox {
 			r: number;
 		}
 
-		// TODO: maybe complete this? (probably not important)
+		// WIP: maybe complete this? (probably not important)
 		// Missing methods: look in 'dojox/gfx/svg.js'
 		// These methods are all defined in each specific renderer, but copied to the base module by
 		// 'dojox/gfx/_base.switchTo', so the typings have been defined in this file (e.g. Group, Rect, Ellipse).
@@ -154,13 +154,13 @@ declare namespace dojox {
 		}
 
 		interface SimpleShape {
-			type?: string; // TODO: enum
+			type?: string; // WIP: enum
 		}
 
 		interface SimpleText extends SimpleShape {
-			align?: string; // TODO: enum
+			align?: string; // WIP: enum
 			decoration?: string;
-			fitting?: number; // TODO: enum
+			fitting?: number; // WIP: enum
 			height?: number;
 			kerning: boolean;
 			leading?: number;
@@ -180,10 +180,10 @@ declare namespace dojox {
 		}
 
 		interface Stroke extends SimpleShape {
-			cap?: string; // TODO: enum
+			cap?: string; // WIP: enum
 			color?: ColorLike;
 			join?: number | string;
-			style?: string; // TODO: enum
+			style?: string; // WIP: enum
 			width?: number;
 		}
 

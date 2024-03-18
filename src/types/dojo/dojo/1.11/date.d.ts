@@ -3,9 +3,8 @@ declare namespace dojo {
 
 		/* dojo/date */
 
-		/* TODO: Activate for TS 1.8+ */
-		/* type DatePortion = 'date' | 'time' | 'datetime'; */
-		/* type DateInterval = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond' | 'quarter' | 'week' | 'weekday'; */
+		type DatePortion = 'date' | 'time' | 'datetime';
+		type DateInterval = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond' | 'quarter' | 'week' | 'weekday';
 
 		interface DateBase {
 			/**
@@ -27,38 +26,37 @@ declare namespace dojo {
 			 * Compare two date objects by date, time, or both.
 			 *
 			 */
-			compare(date1: Date, date2: Date, portion?: string /* DatePortion */): number;
+			compare(date1: Date, date2: Date, portion?: DatePortion): number;
 
 			/**
 			 * Add to a Date in intervals of different size, from milliseconds to years
 			 */
-			add(date: Date, interval: string /* DateInterval */, amount: number): Date;
+			add(date: Date, interval: DateInterval, amount: number): Date;
 
 			/**
 			 * Get the difference in a specific unit of time (e.g., number of
 			 * months, weeks, days, etc.) between two dates, rounded to the
 			 * nearest integer.
 			 */
-			difference(date1: Date, date2?: Date, interval?: string /* DateInterval */): number;
+			difference(date1: Date, date2?: Date, interval?: DateInterval): number;
 		}
 
 		/* dojo/date/locale */
 
-		/* TODO: Activate for TS 1.8+ */
-		/* type DateLocaleFormatSelector = 'time' | 'date'; */
-		/* type DateLocaleFormatLength = 'long' | 'short' | 'medium' | 'full'; */
+		type DateLocaleFormatSelector = 'time' | 'date';
+		type DateLocaleFormatLength = 'long' | 'short' | 'medium' | 'full';
 
 		interface DateLocaleFormatOptions {
 
 			/**
 			 * choice of 'time','date' (default: date and time)
 			 */
-			selector?: string; /* DateLocaleFormatSelector */
+			selector?: DateLocaleFormatSelector;
 
 			/**
 			 * choice of long, short, medium or full (plus any custom additions).  Defaults to 'short'
 			 */
-			formatLength?: string; /* DateLocaleFormatLength */
+			formatLength?: DateLocaleFormatLength;
 
 			/**
 			 * override pattern with this string
@@ -131,7 +129,7 @@ declare namespace dojo {
 
 			_getGregorianBundle(locale: string): GenericObject;
 
-			/* TODO: string literal types used here */
+			/* WIP: string literal types used here */
 			/**
 			 * Used to get localized strings from dojo.cldr for day or month names.
 			 */
@@ -158,7 +156,7 @@ declare namespace dojo {
 			 * "date" or "time" for partial formatting of the Date object.
 			 * Both date and time will be formatted by default.
 			 */
-			selector?: string /* DateLocaleFormatSelector */;
+			selector?:  DateLocaleFormatSelector;
 
 			/**
 			 * if true, UTC/GMT is used for a timezone

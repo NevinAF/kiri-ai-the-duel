@@ -17,6 +17,9 @@ interface GameguiCookbook
 	 * @param callback The callback to be called once a response is received from the server.
 	 * @param ajax_method The method to use for the ajax call. See {@link Game.ajaxcall} for more information.
 	 * @returns True if the action was called, false if the action was not called because it was not a valid player action (see {@link Game.checkAction}).
+	 * @example
+	 * // Arguments must match the arguments of the PlayerAction 'myAction'.
+	 * this.ajaxAction( 'myAction', { myArgument1: arg1, myArgument2: arg2 }, (is_error) => {} );
 	 */
 	ajaxAction<T extends keyof PlayerActions>(action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean;
 
@@ -25,6 +28,16 @@ interface GameguiCookbook
 	 * @param event The event that you want to subscribe to.
 	 * @param callback The callback to be called when the event is published. Note that the callback can be the same callback for multiple events as long as the expected parameters for the notifications are the same.
 	 * @returns A handle that can be used to unsubscribe from the event. Not necessary to hold onto this handle if the subscription lasts for the lifetime of the game (or browser lifetime).
+	 * @example
+	 * setupNotifications() {
+	 * 	this.subscribeNotif('cardPlayed', this.notif_cardPlayed);
+	 * }
+	 * // With any of the possible argument types for notifications
+	 * notif_cardPlayed(notif: AnyNotif) { ... }
+	 * // With manual argument type (must match a subset of the arguments for the 'cardPlayed' notification type)
+	 * notif_cardPlayed(notif: Notif<{ player_id: number, card_id: number }>) { ... }
+	 * // With defined argument type
+	 * notif_cardPlayed(notif: Notif<NotifTypes['cardPlayed']>) { ... }
 	 */
 	subscribeNotif<T extends keyof NotifTypes>(event: T, callback: (notif: Notif<NotifTypes[T]>) => any): dojo.Handle;
 
@@ -121,6 +134,7 @@ GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(t
 	if (!args)
 		args = {} as any;
 
+	// @ts-ignore - Prevents error when no PlayerActions are defined.
 	if (args.lock === undefined) args.lock = true;
 
 	this.ajaxcall(

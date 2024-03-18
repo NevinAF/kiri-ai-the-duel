@@ -120,14 +120,13 @@ declare namespace dojo {
 
 		/* dojo/promise/tracer */
 
-		/* TODO: Uncomment for TS 1.8 */
-		/* type TracerEvent = 'resolved' | 'rejected' | 'progress'; */
+		type TracerEvent = 'resolved' | 'rejected' | 'progress';
 
 		interface Tracer {
 			/**
 			 * Subscribe to traces.
 			 */
-			on(type: string /* TracerEvent */, listener: EventListener): Handle;
+			on(type: TracerEvent, listener: EventListener): Handle;
 		}
 	}
 }

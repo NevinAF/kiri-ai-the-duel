@@ -308,9 +308,7 @@ declare namespace dijit {
 		 * This variable controls the position of the drop down.
 		 * It's an array of strings
 		 */
-		dropDownPosition: string[];
-		/* TODO remove for TS 1.8 */
-		/* dropDownPosition: ('before' | 'after' | 'above' | 'below')[]; */
+		dropDownPosition: ('before' | 'after' | 'above' | 'below')[];
 
 		/**
 		 * When set to false, the click events will not be stopped, in

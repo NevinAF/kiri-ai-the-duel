@@ -29,7 +29,7 @@ declare namespace dojox {
 				lineTo(x: number, y: number): this;
 				moveTo(x: number, y: number): this;
 				qCurveTo(x1: number, y1: number, x: number, y: number): this;
-				setAbsoluteMode(mode: boolean | string): void; // TODO: enum
+				setAbsoluteMode(mode: boolean | string): void; // WIP: enum
 				// setShape(shape: string | dojox.gfx.path.Path): this;
 				smoothCurveTo(x2: number, y2: number, x: number, y: number): void;
 				vLineTo(y: number): this;

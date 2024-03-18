@@ -532,8 +532,7 @@ declare namespace dojo {
 
 	/* dojo/dom-construct */
 
-	/* TODO implement for TS 1.8 */
-	/* type PosString = 'first' | 'after' | 'before' | 'last' | 'replace' | 'only'; */
+	type PosString = 'first' | 'after' | 'before' | 'last' | 'replace' | 'only';
 
 	interface DomConstruct {
 
@@ -546,13 +545,13 @@ declare namespace dojo {
 		 * Attempt to insert node into the DOM, choosing from various positioning options.
 		 * Returns the first argument resolved to a DOM node.
 		 */
-		place(node: NodeFragmentOrString, refNode: NodeOrString, position?: string /* PosString */ | number): HTMLElement;
+		place(node: NodeFragmentOrString, refNode: NodeOrString, position?: PosString | number): HTMLElement;
 
 		/**
 		 * Create an element, allowing for optional attribute decoration
 		 * and placement.
 		 */
-		create(tag: NodeOrString, attrs?: GenericObject, refNode?: NodeOrString, pos?: string /* PosString */ | number): HTMLElement;
+		create(tag: NodeOrString, attrs?: GenericObject, refNode?: NodeOrString, pos?: PosString | number): HTMLElement;
 
 		/**
 		 * safely removes all children of the node.
@@ -618,7 +617,7 @@ declare namespace dojo {
 	}
 
 	interface DomGeometry {
-		boxModel: string; /* TODO: string literal 'border-box' | 'content-box' */
+		boxModel: 'border-box' | 'content-box';
 
 		/**
 		 * Returns object with special values specifically useful for node
@@ -736,12 +735,7 @@ declare namespace dojo {
 
 	/* dojo/dom-style */
 
-	// TODO move over the most common properties from CSSStyleDeclaration
-	interface DomComputedStyle {
-		position?: string;
-		width?: string;
-		height?: string;
-		[id: string]: any;
+	interface DomComputedStyle extends CSSStyleDeclaration {
 	}
 
 	interface DomStyle {
@@ -776,7 +770,7 @@ declare namespace dojo {
 		 */
 		(callback: Function): void;
 
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 		_Q: Function[];
 		_onEmpty(): void;
 	}
@@ -860,12 +854,12 @@ declare namespace dojo {
 		/**
 		 * Resolves id into a module id based on possibly-nested tenary expression that branches on has feature test value(s).
 		 */
-		normalize(id: string, toAbsMid: Function): string; /* TODO: Align with loader api */
+		normalize(id: string, toAbsMid: Function): string; /* WIP: Align with loader api */
 
 		/**
 		 * Conditional loading of AMD modules based on a has feature test value.
 		 */
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 	}
 
 	/* dojo/hash */
@@ -1041,14 +1035,14 @@ declare namespace dojo {
 		/**
 		 * Resolves id into a module id based on possibly-nested tenary expression that branches on has feature test value(s).
 		 */
-		normalize(id: string, toAbsMid: Function): string; /* TODO: Align with loader api */
+		normalize(id: string, toAbsMid: Function): string; /* WIP: Align with loader api */
 
 		normalizeLocale(locale?: string): string;
 
 		/**
 		 * Conditional loading of AMD modules based on a has feature test value.
 		 */
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 
 		cache: { [bundle: string]: any };
 
@@ -1163,12 +1157,12 @@ declare namespace dojo {
 		/**
 		 * Resolves id into a module id based on possibly-nested tenary expression that branches on has feature test value(s).
 		 */
-		normalize(id: string, toAbsMid: Function): string; /* TODO: Align with loader api */
+		normalize(id: string, toAbsMid: Function): string; /* WIP: Align with loader api */
 
 		/**
 		 * Conditional loading of AMD modules based on a has feature test value.
 		 */
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 	}
 
 	/* dojo/mouse */
@@ -1787,7 +1781,7 @@ declare namespace dojo {
 		/**
 		 * can be used as AMD plugin to conditionally load new query engine
 		 */
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 	}
 
 	/* dojo/ready */
@@ -2021,9 +2015,9 @@ declare namespace dojo {
 		 */
 		dynamic: boolean;
 
-		normalize(id: string, toAbsMid: Function): string; /* TODO: Align with loader api */
+		normalize(id: string, toAbsMid: Function): string; /* WIP: Align with loader api */
 
-		load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+		load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 	}
 
 	/* dojo/throttle */

@@ -1,4 +1,4 @@
-/// <reference path="../kiriaitheduel.d.ts" />
+/// <reference path="../types/index.d.ts" />
 
 // Creates an alias for the Gamegui interface, so we don't have to implement the interface. Not necessary but helps for clarity.
 interface GameguiCookbook extends Gamegui {}

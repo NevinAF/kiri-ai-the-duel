@@ -81,9 +81,9 @@ declare namespace dojo {
 
 		interface Default {
 
-			getPlatformId(): string; /* './xhr' | './node' */ /* TODO: Uncomment for TS 1.8 */
+			getPlatformId(): './xhr' | './node';
 
-			load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+			load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 		}
 
 		/* dojo/request/handlers */
@@ -175,15 +175,14 @@ declare namespace dojo {
 
 		/* dojo/request/notify */
 
-		/* TODO: Type in TS 1.8 */
-		/* type NotifyType = 'start' | 'send' | 'load' | 'error' | 'done' | 'stop'; */
+		type NotifyType = 'start' | 'send' | 'load' | 'error' | 'done' | 'stop';
 
 		interface Notify {
 			/**
 			 * Register a listener to be notified when an event
 			 * in dojo/request happens.
 			 */
-			(type: string /* NotifyType */, listener: (event: any) => void): Handle;
+			(type: NotifyType, listener: (event: any) => void): Handle;
 
 			emit(type: string, event: any, cancel: boolean): any;
 		}
@@ -207,7 +206,7 @@ declare namespace dojo {
 
 			register<T>(url: RegisterUrlType, provider: Provider<T>, first?: boolean): Handle;
 
-			load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+			load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 
 			/**
 			 * Send an HTTP GET request using the default transport for the current platform.

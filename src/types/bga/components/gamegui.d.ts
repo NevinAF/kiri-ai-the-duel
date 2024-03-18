@@ -260,7 +260,7 @@ interface Gamegui {
 	placeOnObjectPos: (target: string | HTMLElement, location: string | HTMLElement, relativeX: number, relativeY: number) => void;
 
 	/**
-	 * This destroys the `target` element and all its connectors (onClick, etc), then places a clone positioned at the original location but attached to the `newParent` element. This is useful for moving elements between different containers. See `GameExtended.attachToNewParentNoDestroy` for a version that does not destroy the target element.
+	 * This destroys the `target` element and all its connectors (onClick, etc), then places a clone positioned at the original location but attached to the `newParent` element. This is useful for moving elements between different containers. See {@link GameguiCookbook.attachToNewParentNoDestroy} for a version that does not destroy the target element.
 	 * Changing the HTML parent of an element can be useful for the following reasons:
 	 * - When the HTML parent moves, all its child are moving with them. If some game elements is no more linked with a parent HTML object, you may want to attach it to another place.
 	 * - The z_order (vertical order of display) depends on the position in the DOM, so you may need to change the parent of some game elements when they are moving in your game area.

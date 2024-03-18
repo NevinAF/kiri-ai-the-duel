@@ -103,7 +103,7 @@ declare namespace dojox {
 				rawNode: Node;
 				shape: dojox.gfx.SimpleShape;
 				strokeStyle: Stroke;
-				type: string; // TODO: enum
+				type: string; // WIP: enum
 
 				applyLeftTransform(matrix: dojox.gfx.matrix.MatrixLike): this;
 				applyRightTransform(matrix: dojox.gfx.matrix.MatrixLike): this;

@@ -6,7 +6,7 @@ declare namespace dojo {
 			/**
 			 * This module handles loading the appropriate selector engine for the given browser
 			 */
-			load(id: string, parentRequire: Function, loaded: Function): void; /* TODO: Align with loader api */
+			load(id: string, parentRequire: Function, loaded: Function): void; /* WIP: Align with loader api */
 		}
 
 		/* dojo/selector/acme */

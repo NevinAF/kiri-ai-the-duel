@@ -63,9 +63,7 @@ declare namespace dijit {
 			/**
 			 * One of: "first", "all" or "none".
 			 */
-			highlightMatch: string;
-			/* TODO: Uncomment for TS 1.8 and remove above */
-			/* highlightMatch: 'fisrt' | 'all' | 'none'; */
+			highlightMatch: 'first' | 'all' | 'none';
 
 			/**
 			 * The entries in the drop down list come from this attribute in the
@@ -350,9 +348,7 @@ declare namespace dijit {
 			 * "date" or "time".
 			 * Subclass must specify this.
 			 */
-			_selector: string;
-			/* TODO: uncomment for TS 1.8 */
-			/* _selector: 'data' | 'time'; */
+			_selector: 'data' | 'time';
 
 			buildRendering(): void;
 
@@ -1257,7 +1253,7 @@ declare namespace dijit {
 		interface DateTextBox extends _DateTimeTextBox<Calendar> {
 			baseClass: string;
 			popupClass: CalendarConstructor;
-			_selector: string;
+			_selector: "time" | "data";
 			maxHeight: number;
 
 			/**

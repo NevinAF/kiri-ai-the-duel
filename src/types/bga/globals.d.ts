@@ -1,34 +1,3 @@
-/**
- * Defines an object by assigning it to some target with a key. For simplicity, this has been restricted to defining the game specific module, requiring the game to be defined as a class.
- * @param dependencies The dependencies required for the game class to be defined.
- * @param callback The function that will define the game class and return it.
- * - param `dojo`: The dojo library. This should not be used but instead the global `dojo` object should be used.
- * - param `declare`: The declare function used to create the module.
- * - - param `module_name`: The name of the module to be defined. Should be 'bgagame.yourgamename'.
- * - - param `base_class`: The target to define the module on. Should be `ebg.core.gamegui`.
- * - - param `module`: The game class to be defined. Should be a new instance of the game class: `new YourGameName()`.
- * @example
- * define([
- * 	"dojo",
- * 	"dojo/_base/declare",
- * 	"ebg/core/gamegui",
- * 	"ebg/counter",
- * ],
- * function (dojo, declare) {
- * 	return declare("bgagame.yourgamename", ebg.core.gamegui, new YourGameName());
- * });
- */
-declare const define: <T>(
-	dependencies: BGA_Dependency[],
-	callback: (
-		dojo: null,
-		declare: (
-			module_name: string,
-			base_class: new () => Gamegui,
-			module: T) => T
-	) => T
-) => void;
-
 /** The global jQuery-like selector function included in all BGA pages, used to resolve an id to an element if not already an element. */
 declare const $: (selectorOrElement: string | HTMLElement) => HTMLElement;
 

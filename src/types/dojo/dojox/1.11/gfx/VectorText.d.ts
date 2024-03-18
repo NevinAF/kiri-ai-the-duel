@@ -9,7 +9,7 @@ declare namespace dojox {
 		interface VectorText {
 			align: string;
 			decoration: string;
-			fitting: number; // TODO enum? vectorFontFitting
+			fitting: number; // WIP enum? vectorFontFitting
 			height: number;
 			leading: number;
 			text: string;
