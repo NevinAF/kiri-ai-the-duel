@@ -29,13 +29,14 @@ GameguiCookbook.prototype.attachToNewParentNoDestroy = function (mobile_in, new_
     return box;
 };
 GameguiCookbook.prototype.ajaxAction = function (action, args, callback, ajax_method) {
+    console.log("ajaxAction", action, args);
     if (!this.checkAction(action))
         return false;
     if (!args)
         args = {};
     if (args.lock === undefined)
         args.lock = true;
-    this.ajaxcall("/".concat(this.game_name, "/").concat(this.game_name, "/").concat(action, ".html"), args, this, undefined, callback, ajax_method);
+    this.ajaxcall("/".concat(this.game_name, "/").concat(this.game_name, "/").concat(action, ".html"), args, this, function () { }, callback, ajax_method);
     return true;
 };
 GameguiCookbook.prototype.subscribeNotif = function (event, callback) {
@@ -116,6 +117,73 @@ GameguiCookbook.prototype.infoDialog = function (message, title, callback) {
     });
     return myDlg;
 };
+var PlayerActionQueue = (function () {
+    function PlayerActionQueue(gamegui) {
+        this.timout = 6000;
+        this.gamegui = gamegui;
+        this.postingTimeout = null;
+        this.queue = [];
+        this.currentItem = null;
+    }
+    PlayerActionQueue.prototype.actionInProgress = function () {
+        return this.currentItem;
+    };
+    PlayerActionQueue.prototype.enqueue = function (action, args, callback) {
+        this.queue.push({ action: action, args: args, timestamp: Date.now(), callback: callback });
+        this.postActions();
+    };
+    PlayerActionQueue.prototype.contains = function (action) {
+        return this.queue.some(function (a) { return a.action === action; });
+    };
+    PlayerActionQueue.prototype.filterOut = function (action) {
+        var lastLength = this.queue.length;
+        this.queue = this.queue.filter(function (a) {
+            var _a;
+            if (a.action !== action)
+                return true;
+            (_a = a.callback) === null || _a === void 0 ? void 0 : _a.call(a, true, 'Action was removed from queue', PlayerActionQueue.removedErrorCode);
+            return false;
+        });
+        return lastLength !== this.queue.length;
+    };
+    PlayerActionQueue.prototype.postActions = function () {
+        var _this = this;
+        if (this.postingTimeout !== null) {
+            clearTimeout(this.postingTimeout);
+            this.postingTimeout = null;
+        }
+        console.log('Posting actions:', this.queue);
+        if (this.queue.length == 0)
+            return;
+        var action = this.queue[0];
+        console.log('Posting action:', action.action, action.args, this.gamegui.checkLock(true), this.gamegui.checkAction(action.action, true));
+        if (this.gamegui.checkAction(action.action, true)) {
+            this.queue.shift();
+            this.currentItem = action;
+            action.args.lock = true;
+            this.gamegui.ajaxcall("/".concat(this.gamegui.game_name, "/").concat(this.gamegui.game_name, "/").concat(action.action, ".html"), action.args, this.gamegui, function () { }, function (error, errorMessage, errorCode) {
+                var _a;
+                _this.currentItem = null;
+                (_a = action.callback) === null || _a === void 0 ? void 0 : _a.call(action, error, errorMessage, errorCode);
+                _this.postActions();
+            });
+            return;
+        }
+        if (action.timestamp + this.timout < Date.now()) {
+            if (action.callback)
+                action.callback(true, 'Action took too long to post', PlayerActionQueue.timeoutErrorCode);
+            else
+                console.warn('PlayerActionQueue: action took too long to post, discarding action:', action.action, action.args);
+            this.queue.shift();
+            this.postActions();
+            return;
+        }
+        this.postingTimeout = setTimeout(this.postActions.bind(this), 100);
+    };
+    PlayerActionQueue.timeoutErrorCode = -513;
+    PlayerActionQueue.removedErrorCode = -513;
+    return PlayerActionQueue;
+}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -135,228 +203,218 @@ var KiriaiTheDuel = (function (_super) {
     __extends(KiriaiTheDuel, _super);
     function KiriaiTheDuel() {
         var _this = _super.call(this) || this;
-        _this.getCardUniqueId = function (isRed, card_type) {
-            if (card_type == -1)
-                return 12;
-            else if (isRed)
-                return (card_type < 5) ? card_type : card_type + 5;
-            else
-                return card_type + 5;
-        };
-        _this.revealCard = function (back_card_id, new_card_id) {
-            _this.placeOnObject('cardontable_' + new_card_id, 'cardontable_' + back_card_id);
-            dojo.destroy('cardontable_' + back_card_id);
-        };
-        _this.moveCard = function (card_id, to) {
-            console.log('Moving card ' + card_id + ' to ' + to + '.');
-            if (card_id == -1)
-                return;
-            var target = $('cardontable_' + card_id);
-            var divTo = $(to);
-            if (target == null) {
-                console.log('Div "' + 'cardontable_' + card_id + '" does not exist.');
-                return;
+        _this.isInitialized = false;
+        _this.playerActionQueue = new PlayerActionQueue(_this);
+        _this.resizeTimeout = null;
+        _this.onScreenWidthChange = function () {
+            if (_this.isInitialized) {
+                if (_this.resizeTimeout !== null) {
+                    clearTimeout(_this.resizeTimeout);
+                }
+                _this.resizeTimeout = setTimeout(function () {
+                    _this.instantMatch();
+                    _this.resizeTimeout = null;
+                }, 10);
+                _this.instantMatch();
             }
-            if (divTo == null) {
-                console.log('Div "' + to + '" does not exist.');
+        };
+        _this.predictionKey = 0;
+        _this.onHandCardClick = function (evt, index) {
+            var _a;
+            evt.preventDefault();
+            if (((_a = _this.playerActionQueue.actionInProgress()) === null || _a === void 0 ? void 0 : _a.action) === 'confirmedCards') {
+                console.log('Already confirmed cards! There is no backing out now!');
                 return;
             }
-            var targetPosition = target.getBoundingClientRect();
-            var divToPosition = divTo.getBoundingClientRect();
-            var relativePosition = {
-                top: targetPosition.top - divToPosition.top,
-                left: targetPosition.left - divToPosition.left
-            };
-            dojo.place(target, divTo);
-            dojo.style(target, 'top', relativePosition.top + 'px');
-            dojo.style(target, 'left', relativePosition.left + 'px');
-            _this.slideToObject('cardontable_' + card_id, to).play();
-        };
-        _this.updateAll = function () {
-            _this.placeAllCards();
-            _this.updateFlippedStatus();
-            _this.updateStance();
-            _this.updatePosition();
-            for (var id in _this.gamedatas.state.damage) {
-                $(id + "_damage").innerHTML = _this.gamedatas.state.damage[id];
+            if (index == (_this.isRedPlayer() ? _this.redDiscarded() : _this.blueDiscarded())) {
+                console.log('This card has already been discarded!');
+                return;
             }
-        };
-        _this.placeAllCards = function () {
-            var cards = _this.gamedatas.state.cards;
-            for (var i in cards)
-                for (var j in cards[i])
-                    _this.moveCard(cards[i][j], i + "_" + j);
-        };
-        _this.updateFlippedStatus = function () {
-            var flippedState = _this.gamedatas.state.flippedState;
-            var cardIds = [1, 2, 6, 7];
-            for (var i in cardIds) {
-                var cardId = cardIds[i];
-                var cardDiv = $('cardontable_' + cardId);
-                var state = flippedState[cardDiv.parentNode.id + '_Flipped'];
-                if (state == undefined || (state != 0 && state != 1)) {
-                    dojo.removeClass(cardDiv, 'topPicked');
-                    dojo.removeClass(cardDiv, 'bottomPicked');
-                }
-                else if (state == 0) {
-                    dojo.addClass(cardDiv, 'topPicked');
-                    dojo.removeClass(cardDiv, 'bottomPicked');
-                }
-                else {
-                    dojo.addClass(cardDiv, 'bottomPicked');
-                    dojo.removeClass(cardDiv, 'topPicked');
-                }
+            if (index == 6 && (_this.isRedPlayer() ? _this.redSpecialPlayed() : _this.blueSpecialPlayed())) {
+                console.log('Thee special card has already been played!');
+                return;
             }
-        };
-        _this.updateStance = function () {
-            var stances = _this.gamedatas.state.stances;
-            for (var id in stances) {
-                var div = $(id);
-                if (div == null) {
-                    console.log('Div "' + id + '" does not exist.');
-                    continue;
-                }
-                if (stances[id] == 0) {
-                    dojo.addClass(div, 'heaven_stance');
-                    dojo.removeClass(div, 'earth_stance');
-                }
-                else {
-                    dojo.addClass(div, 'earth_stance');
-                    dojo.removeClass(div, 'heaven_stance');
-                }
+            var first = _this.isRedPlayer() ? _this.redPlayed0() : _this.bluePlayed0();
+            var second = _this.isRedPlayer() ? _this.redPlayed1() : _this.bluePlayed1();
+            var fixedIndex = index == 6 ? 8 : index;
+            if ((index == 1 && first == 6) ||
+                (index == 1 && second == 6) ||
+                fixedIndex == first) {
+                _this.returnCardToHand(null, true);
+                return;
             }
-        };
-        _this.updatePosition = function () {
-            var positions = _this.gamedatas.state.positions;
-            for (var id in positions) {
-                var div = $(id);
-                var divFrom = div.parentNode;
-                var divTo = $(id + "_field_position_" + positions[id]);
-                dojo.place(div, divTo);
-                _this.placeOnObject(div, divFrom);
-                _this.slideToObject(div, divTo).play();
+            if ((index == 2 && first == 7) ||
+                (index == 2 && second == 7) ||
+                fixedIndex == second) {
+                _this.returnCardToHand(null, false);
+                return;
             }
-        };
-        _this.onCardClick = function (evt) {
+            if (first != 0 && second != 0) {
+                console.log('Both cards have already been played!');
+                return;
+            }
             var target = evt.target;
-            var parent = target.parentNode;
-            var card_id = +target.id.split('_')[1];
-            if (parent.id.includes('Hand')) {
-                var rect = target.getBoundingClientRect();
-                var y = evt.clientY - rect.top;
-                var clickedTopHalf = y < rect.height / 2;
-                _this.playCardFromHand(card_id, clickedTopHalf);
-            }
-            else if (parent.id.includes('Played')) {
-                _this.returnCardToHand(card_id);
+            var rect = target.getBoundingClientRect();
+            var y = evt.clientY - rect.top;
+            var clickedTopHalf = y < rect.height / 2;
+            if (!clickedTopHalf && (index == 1 || index == 2))
+                index += 5;
+            else if (index == 6)
+                index = 8;
+            var action;
+            var indexOffset;
+            if (_this.isRedPlayer()) {
+                if (_this.redPlayed0() == 0) {
+                    action = 'pickedFirst';
+                    indexOffset = 0;
+                }
+                else if (_this.redPlayed1() == 0) {
+                    action = 'pickedSecond';
+                    indexOffset = 4;
+                }
             }
             else {
-                console.log('Card is not in the hand or played cards.', evt);
-            }
-        };
-        _this.playCardFromHand = function (card_id, clickedTopHalf) {
-            if (!_this.checkAction('pickedCards')) {
-                console.log('It is not time to play cards.');
-                return;
-            }
-            var playerType = _this.player_id == _this.gamedatas.redPlayer ? 'red' : 'blue';
-            var card_div = $('cardontable_' + card_id);
-            if (!card_div.parentNode.id.startsWith(playerType + "Hand")) {
-                console.log('Card is not in the hand.');
-                return;
-            }
-            var isFirstOpen = $(playerType + 'Played_0').childNodes.length == 0;
-            var isSecondOpen = $(playerType + 'Played_1').childNodes.length == 0;
-            if (!isFirstOpen && !isSecondOpen) {
-                console.log('Both cards are already played! Must choose one to return before playing another.');
-                return;
-            }
-            var flippableCards = [1, 2, 6, 7];
-            if (flippableCards.includes(card_id)) {
-                if (clickedTopHalf) {
-                    dojo.addClass(card_div, 'topPicked');
-                    dojo.removeClass(card_div, 'bottomPicked');
+                if (_this.bluePlayed0() == 0) {
+                    action = 'pickedFirst';
+                    indexOffset = 8;
                 }
-                else {
-                    dojo.addClass(card_div, 'bottomPicked');
-                    dojo.removeClass(card_div, 'topPicked');
+                else if (_this.bluePlayed1() == 0) {
+                    action = 'pickedSecond';
+                    indexOffset = 12;
                 }
             }
-            if (isFirstOpen) {
-                _this.moveCard(card_id, playerType + 'Played_0');
-                return;
-            }
-            if (isSecondOpen) {
-                _this.moveCard(card_id, playerType + 'Played_1');
-                return;
-            }
+            var callback = _this.addPredictionModifier(function (cards) {
+                cards &= ~(15 << indexOffset);
+                return cards | (index & 15) << indexOffset;
+            });
+            _this.playerActionQueue.filterOut('confirmedCards');
+            _this.playerActionQueue.enqueue(action, { card: index }, callback);
         };
-        _this.returnCardToHand = function (card_id) {
-            if (!_this.checkAction('pickedCards')) {
-                console.log('It is not time to return cards.');
+        _this.returnCardToHand = function (evt, first) {
+            var _a;
+            evt === null || evt === void 0 ? void 0 : evt.preventDefault();
+            if (((_a = _this.playerActionQueue.actionInProgress()) === null || _a === void 0 ? void 0 : _a.action) === 'confirmedCards') {
+                console.log('Already confirmed cards! There is no backing out now!');
                 return;
             }
-            var playerType = _this.player_id == _this.gamedatas.redPlayer ? 'red' : 'blue';
-            var card_div = $('cardontable_' + card_id);
-            if (!card_div.parentNode.id.startsWith(playerType + "Played_")) {
-                console.log('Card is not in the played cards.');
-                return;
-            }
-            dojo.removeClass(card_div, 'topPicked');
-            dojo.removeClass(card_div, 'bottomPicked');
-            var handSlotId = playerType + 'Hand_';
-            for (var i = 0; i < 6; i++) {
-                if ($(handSlotId + i).childNodes.length == 0) {
-                    _this.moveCard(card_id, handSlotId + i);
+            if (first) {
+                if (_this.playerActionQueue.filterOut('pickedFirst')) {
                     return;
                 }
             }
-            console.log('No empty hand slots!');
-        };
-        _this.confirmPlayedCards = function () {
-            if (!_this.checkAction('pickedCards')) {
-                console.log('It is not time to confirm cards.');
-                return;
+            else {
+                if (_this.playerActionQueue.filterOut('pickedSecond')) {
+                    return;
+                }
             }
-            var playerType = _this.player_id == _this.gamedatas.redPlayer ? 'red' : 'blue';
-            var firstCard = $(playerType + 'Played_0').children[0];
-            var secondCard = $(playerType + 'Played_1').children[0];
-            if (firstCard == null || secondCard == null) {
-                console.log('Both cards must be played before confirming.');
-                return;
+            var indexOffset;
+            if (_this.isRedPlayer()) {
+                indexOffset = first ? 0 : 4;
             }
-            var firstCardId = +firstCard.id.split('_')[1];
-            var secondCardId = +secondCard.id.split('_')[1];
-            if (dojo.hasClass(firstCard, 'bottomPicked'))
-                firstCardId = -firstCardId;
-            if (dojo.hasClass(secondCard, 'bottomPicked'))
-                secondCardId = -secondCardId;
-            _this.ajaxAction('pickedCards', {
-                firstCard: firstCardId,
-                secondCard: secondCardId,
+            else {
+                indexOffset = first ? 8 : 12;
+            }
+            var callback = _this.addPredictionModifier(function (cards) {
+                return cards & ~(15 << indexOffset);
             });
+            _this.playerActionQueue.filterOut('confirmedCards');
+            _this.playerActionQueue.enqueue(first ? "undoFirst" : "undoSecond", {}, callback);
         };
-        _this.notif_placeAllCards = function (notif) {
+        _this.notif_instantMatch = function (notif) {
             console.log('notif_placeAllCards', notif);
-            _this.gamedatas.state = notif.args.state;
-            _this.updateAll();
-        };
-        _this.notif_cardsPlayed = function (notif) {
-        };
-        _this.notif_cardFlipped = function (notif) {
-            _this.revealCard(notif.args.back_card_id, notif.args.card_id);
+            _this.gamedatas.battlefield = notif.args.battlefield;
+            _this.serverCards = notif.args.cards;
+            _this.updateCardsWithPredictions();
+            _this.instantMatch();
         };
         console.log('kiriaitheduel:', _this);
         return _this;
     }
+    KiriaiTheDuel.prototype.isRedPlayer = function () { return this.gamedatas.players[this.player_id].color == 'e54025'; };
+    KiriaiTheDuel.prototype.redPrefix = function () { return this.isRedPlayer() ? 'my' : 'opponent'; };
+    KiriaiTheDuel.prototype.bluePrefix = function () { return this.isRedPlayer() ? 'opponent' : 'my'; };
+    KiriaiTheDuel.prototype.redPosition = function () { return (this.gamedatas.battlefield >> 0) & 15; };
+    KiriaiTheDuel.prototype.redStance = function () { return (this.gamedatas.battlefield >> 4) & 1; };
+    KiriaiTheDuel.prototype.bluePosition = function () { return (this.gamedatas.battlefield >> 5) & 15; };
+    KiriaiTheDuel.prototype.blueStance = function () { return (this.gamedatas.battlefield >> 9) & 1; };
+    KiriaiTheDuel.prototype.redHit = function () { return ((this.gamedatas.battlefield >> 14) & 1) == 1; };
+    KiriaiTheDuel.prototype.blueHit = function () { return ((this.gamedatas.battlefield >> 15) & 1) == 1; };
+    KiriaiTheDuel.prototype.redPlayed0 = function () { return (this.gamedatas.cards >> 0) & 15; };
+    KiriaiTheDuel.prototype.redPlayed1 = function () { return (this.gamedatas.cards >> 4) & 15; };
+    KiriaiTheDuel.prototype.bluePlayed0 = function () { return (this.gamedatas.cards >> 8) & 15; };
+    KiriaiTheDuel.prototype.bluePlayed1 = function () { return (this.gamedatas.cards >> 12) & 15; };
+    KiriaiTheDuel.prototype.redDiscarded = function () { return (this.gamedatas.cards >> 16) & 7; };
+    KiriaiTheDuel.prototype.blueDiscarded = function () { return (this.gamedatas.cards >> 19) & 7; };
+    KiriaiTheDuel.prototype.redSpecialCard = function () { return (this.gamedatas.cards >> 22) & 3; };
+    KiriaiTheDuel.prototype.blueSpecialCard = function () { return (this.gamedatas.cards >> 24) & 3; };
+    KiriaiTheDuel.prototype.redSpecialPlayed = function () { return ((this.gamedatas.cards >> 26) & 1) == 1; };
+    KiriaiTheDuel.prototype.blueSpecialPlayed = function () { return ((this.gamedatas.cards >> 27) & 1) == 1; };
     KiriaiTheDuel.prototype.setup = function (gamedatas) {
-        console.log("Starting game setup", gamedatas);
+        var _this = this;
+        console.log("Starting game setup", this.gamedatas);
+        console.log(this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id].color, this.gamedatas.players[this.player_id].color == 'e54025');
+        this.serverCards = gamedatas.cards;
+        this.predictionModifiers = [];
         this.setupNotifications();
-        for (var i = 1; i < 14; i++) {
-            dojo.connect($('cardontable_' + i), 'onclick', this, 'onCardClick');
+        var placeCard = function (id, target, offset) {
+            if ($(target) == null) {
+                console.error('Div "' + target + '" does not exist.');
+                return;
+            }
+            var div = dojo.place(_this.format_block('jstpl_card', {
+                src: g_gamethemeurl + 'img/placeholderCards.jpg',
+                x: offset / 0.13,
+                id: id
+            }), target);
+            return div;
+        };
+        for (var i = 0; i < 5; i++) {
+            placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
+            placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
         }
-        dojo.connect($('confirmSelectionButton'), 'onclick', this, 'confirmPlayedCards');
-        this.updateAll();
+        placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
+        placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
+        for (var i = 0; i < 2; i++) {
+            var div = void 0;
+            div = placeCard("redPlayed_" + i, this.redPrefix() + 'Played_' + i, 13);
+            div = placeCard("bluePlayed_" + i, this.bluePrefix() + 'Played_' + i, 13);
+            $('redPlayed_' + i).style.display = 'none';
+            $('bluePlayed_' + i).style.display = 'none';
+        }
+        for (var _i = 0, _a = ['red_samurai', 'blue_samurai']; _i < _a.length; _i++) {
+            var id = _a[_i];
+            dojo.place(this.format_block('jstpl_card', {
+                src: g_gamethemeurl + 'img/placeholder_SamuraiCards.jpg',
+                x: 0,
+                id: id + '_card'
+            }), id);
+        }
+        var battlefieldSize = 6;
+        for (var i = 1; i <= battlefieldSize; i++) {
+            dojo.place(this.format_block('jstpl_field_position', {
+                id: i,
+            }), $('battlefield'));
+        }
+        if (!this.isRedPlayer())
+            $('battlefield').style.flexDirection = 'column-reverse';
+        this.instantMatch();
+        var _loop_1 = function (i) {
+            var index = i + 1;
+            dojo.connect($('myHand_' + i), 'onclick', this_1, function (e) { return _this.onHandCardClick(e, index); });
+        };
+        var this_1 = this;
+        for (var i = 0; i < 6; i++) {
+            _loop_1(i);
+        }
+        var _loop_2 = function (i) {
+            var first = i == 0;
+            dojo.connect($('myPlayed_' + i), 'onclick', this_2, function (e) { return _this.returnCardToHand(e, first); });
+        };
+        var this_2 = this;
+        for (var i = 0; i < 2; i++) {
+            _loop_2(i);
+        }
+        this.isInitialized = true;
         console.log("Ending game setup");
     };
     KiriaiTheDuel.prototype.onEnteringState = function (stateName, args) {
@@ -374,23 +432,187 @@ var KiriaiTheDuel = (function (_super) {
         }
     };
     KiriaiTheDuel.prototype.onUpdateActionButtons = function (stateName, args) {
+        var _this = this;
         console.log('onUpdateActionButtons: ' + stateName, args);
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
+                case "pickCards":
+                    if (this.isRedPlayer()) {
+                        if (this.redPlayed0() == 0 && this.redPlayed1() == 0) {
+                            return;
+                        }
+                    }
+                    else {
+                        if (this.bluePlayed0() == 0 && this.bluePlayed1() == 0) {
+                            return;
+                        }
+                    }
+                    this.addActionButton('confirmSelectionButton', _('Confirm'), function () { return _this.ajaxAction('confirmedCards', {}); });
+                    break;
             }
         }
     };
+    KiriaiTheDuel.prototype.instantMatch = function () {
+        var _this = this;
+        console.log('instantMatch: ', {
+            isRedPlayer: this.isRedPlayer(),
+            redPrefix: this.redPrefix(),
+            bluePrefix: this.bluePrefix(),
+            redPosition: this.redPosition(),
+            redStance: this.redStance(),
+            bluePosition: this.bluePosition(),
+            blueStance: this.blueStance(),
+            redPlayed0: this.redPlayed0(),
+            redPlayed1: this.redPlayed1(),
+            bluePlayed0: this.bluePlayed0(),
+            bluePlayed1: this.bluePlayed1(),
+            redDiscarded: this.redDiscarded(),
+            blueDiscarded: this.blueDiscarded(),
+            redSpecialCard: this.redSpecialCard(),
+            blueSpecialCard: this.blueSpecialCard(),
+            redSpecialPlayed: this.redSpecialPlayed(),
+            blueSpecialPlayed: this.blueSpecialPlayed()
+        });
+        var updateCard = function (target, card, isRed) {
+            if (card == 0) {
+                target.style.display = 'none';
+                return;
+            }
+            target.style.display = 'block';
+            target.classList.remove('bottomPicked');
+            var offset;
+            if (card <= 5)
+                offset = (isRed ? card : card + 5) - 1;
+            else if (card <= 7) {
+                offset = (isRed ? card - 5 : card) - 1;
+                target.classList.add('bottomPicked');
+            }
+            else if (card == 8)
+                offset = isRed ? _this.redSpecialCard() + 9 : _this.blueSpecialCard() + 9;
+            else
+                offset = 13;
+            target.style.objectPosition = (offset / 0.13) + '% 0px';
+        };
+        updateCard($('redPlayed_0'), this.redPlayed0(), true);
+        updateCard($('redPlayed_1'), this.redPlayed1(), true);
+        updateCard($('bluePlayed_0'), this.bluePlayed0(), false);
+        updateCard($('bluePlayed_1'), this.bluePlayed1(), false);
+        var playedToHand = function (index) {
+            if (index == 0)
+                return -1;
+            if (index <= 5)
+                return index - 1;
+            if (index <= 7)
+                return index - 6;
+            if (index == 8)
+                return 5;
+            return -1;
+        };
+        var redPlayed = [];
+        var bluePlayed = [];
+        redPlayed.push(playedToHand(this.redPlayed0()));
+        redPlayed.push(playedToHand(this.redPlayed1()));
+        bluePlayed.push(playedToHand(this.bluePlayed0()));
+        bluePlayed.push(playedToHand(this.bluePlayed1()));
+        for (var i = 0; i < 6; i++) {
+            if (this.redDiscarded() - 1 == i)
+                $('redHand_' + i).parentElement.classList.add('discarded');
+            else
+                $('redHand_' + i).parentElement.classList.remove('discarded');
+            if (this.blueDiscarded() - 1 == i)
+                $('blueHand_' + i).parentElement.classList.add('discarded');
+            else
+                $('blueHand_' + i).parentElement.classList.remove('discarded');
+            if (redPlayed.includes(i))
+                $('redHand_' + i).parentElement.classList.add('played');
+            else
+                $('redHand_' + i).parentElement.classList.remove('played');
+            if (bluePlayed.includes(i))
+                $('blueHand_' + i).parentElement.classList.add('played');
+            else
+                $('blueHand_' + i).parentElement.classList.remove('played');
+        }
+        $('redHand_5').style.objectPosition = ((this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9) / 0.13) + '% 0px';
+        if (this.redSpecialPlayed)
+            $('redHand_5').parentElement.classList.add('discarded');
+        else
+            $('redHand_5').parentElement.classList.remove('discarded');
+        $('blueHand_5').style.objectPosition = ((this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9) / 0.13) + '% 0px';
+        if (this.blueSpecialPlayed)
+            $('blueHand_5').parentElement.classList.add('discarded');
+        else
+            $('blueHand_5').parentElement.classList.remove('discarded');
+        var redRot = this.redStance() == 0 ? 'rotate(-45deg)' : 'rotate(135deg)';
+        var blueRot = this.blueStance() == 0 ? 'rotate(-45deg)' : 'rotate(135deg)';
+        if (!this.isRedPlayer()) {
+            $('red_samurai').style.transform = 'translate(-95%, -11.5%) ' + redRot;
+            $('blue_samurai').style.transform = 'translate(95%, 11.5%) ' + blueRot;
+        }
+        else {
+            $('red_samurai').style.transform = 'translate(95%, 11.5%) scale(-1, -1) ' + redRot;
+            $('blue_samurai').style.transform = 'translate(-95%, -11.5%) scale(-1, -1) ' + blueRot;
+        }
+        if ($('red_samurai_field_position_' + this.redPosition()))
+            this.placeOnObject('red_samurai_offset', 'red_samurai_field_position_' + this.redPosition());
+        if ($('blue_samurai_field_position_' + this.bluePosition()))
+            this.placeOnObject('blue_samurai_offset', 'blue_samurai_field_position_' + this.bluePosition());
+        var redSprite = !this.redHit() ? 0 : 2;
+        var blueSprite = !this.blueHit() ? 1 : 3;
+        $('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';
+        $('blue_samurai_card').style.objectPosition = (blueSprite / 0.03) + '% 0px';
+        var battlefield = $('battlefield');
+        var battlefieldWidth = battlefield.getBoundingClientRect().width;
+        var samuraiWidth = battlefieldWidth * 0.24;
+        dojo.style($('red_samurai'), 'width', samuraiWidth + 'px');
+        dojo.style($('blue_samurai'), 'width', samuraiWidth + 'px');
+    };
+    KiriaiTheDuel.prototype.addPredictionModifier = function (func) {
+        var _this = this;
+        var key = this.predictionKey++;
+        this.predictionModifiers.push({ key: key, func: func });
+        this.updateCardsWithPredictions();
+        return function () {
+            _this.predictionModifiers = _this.predictionModifiers.filter(function (mod) { return mod.key != key; });
+            _this.updateCardsWithPredictions();
+        };
+    };
+    KiriaiTheDuel.prototype.updateCardsWithPredictions = function () {
+        var cards = this.serverCards;
+        for (var _i = 0, _a = this.predictionModifiers; _i < _a.length; _i++) {
+            var mod = _a[_i];
+            console.log('cards:', cards.toString(2));
+            cards = mod.func(cards);
+        }
+        console.log('cards:', cards.toString(2));
+        this.gamedatas.cards = cards;
+        this.instantMatch();
+    };
     KiriaiTheDuel.prototype.setupNotifications = function () {
         console.log('notifications subscriptions setup');
-        this.subscribeNotif('playCards', this.notif_placeAllCards);
-        this.subscribeNotif('cardsResolved', this.notif_placeAllCards);
-        this.subscribeNotif('drawSpecialCard', this.notif_placeAllCards);
-        this.subscribeNotif('cardsPlayed', this.notif_cardsPlayed);
-        this.subscribeNotif('cardFlipped', this.notif_cardFlipped);
-        this.notifqueue.setSynchronous('playCards', 3000);
-        this.notifqueue.setSynchronous('cardsResolved', 3000);
-        this.notifqueue.setSynchronous('drawSpecialCard', 3000);
-        this.notifqueue.setSynchronous('cardFlipped', 1000);
+        this.subscribeNotif('battlefield setup', this.notif_instantMatch);
+        this.subscribeNotif('played card', this.notif_instantMatch);
+        this.subscribeNotif('undo card', this.notif_instantMatch);
+        this.subscribeNotif('before first resolve', this.notif_instantMatch);
+        this.subscribeNotif('before second resolve', this.notif_instantMatch);
+        this.subscribeNotif('after resolve', this.notif_instantMatch);
+        this.subscribeNotif('player(s) charged', this.notif_instantMatch);
+        this.subscribeNotif('player(s) moved', this.notif_instantMatch);
+        this.subscribeNotif('player(s) changed stance', this.notif_instantMatch);
+        this.subscribeNotif('player(s) attacked', this.notif_instantMatch);
+        this.subscribeNotif('red hit', this.notif_instantMatch);
+        this.subscribeNotif('blue hit', this.notif_instantMatch);
+        this.subscribeNotif('log', function (a) { return console.log('log:', a); });
+        this.notifqueue.setSynchronous('battlefield setup', 1000);
+        this.notifqueue.setSynchronous('played card', 1000);
+        this.notifqueue.setSynchronous('before first resolve', 1000);
+        this.notifqueue.setSynchronous('before second resolve', 1000);
+        this.notifqueue.setSynchronous('after resolve', 1000);
+        this.notifqueue.setSynchronous('player(s) charged', 1000);
+        this.notifqueue.setSynchronous('player(s) moved', 1000);
+        this.notifqueue.setSynchronous('player(s) changed stance', 1000);
+        this.notifqueue.setSynchronous('player(s) attacked', 1000);
+        this.notifqueue.setSynchronous('red hit', 1000);
+        this.notifqueue.setSynchronous('blue hit', 1000);
     };
     return KiriaiTheDuel;
 }(GameguiCookbook));

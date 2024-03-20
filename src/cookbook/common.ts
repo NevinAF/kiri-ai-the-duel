@@ -11,7 +11,7 @@ interface GameguiCookbook
 	attachToNewParentNoDestroy(mobile_in: string | HTMLElement, new_parent_in: string | HTMLElement, relation?: string | number, place_position?: string): dojo.DomGeometryBox;
 
 	/**
-	 * Typed `ajaxcallWrapper` method recommended by the BGA wiki. This method removes obsolete parameters, simplifies action url, and auto adds the lock parameter the the args if needed. This significantly reduces the amount of code needed to make an ajax call and makes the parameters much more readable.
+	 * Typed `ajaxcallWrapper` method recommended by the BGA wiki. This method removes obsolete parameters, simplifies action url, and auto adds the lock parameter to the args if needed. This significantly reduces the amount of code needed to make an ajax call and makes the parameters much more readable.
 	 * @param action The action to be called.
 	 * @param args The arguments to be passed to the server for the action. This does not need to include the `lock` parameter, as it will be added automatically if needed.
 	 * @param callback The callback to be called once a response is received from the server.
@@ -128,6 +128,7 @@ GameguiCookbook.prototype.attachToNewParentNoDestroy = function(this: GameguiCoo
 
 GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(this: GameguiCookbook, action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean
 {
+	console.log("ajaxAction", action, args);
 	if (!this.checkAction(action))
 		return false;
 
@@ -140,7 +141,7 @@ GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(t
 	this.ajaxcall(
 		`/${this.game_name}/${this.game_name}/${action}.html`,
 		args as PlayerActions[T] & { lock: boolean },
-		this, undefined, callback, ajax_method
+		this, () => {}, callback, ajax_method
 	);
 
 	return true;

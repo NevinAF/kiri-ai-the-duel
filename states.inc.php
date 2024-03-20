@@ -31,20 +31,20 @@
    Arguments of game states:
    _ name: the name of the GameState, in order you can recognize it on your own code.
    _ description: the description of the current game state is always displayed in the action status bar on
-                  the top of the game. Most of the time this is useless for game state with "game" type.
+				  the top of the game. Most of the time this is useless for game state with "game" type.
    _ descriptionmyturn: the description of the current game state when it's your turn.
    _ type: defines the type of game states (activeplayer / multipleactiveplayer / game / manager)
    _ action: name of the method to call when this game state become the current game state. Usually, the
-             action method is prefixed by "st" (ex: "stMyGameStateName").
+			 action method is prefixed by "st" (ex: "stMyGameStateName").
    _ possibleactions: array that specify possible player actions on this step. It allows you to use "checkAction"
-                      method on both client side (Javacript: this.checkAction) and server side (PHP: self::checkAction).
+					  method on both client side (Javacript: this.checkAction) and server side (PHP: self::checkAction).
    _ transitions: the transitions are the possible paths to go from a game state to another. You must name
-                  transitions in order to use transition names in "nextState" PHP method, and use IDs to
-                  specify the next game state for each transition.
+				  transitions in order to use transition names in "nextState" PHP method, and use IDs to
+				  specify the next game state for each transition.
    _ args: name of the method to call to retrieve arguments for this gamestate. Arguments are sent to the
-           client side to be used on "onEnteringState" or to set arguments in the gamestate description.
+		   client side to be used on "onEnteringState" or to set arguments in the gamestate description.
    _ updateGameProgression: when specified, the game progression is updated (=> call to your getGameProgression
-                            method).
+							method).
 */
 
 //    !! It is not a good idea to modify this file when a game is running !!
@@ -52,75 +52,77 @@
  
 $machinestates = array(
 
-    // The initial state. Please do not modify.
-    1 => array(
-        "name" => "gameSetup",
-        "description" => "",
-        "type" => "manager",
-        "action" => "stGameSetup",
-        "transitions" => array( "" => 2 )
-    ),
-    
-    // Note: ID=2 => your first state
+	// The initial state. Please do not modify.
+	1 => array(
+		"name" => "gameSetup",
+		"description" => "",
+		"type" => "manager",
+		"action" => "stGameSetup",
+		"transitions" => array( "" => 2 )
+	),
+	
+	// Note: ID=2 => your first state
 
 	2 => array(
-        "name" => "drawSpecialCards",
-        "description" => '',
-        "type" => "game",
-        "action" => "stDrawSpecialCards",
-        "transitions" => array( "" => 3 )
-    ),
+		"name" => "setupBattlefield",
+		"type" => "multipleactiveplayer",
+		"action" => "stSetupBattlefield",
+		"description" => 'The opponent must choose a stance and position',
+		"descriptionmyturn" => '${you} must choose a stance and position',
+		"possibleactions" => array( "confirmedStanceAndPosition" ),
+		"transitions" => array( "" => 3 )
+	),
 
-    3 => array(
-    		"name" => "pickCards",
-    		"type" => "multipleactiveplayer",
+	3 => array(
+			"name" => "pickCards",
+			"type" => "multipleactiveplayer",
 			'action' => 'stPickCardsInit',
-    		"description" => clienttranslate('$Other players must choose two cards to play'),
-    		"descriptionmyturn" => clienttranslate('${you} must choose two cards to play'),
-    		"possibleactions" => array( "pickedCards" ),
-    		"transitions" => array( "" => 4, )
-    ),
+			"description" => clienttranslate('The opponent must choose two cards to play'),
+			"descriptionmyturn" => clienttranslate('${you} must choose two cards to play'),
+			"possibleactions" => array( "pickedFirst", "pickedSecond", "undoFirst", "undoSecond", "confirmedCards" ),
+			"transitions" => array( "" => 4, )
+	),
 
-    4 => array(
-        "name" => "resolveCards",
-        "description" => '',
-        "type" => "game",
-        "action" => "stResolveCards",
-        "updateGameProgression" => true,
-        "transitions" => array( "endGame" => 99, "pickCards" => 3 )
-    ),
+	4 => array(
+		"name" => "resolveCards",
+		"description" => '',
+		"type" => "game",
+		"action" => "stResolveCards",
+		"updateGameProgression" => true,
+		"transitions" => array( "endGame" => 99, "pickCards" => 3 )
+	),
 /*
-    Examples:
-    
-    2 => array(
-        "name" => "nextPlayer",
-        "description" => '',
-        "type" => "game",
-        "action" => "stNextPlayer",
-        "updateGameProgression" => true,   
-        "transitions" => array( "endGame" => 99, "nextPlayer" => 10 )
-    ),
-    
-    10 => array(
-        "name" => "playerTurn",
-        "description" => clienttranslate('${actplayer} must play a card or pass'),
-        "descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-        "type" => "activeplayer",
-        "possibleactions" => array( "playCard", "pass" ),
-        "transitions" => array( "playCard" => 2, "pass" => 2 )
-    ), 
+	Examples:
+	
+	2 => array(
+		"name" => "nextPlayer",
+		"description" => '',
+		"type" => "game",
+		"action" => "stNextPlayer",
+		"updateGameProgression" => true,   
+		"transitions" => array( "endGame" => 99, "nextPlayer" => 10 )
+	),
+	
+	10 => array(
+		"name" => "playerTurn",
+		"description" => clienttranslate('${actplayer} must play a card or pass'),
+		"descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
+		"type" => "activeplayer",
+		"possibleactions" => array( "playCard", "pass" ),
+		"transitions" => array( "playCard" => 2, "pass" => 2 )
+	), 
 
 */    
    
-    // Final state.
-    // Please do not modify (and do not overload action/args methods).
-    99 => array(
-        "name" => "gameEnd",
-        "description" => clienttranslate("End of game"),
-        "type" => "manager",
-        "action" => "stGameEnd",
-        "args" => "argGameEnd"
-    )
+	// Final state.
+	// Please do not modify (and do not overload action/args methods).
+	99 => array(
+		"name" => "gameEnd",
+		"description" => clienttranslate("End of game"),
+		"type" => "manager",
+		"action" => "stGameEnd",
+		"args" => "argGameEnd"
+	)
 
 );
 

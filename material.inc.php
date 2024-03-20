@@ -19,22 +19,53 @@
  *
  */
 
-$this->cardNames = array(
-    1 => clienttranslate('Approach/Retreat'),
-    6 => clienttranslate('Approach/Retreat'),
-	2 => clienttranslate('Charge/Change Stance'),
-	7 => clienttranslate('Charge/Change Stance'),
-	3 => clienttranslate('High Strike'),
-	8 => clienttranslate('High Strike'),
-	4 => clienttranslate('Low Strike'),
-	9 => clienttranslate('Low Strike'),
-	5 => clienttranslate('Balanced Strike'),
-	10 => clienttranslate('Balanced Strike'),
-	11 => clienttranslate('Kesa Strike'),
-	12 => clienttranslate('Zan-Tetsu Strike'),
-	13 => clienttranslate('Counterattack'),
+$this->stanceNames = array(
+	Stance::HEAVEN => clienttranslate('Heaven Stance'),
+	Stance::EARTH => clienttranslate('Earth Stance'),
+);
+$this->playedCardNames = array(
+	PlayedCard::APPROACH => clienttranslate('Approach'),
+	PlayedCard::CHARGE => clienttranslate('Charge'),
+	PlayedCard::HIGH_STRIKE => clienttranslate('High Strike'),
+	PlayedCard::LOW_STRIKE => clienttranslate('Low Strike'),
+	PlayedCard::BALANCED_STRIKE => clienttranslate('Balanced Strike'),
+	PlayedCard::RETREAT => clienttranslate('Retreat'),
+	PlayedCard::CHANGE_STANCE => clienttranslate('Change Stance'),
+);
+$this->specialCardNames = array(
+	SpecialCard::KESA_STRIKE => clienttranslate('Kesa Strike'),
+	SpecialCard::ZAN_TETSU_STRIKE => clienttranslate('Zan-Tetsu Strike'),
+	SpecialCard::COUNTERATTACK => clienttranslate('Counterattack'),
+);
+$this->discardedNames = array(
+	Discarded::APPROACH_RETREAT => clienttranslate('Approach/Retreat'),
+	Discarded::CHARGE_CHANGE_STANCE => clienttranslate('Charge/Change Stance'),
+	Discarded::HIGH_STRIKE => clienttranslate('High Strike'),
+	Discarded::LOW_STRIKE => clienttranslate('Low Strike'),
+	Discarded::BALANCED_STRIKE => clienttranslate('Balanced Strike'),
+);
 
-	97 => clienttranslate('<card back>'),
-	98 => clienttranslate('<card back>'),
-	99 => clienttranslate('<card back>')
+$this->userErrors = array (
+	'playing discarded card' => clienttranslate("You cannot play the %s card because it is currently discarded."),
+	'double play card' => clienttranslate("You cannot play the same card twice in a turn. Trying to play %s twice."),
+	'already played first' => clienttranslate("You have already played your first card for this turn."),
+	'already played second' => clienttranslate("You have already played your second card for this turn."),
+	'not all cards played' => clienttranslate("Trying to resolve cards by not all cards were played!"),
+	'player color not found' => clienttranslate("Player with color '%s' not found in database."),
+);
+
+$this->notifMessages = array (
+	'starting special card' => clienttranslate('You started the game with the ${card_name} special card'),
+	'played card' => '',
+	'undo card' => '',
+	'battlefield setup' => '',
+	'before first resolve' => '',
+	'before second resolve' => '',
+	'after resolve' => '',
+	'player(s) charged' => '',
+	'player(s) moved' => '',
+	'player(s) changed stance' => '',
+	'player(s) attacked' => '',
+	'red hit' => '',
+	'blue hit' => '',
 );

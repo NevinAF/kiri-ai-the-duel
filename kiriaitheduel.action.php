@@ -37,22 +37,62 @@
             $this->view = "kiriaitheduel_kiriaitheduel";
             self::trace( "Complete reinitialization of board game" );
       }
-  	} 
-  	
-  	// TODO: defines your action entry points there
+  	}
 
-
-	public function pickedCards()
+	public function confirmedStanceAndPosition()
 	{
 		self::setAjaxMode();
 
-		// Retrieve arguments
-		// Note: these arguments correspond to what has been sent through the javascript "ajaxcall" method
-		$arg1 = self::getArg( "firstCard", AT_int, true );
-		$arg2 = self::getArg( "secondCard", AT_int, true );
+		$arg1 = self::getArg( "isHeavenStance", AT_bool, true );
+		$arg2 = self::getArg( "position", AT_posint, true );
+		$this->game->confirmedStanceAndPosition( $arg1, $arg2 );
 
-		// Then, call the appropriate method in your game logic, like "playCard" or "myAction"
-		$this->game->pickedCards( $arg1, $arg2 );
+		self::ajaxResponse( );
+	}
+
+	public function pickedFirst()
+	{
+		self::setAjaxMode();
+
+		$arg1 = self::getArg( "card", AT_posint, true );
+		$this->game->pickedFirst( $arg1 );
+
+		self::ajaxResponse( );
+	}
+
+	public function pickedSecond()
+	{
+		self::setAjaxMode();
+
+		$arg1 = self::getArg( "card", AT_posint, true );
+		$this->game->pickedSecond( $arg1 );
+
+		self::ajaxResponse( );
+	}
+
+	public function undoFirst()
+	{
+		self::setAjaxMode();
+
+		$this->game->undoFirst( );
+
+		self::ajaxResponse( );
+	}
+
+	public function undoSecond()
+	{
+		self::setAjaxMode();
+
+		$this->game->undoSecond( );
+
+		self::ajaxResponse( );
+	}
+
+	public function confirmedCards()
+	{
+		self::setAjaxMode();
+
+		$this->game->confirmedCards( );
 
 		self::ajaxResponse( );
 	}

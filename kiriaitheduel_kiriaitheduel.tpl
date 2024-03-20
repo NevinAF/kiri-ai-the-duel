@@ -25,119 +25,57 @@
     Please REMOVE this comment before publishing your game on BGA
 -->
 
-
-This is your game interface. You can edit this HTML in your ".tpl" file.
-
-<div id="redHandArea">
-    <h3>Red Hand</h3>
-    <div class="cardrow" id="redHand">
-		<div class="cardslot movable" id="redHand_0"></div>
-		<div class="cardslot movable" id="redHand_1"></div>
-		<div class="cardslot movable" id="redHand_2"></div>
-		<div class="cardslot movable" id="redHand_3"></div>
-		<div class="cardslot movable" id="redHand_4"></div>
-		<div class="cardslot movable" id="redHand_5"></div>
-    </div>
-</div>
-
-<div id="playArea">
-    <h3>PlayArea</h3>
-
-	<div id="redDamageContainer">
-		<h3>Red Damage</h3>
-		<div id="red_samurai_damage"></div>
+<div style="display: flex; align-items: center; width: 100%; justify-content: center; margin: 5px;">
+	<div id="myHandArea" style="flex-grow: 3; max-width: 310px; display: grid; grid-template-columns: 185fr 185fr; grid-template-rows: 270fr 270fr 270fr; gap: 0.5em; margin-bottom: 10px;">
+		<div class="cardslot" id="myHand_0"></div>
+		<div class="cardslot" id="myHand_1"></div>
+		<div class="cardslot" id="myHand_2"></div>
+		<div class="cardslot" id="myHand_3"></div>
+		<div class="cardslot" id="myHand_4"></div>
+		<div class="cardslot" id="myHand_5"></div>
 	</div>
 
-	<div id="blueDamageContainer">
-		<h3>Blue Damage</h3>
-		<div id="blue_samurai_damage"></div>
+	<div id="battlefield" style="flex-grow: 6; max-width: 500px;  display: flex; flex-direction: column; justify-content: space-evenly; aspect-ratio: 1/1">
 	</div>
 
-	<div id="standard_battlefield">
-		<div class="field_position">
-			<div  id="red_samurai_field_position_5" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_5" class="blue_field_position"> </div>
-		</div>
-		<div class="field_position">
-			<div  id="red_samurai_field_position_4" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_4" class="blue_field_position"> </div>
-		</div>
-		<div class="field_position">
-			<div  id="red_samurai_field_position_3" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_3" class="blue_field_position"> </div>
-		</div>
-		<div class="field_position">
-			<div  id="red_samurai_field_position_2" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_2" class="blue_field_position"> </div>
-		</div>
-		<div class="field_position">
-			<div  id="red_samurai_field_position_1" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_1" class="blue_field_position"> </div>
-		</div>
-		<div class="field_position">
-			<div  id="red_samurai_field_position_0" class="red_field_position"> </div>
-			<div id="blue_samurai_field_position_0" class="blue_field_position"> </div>
-		</div>
-
-		<div id="red_samurai"  class="samurai_card"></div>
-		<div id="blue_samurai" class="samurai_card"></div>
-	</div>
-		
-
-	<div id="misc" class="cardrow">
-		<div id="deck" class="cardslot">
-			<div class="cardontable" id="cardontable_1" ></div>
-			<div class="cardontable" id="cardontable_2" ></div>
-			<div class="cardontable" id="cardontable_3" ></div>
-			<div class="cardontable" id="cardontable_4" ></div>
-			<div class="cardontable" id="cardontable_5" ></div>
-			<div class="cardontable" id="cardontable_6" ></div>
-			<div class="cardontable" id="cardontable_7" ></div>
-			<div class="cardontable" id="cardontable_8" ></div>
-			<div class="cardontable" id="cardontable_9" ></div>
-			<div class="cardontable" id="cardontable_10"></div>
-			<div class="cardontable" id="cardontable_11"></div>
-			<div class="cardontable" id="cardontable_12"></div>
-			<div class="cardontable" id="cardontable_13"></div>
-
-			<div class="cardontable" id="cardontable_97"></div>
-			<div class="cardontable" id="cardontable_98"></div>
-			<div class="cardontable" id="cardontable_99"></div>
-		</div>
-
-		<div class="cardslot" id="redPlayed_0"></div>
-		<div class="cardslot" id="redPlayed_1"></div>
-		<div class="cardslot" id="bluePlayed_0"></div>
-		<div class="cardslot" id="bluePlayed_1"></div>
-		<div class="cardslot" id="redDiscard_0"></div>
-		<div class="cardslot" id="redDiscard_1"></div>
-		<div class="cardslot" id="blueDiscard_0"></div>
-		<div class="cardslot" id="blueDiscard_1"></div>
+	<div id="playArea" style="flex-grow: 3; max-width: 310px; display: grid; grid-template-columns: 185fr 185fr; grid-template-rows: 270fr 270fr; gap: 0.5em;">
+		<div class="cardslot" id="myPlayed_0"></div>
+		<div class="cardslot" id="myPlayed_1"></div>
+		<div class="cardslot" id="opponentPlayed_0"></div>
+		<div class="cardslot" id="opponentPlayed_1"></div>
 	</div>
 </div>
 
-<div id="blueHandArea">
-    <h3>Blue Hand</h3>
-    <div id="blueHand" class="cardrow">
-		<div class="cardslot" id="blueHand_0"></div>
-		<div class="cardslot" id="blueHand_1"></div>
-		<div class="cardslot" id="blueHand_2"></div>
-		<div class="cardslot" id="blueHand_3"></div>
-		<div class="cardslot" id="blueHand_4"></div>
-		<div class="cardslot" id="blueHand_5"></div>
-    </div>
+<div id="opponentHandArea" style="display: flex; align-content: stretch; justify-content: center;">
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_0"></div>
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_1"></div>
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_2"></div>
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_3"></div>
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_4"></div>
+	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_5"></div>
 </div>
 
-<button id='confirmSelectionButton'>Confirm Selection</button>
-
-
+<div id="red_samurai_offset" style="position: absolute;">
+	<div id="red_samurai"  class="cardslot"></div>
+</div>
+<div id="blue_samurai_offset" style="position: absolute;">
+	<div id="blue_samurai" class="cardslot"></div>
+</div>
 
 <script type="text/javascript">
 
 // Javascript HTML templates
 
-var jstpl_playedCard = '<div class="cardontable" id="cardontable_${card_id}" style="background-position:-${x}px 0px">\
-                        </div>';
+var jstpl_card =
+'<div class="cardontable" style="width: 100%; height:100%;">\
+	<img src="${src}" id="${id}" style="object-position: ${x}% 0px; width: 100%; height:100%;">\
+</div>';
+
+var jstpl_field_position =
+'<div class="field_position">\
+	<div  id="red_samurai_field_position_${id}" class="red_field_position"> </div>\
+	<div id="blue_samurai_field_position_${id}" class="blue_field_position"> </div>\
+</div>';
 
 </script>  
 

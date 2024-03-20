@@ -68,68 +68,40 @@
 */
 
 .cardontable {
-    position: absolute;
-    width: 185px;
-    height: 270px;
-    background-image: url('img/placeholderCards.jpg');
+	position: absolute;
+	width: 100%;
+	height: auto;
+	overflow: hidden;
 	z-index: 1;
 }
 
-#cardontable_1 {
-	background-position-x: -0px;
+.cardontable img {
+	object-fit: cover;
+	width: auto;
+	height: 100%;
+	position: relative;
 }
 
-#cardontable_2 {
-	background-position-x: -185px;
+.played::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 255, 0, 0.1);
 }
 
-#cardontable_3 {
-	background-position-x: -370px;
+.discarded::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.1);
 }
 
-#cardontable_4 {
-	background-position-x: -555px;
-}
-
-#cardontable_5 {
-	background-position-x: -740px;
-}
-
-#cardontable_6 {
-	background-position-x: -925px;
-}
-
-#cardontable_7 {
-	background-position-x: -1110px;
-}
-
-#cardontable_8 {
-	background-position-x: -1295px;
-}
-
-#cardontable_9 {
-	background-position-x: -1480px;
-}
-
-#cardontable_10 {
-	background-position-x: -1665px;
-}
-
-#cardontable_11 {
-	background-position-x: -1850px;
-}
-
-#cardontable_12 {
-	background-position-x: -2035px;
-}
-
-#cardontable_13 {
-	background-position-x: -2220px;
-}
-
-#cardontable_97, #cardontable_98, #cardontable_99 {
-	background-position-x: -2405px;
-}
 
 #standard_battlefield {
 	padding: 100px 50px;
@@ -137,22 +109,18 @@
 
 .field_position {
 	position: relative;
-	width: 590px;
-	height: 75px;
 }
 
 .red_field_position {
 	position: absolute;
-	left: 0;
-	top: 7px;
-	width: 270px;
+	left: 50%;
+	top: 50%;
 }
 
 .blue_field_position {
 	position: absolute;
-	top: 68px;
-	right: 0;
-	width: 270px;
+	left: 50%;
+	top: 50%;
 }
 
 .field_position::after {
@@ -163,61 +131,35 @@
 	width: 25px;
 	height: 25px;
 	background-color: black;
-	transform: translate(-50%, -50%);
-}
-
-.samurai_card {
-	position: absolute;
-	background-image: url('img/placeholder_SamuraiCards.jpg'); 
-	width: 185px;
-	height: 270px;
-	z-index: 1;
-}
-
-#red_samurai {
-	background-position-x: -0px;
-}
-
-#blue_samurai {
-	background-position-x: -185px;
-}
-
-.heaven_stance {
-	/* Rotate the image 45 deg counter clockwise */
-	transform: rotate(-45deg);
-}
-
-.earth_stance {
-	/* Rotate the image 135 deg clockwise */
-	transform: rotate(135deg);
+	transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .topPicked {
 	position: relative;
 }
 
-.topPicked::after {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 33%; /* Adjust this to control the height of the tint */
-	background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), transparent); /* Adjust colors and opacity as needed */
-}
-
 .bottomPicked {
 	position: relative;
+	transform: rotate(180deg);
 }
 
-.bottomPicked::after {
-	content: "";
+
+.samurai_card {
 	position: absolute;
-	bottom: 0;
+	width: 185px;
+	aspect-ratio: 185/270;
+	z-index: 1;
+}
+
+.attack_icon {
+	position: absolute;
+	display: none;
+	top: 0;
 	left: 0;
-	width: 100%;
-	height: 33%; /* Adjust this to control the height of the tint */
-	background: linear-gradient(to top, rgba(255, 255, 255, 0.7), transparent); /* Adjust colors and opacity as needed */
+	width: 30px;
+	height: 30px;
+	background-image: url('img/attack_icon.png');
+	background-size: 30px 30px;
 }
 
 .cardrow {
@@ -230,7 +172,7 @@
 
 .cardslot {
 	position: relative;
-	width: 190px;
-	height: 275px;
+	width: 100%;
+	aspect-ratio: 185/270;
 	background-color: white;
 }
