@@ -139,7 +139,8 @@ GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(t
 
 	this.ajaxcall(
 		`/${this.game_name}/${this.game_name}/${action}.html`,
-		args as any,
+		// @ts-ignore - Prevents error when no PlayerActions are defined and stating that 'lock' might not be defined.
+		args,
 		this, () => {}, callback, ajax_method
 	);
 

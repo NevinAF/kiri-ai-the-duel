@@ -383,7 +383,7 @@ interface Gamegui {
 	/**
 	 * Sends a client side notification to the server in the form of a player action. This should be used only in reaction to a user action in the interface to prevent race conditions or breaking replay game and tutorial features.
 	 * @param actionURL The relative URL of the action to perform. Usually, it must be: "/<mygame>/<mygame>/myAction.html"
-	 * @param args An array of parameter to send to the game server. Note that `lock` must always be specified and be truthy when calling player actions. Player actions must always be accompanied by a uuid lock parameter else the server will respond with a lock error.
+	 * @param args An array of parameter to send to the game server. Note that `lock` must always be specified and be truthy when calling player actions. Player actions must always be accompanied by a uuid lock parameter else the server will respond with a lock error. NOTE: If you are seeing an error here, it is likely that you are using a reserved args property (e.g. action/module/class). Make sure no player action arguments have these properties.
 	 * @param source (non-optional) The object that triggered the action. This is usually `this`.
 	 * @param onSuccess (non-optional but rarely used) A function to trigger when the server returns result and everything went fine (not used, as all data handling is done via notifications).
 	 * @param callback (optional) A function to trigger when the server returns ok OR error. If no error this function is called with parameter value false. If an error occurred, the first parameter will be set to true, the second will contain the error message sent by the PHP back-end, and the third will contain an error code.
