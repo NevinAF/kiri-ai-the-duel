@@ -66,6 +66,5 @@ $this->notifMessages = array (
 	'player(s) moved' => '',
 	'player(s) changed stance' => '',
 	'player(s) attacked' => '',
-	'red hit' => '',
-	'blue hit' => '',
+	'player(s) hit' => '',
 );

@@ -29,12 +29,11 @@ GameguiCookbook.prototype.attachToNewParentNoDestroy = function (mobile_in, new_
     return box;
 };
 GameguiCookbook.prototype.ajaxAction = function (action, args, callback, ajax_method) {
-    console.log("ajaxAction", action, args);
     if (!this.checkAction(action))
         return false;
     if (!args)
         args = {};
-    if (args.lock === undefined)
+    if (!args.lock)
         args.lock = true;
     this.ajaxcall("/".concat(this.game_name, "/").concat(this.game_name, "/").concat(action, ".html"), args, this, function () { }, callback, ajax_method);
     return true;
@@ -117,73 +116,6 @@ GameguiCookbook.prototype.infoDialog = function (message, title, callback) {
     });
     return myDlg;
 };
-var PlayerActionQueue = (function () {
-    function PlayerActionQueue(gamegui) {
-        this.timout = 6000;
-        this.gamegui = gamegui;
-        this.postingTimeout = null;
-        this.queue = [];
-        this.currentItem = null;
-    }
-    PlayerActionQueue.prototype.actionInProgress = function () {
-        return this.currentItem;
-    };
-    PlayerActionQueue.prototype.enqueue = function (action, args, callback) {
-        this.queue.push({ action: action, args: args, timestamp: Date.now(), callback: callback });
-        this.postActions();
-    };
-    PlayerActionQueue.prototype.contains = function (action) {
-        return this.queue.some(function (a) { return a.action === action; });
-    };
-    PlayerActionQueue.prototype.filterOut = function (action) {
-        var lastLength = this.queue.length;
-        this.queue = this.queue.filter(function (a) {
-            var _a;
-            if (a.action !== action)
-                return true;
-            (_a = a.callback) === null || _a === void 0 ? void 0 : _a.call(a, true, 'Action was removed from queue', PlayerActionQueue.removedErrorCode);
-            return false;
-        });
-        return lastLength !== this.queue.length;
-    };
-    PlayerActionQueue.prototype.postActions = function () {
-        var _this = this;
-        if (this.postingTimeout !== null) {
-            clearTimeout(this.postingTimeout);
-            this.postingTimeout = null;
-        }
-        console.log('Posting actions:', this.queue);
-        if (this.queue.length == 0)
-            return;
-        var action = this.queue[0];
-        console.log('Posting action:', action.action, action.args, this.gamegui.checkLock(true), this.gamegui.checkAction(action.action, true));
-        if (this.gamegui.checkAction(action.action, true)) {
-            this.queue.shift();
-            this.currentItem = action;
-            action.args.lock = true;
-            this.gamegui.ajaxcall("/".concat(this.gamegui.game_name, "/").concat(this.gamegui.game_name, "/").concat(action.action, ".html"), action.args, this.gamegui, function () { }, function (error, errorMessage, errorCode) {
-                var _a;
-                _this.currentItem = null;
-                (_a = action.callback) === null || _a === void 0 ? void 0 : _a.call(action, error, errorMessage, errorCode);
-                _this.postActions();
-            });
-            return;
-        }
-        if (action.timestamp + this.timout < Date.now()) {
-            if (action.callback)
-                action.callback(true, 'Action took too long to post', PlayerActionQueue.timeoutErrorCode);
-            else
-                console.warn('PlayerActionQueue: action took too long to post, discarding action:', action.action, action.args);
-            this.queue.shift();
-            this.postActions();
-            return;
-        }
-        this.postingTimeout = setTimeout(this.postActions.bind(this), 100);
-    };
-    PlayerActionQueue.timeoutErrorCode = -513;
-    PlayerActionQueue.removedErrorCode = -513;
-    return PlayerActionQueue;
-}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -204,7 +136,6 @@ var KiriaiTheDuel = (function (_super) {
     function KiriaiTheDuel() {
         var _this = _super.call(this) || this;
         _this.isInitialized = false;
-        _this.playerActionQueue = new PlayerActionQueue(_this);
         _this.resizeTimeout = null;
         _this.onScreenWidthChange = function () {
             if (_this.isInitialized) {
@@ -222,7 +153,7 @@ var KiriaiTheDuel = (function (_super) {
         _this.onHandCardClick = function (evt, index) {
             var _a;
             evt.preventDefault();
-            if (((_a = _this.playerActionQueue.actionInProgress()) === null || _a === void 0 ? void 0 : _a.action) === 'confirmedCards') {
+            if ((_a = _this.actionQueue) === null || _a === void 0 ? void 0 : _a.some(function (a) { return a.action === 'confirmedCards' && a.state === 'inProgress'; })) {
                 console.log('Already confirmed cards! There is no backing out now!');
                 return;
             }
@@ -238,12 +169,12 @@ var KiriaiTheDuel = (function (_super) {
             var second = _this.isRedPlayer() ? _this.redPlayed1() : _this.bluePlayed1();
             var fixedIndex = index == 6 ? 8 : index;
             if ((index == 1 && first == 6) ||
-                (index == 1 && second == 6) ||
+                (index == 2 && first == 7) ||
                 fixedIndex == first) {
                 _this.returnCardToHand(null, true);
                 return;
             }
-            if ((index == 2 && first == 7) ||
+            if ((index == 1 && second == 6) ||
                 (index == 2 && second == 7) ||
                 fixedIndex == second) {
                 _this.returnCardToHand(null, false);
@@ -287,23 +218,27 @@ var KiriaiTheDuel = (function (_super) {
                 cards &= ~(15 << indexOffset);
                 return cards | (index & 15) << indexOffset;
             });
-            _this.playerActionQueue.filterOut('confirmedCards');
-            _this.playerActionQueue.enqueue(action, { card: index }, callback);
+            _this.filterActionQueue('confirmedCards');
+            _this.enqueueAjaxAction({
+                action: action,
+                args: { card: index },
+                callback: callback
+            });
         };
         _this.returnCardToHand = function (evt, first) {
             var _a;
             evt === null || evt === void 0 ? void 0 : evt.preventDefault();
-            if (((_a = _this.playerActionQueue.actionInProgress()) === null || _a === void 0 ? void 0 : _a.action) === 'confirmedCards') {
+            if ((_a = _this.actionQueue) === null || _a === void 0 ? void 0 : _a.some(function (a) { return a.action === 'confirmedCards' && a.state === 'inProgress'; })) {
                 console.log('Already confirmed cards! There is no backing out now!');
                 return;
             }
             if (first) {
-                if (_this.playerActionQueue.filterOut('pickedFirst')) {
+                if (_this.filterActionQueue('pickedFirst')) {
                     return;
                 }
             }
             else {
-                if (_this.playerActionQueue.filterOut('pickedSecond')) {
+                if (_this.filterActionQueue('pickedSecond')) {
                     return;
                 }
             }
@@ -317,8 +252,12 @@ var KiriaiTheDuel = (function (_super) {
             var callback = _this.addPredictionModifier(function (cards) {
                 return cards & ~(15 << indexOffset);
             });
-            _this.playerActionQueue.filterOut('confirmedCards');
-            _this.playerActionQueue.enqueue(first ? "undoFirst" : "undoSecond", {}, callback);
+            _this.filterActionQueue('confirmedCards');
+            _this.enqueueAjaxAction({
+                action: first ? "undoFirst" : "undoSecond",
+                args: {},
+                callback: callback
+            });
         };
         _this.notif_instantMatch = function (notif) {
             console.log('notif_placeAllCards', notif);
@@ -352,6 +291,7 @@ var KiriaiTheDuel = (function (_super) {
     KiriaiTheDuel.prototype.setup = function (gamedatas) {
         var _this = this;
         console.log("Starting game setup", this.gamedatas);
+        this.actionTitleLockingStrategy = 'actionbar';
         console.log(this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id].color, this.gamedatas.players[this.player_id].color == 'e54025');
         this.serverCards = gamedatas.cards;
         this.predictionModifiers = [];
@@ -437,17 +377,24 @@ var KiriaiTheDuel = (function (_super) {
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "pickCards":
-                    if (this.isRedPlayer()) {
-                        if (this.redPlayed0() == 0 && this.redPlayed1() == 0) {
-                            return;
+                    this.addActionButton('confirmSelectionButton', _('Confirm'), function (e) {
+                        console.log('Confirming selection', e);
+                        if (_this.isRedPlayer()) {
+                            if (_this.redPlayed0() == 0 && _this.redPlayed1() == 0) {
+                                return;
+                            }
                         }
-                    }
-                    else {
-                        if (this.bluePlayed0() == 0 && this.bluePlayed1() == 0) {
-                            return;
+                        else {
+                            if (_this.bluePlayed0() == 0 && _this.bluePlayed1() == 0) {
+                                return;
+                            }
                         }
-                    }
-                    this.addActionButton('confirmSelectionButton', _('Confirm'), function () { return _this.ajaxAction('confirmedCards', {}); });
+                        _this.lockTitleWithStatus(_('Sending moves to server...'));
+                        _this.enqueueAjaxAction({
+                            action: 'confirmedCards',
+                            args: {}
+                        });
+                    });
                     break;
             }
         }
@@ -515,14 +462,16 @@ var KiriaiTheDuel = (function (_super) {
         bluePlayed.push(playedToHand(this.bluePlayed0()));
         bluePlayed.push(playedToHand(this.bluePlayed1()));
         for (var i = 0; i < 6; i++) {
-            if (this.redDiscarded() - 1 == i)
-                $('redHand_' + i).parentElement.classList.add('discarded');
-            else
-                $('redHand_' + i).parentElement.classList.remove('discarded');
-            if (this.blueDiscarded() - 1 == i)
-                $('blueHand_' + i).parentElement.classList.add('discarded');
-            else
-                $('blueHand_' + i).parentElement.classList.remove('discarded');
+            if (i < 5) {
+                if (this.redDiscarded() - 1 == i)
+                    $('redHand_' + i).parentElement.classList.add('discarded');
+                else
+                    $('redHand_' + i).parentElement.classList.remove('discarded');
+                if (this.blueDiscarded() - 1 == i)
+                    $('blueHand_' + i).parentElement.classList.add('discarded');
+                else
+                    $('blueHand_' + i).parentElement.classList.remove('discarded');
+            }
             if (redPlayed.includes(i))
                 $('redHand_' + i).parentElement.classList.add('played');
             else
@@ -533,12 +482,12 @@ var KiriaiTheDuel = (function (_super) {
                 $('blueHand_' + i).parentElement.classList.remove('played');
         }
         $('redHand_5').style.objectPosition = ((this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9) / 0.13) + '% 0px';
-        if (this.redSpecialPlayed)
+        if (this.redSpecialPlayed())
             $('redHand_5').parentElement.classList.add('discarded');
         else
             $('redHand_5').parentElement.classList.remove('discarded');
         $('blueHand_5').style.objectPosition = ((this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9) / 0.13) + '% 0px';
-        if (this.blueSpecialPlayed)
+        if (this.blueSpecialPlayed())
             $('blueHand_5').parentElement.classList.add('discarded');
         else
             $('blueHand_5').parentElement.classList.remove('discarded');
@@ -599,11 +548,9 @@ var KiriaiTheDuel = (function (_super) {
         this.subscribeNotif('player(s) moved', this.notif_instantMatch);
         this.subscribeNotif('player(s) changed stance', this.notif_instantMatch);
         this.subscribeNotif('player(s) attacked', this.notif_instantMatch);
-        this.subscribeNotif('red hit', this.notif_instantMatch);
-        this.subscribeNotif('blue hit', this.notif_instantMatch);
+        this.subscribeNotif('player(s) hit', this.notif_instantMatch);
         this.subscribeNotif('log', function (a) { return console.log('log:', a); });
         this.notifqueue.setSynchronous('battlefield setup', 1000);
-        this.notifqueue.setSynchronous('played card', 1000);
         this.notifqueue.setSynchronous('before first resolve', 1000);
         this.notifqueue.setSynchronous('before second resolve', 1000);
         this.notifqueue.setSynchronous('after resolve', 1000);
@@ -611,8 +558,7 @@ var KiriaiTheDuel = (function (_super) {
         this.notifqueue.setSynchronous('player(s) moved', 1000);
         this.notifqueue.setSynchronous('player(s) changed stance', 1000);
         this.notifqueue.setSynchronous('player(s) attacked', 1000);
-        this.notifqueue.setSynchronous('red hit', 1000);
-        this.notifqueue.setSynchronous('blue hit', 1000);
+        this.notifqueue.setSynchronous('player(s) hit', 1000);
     };
     return KiriaiTheDuel;
 }(GameguiCookbook));

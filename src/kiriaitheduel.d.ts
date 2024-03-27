@@ -36,8 +36,7 @@ interface NotifTypes {
 	'player(s) moved': GameStateData;
 	'player(s) changed stance': GameStateData;
 	'player(s) attacked': GameStateData;
-	'red hit': GameStateData;
-	'blue hit': GameStateData;
+	'player(s) hit': GameStateData;
 
 	'log': any;
 }

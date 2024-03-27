@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
@@ -13,6 +14,8 @@
  * KiriaiTheDuel game states description
  *
  */
+
+use function PHPSTORM_META\type;
 
 /*
    Game state machine is a tool used to facilitate game developpement by doing common stuff that can be set up
@@ -49,7 +52,10 @@
 
 //    !! It is not a good idea to modify this file when a game is running !!
 
- 
+// Declare the type of machinestates
+
+
+
 $machinestates = array(
 
 	// The initial state. Please do not modify.
@@ -127,4 +133,39 @@ $machinestates = array(
 );
 
 
+
+// /**
+//  * @param array<int, array{
+//  *   name: string,
+//  *   description: string,
+//  *   type: string,
+//  *   action: string,
+//  *   args?: string,
+//  *   updateGameProgression?: bool,
+//  *   possibleactions?: string[],
+//  *   transitions: array<string, int|string>,
+//  *   descriptionmyturn?: string
+//  * }> $arg
+//  */
+// function validate($arg) {}
+
+// validate($machinestates)
+
+class MachineState {
+	public string $name;
+	public string $description;
+	public string $type;
+	public string $action;
+	public string $args;
+	public bool $updateGameProgression;
+	public array $possibleactions;
+	public array $transitions;
+	public string $descriptionmyturn;
+}
+
+/** @var array<int, string> $testing */
+$testing = array();
+
+$out = $testing["This is not a valid index"];
+$testing["This is not a valid index"] = 2345;
 

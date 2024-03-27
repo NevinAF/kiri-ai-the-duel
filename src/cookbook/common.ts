@@ -21,7 +21,7 @@ interface GameguiCookbook
 	 * // Arguments must match the arguments of the PlayerAction 'myAction'.
 	 * this.ajaxAction( 'myAction', { myArgument1: arg1, myArgument2: arg2 }, (is_error) => {} );
 	 */
-	ajaxAction<T extends keyof PlayerActions>(action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean;
+	ajaxAction<T extends keyof PlayerActions>(action: T, args: PlayerActions[T] & { lock?: boolean | 'table' | 'player', action?: undefined, module?: undefined, class?: undefined }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get' | 'iframe'): boolean;
 
 	/**
 	 * Slightly simplified version of the dojo.subscribe method that is typed for notifications.
@@ -126,9 +126,8 @@ GameguiCookbook.prototype.attachToNewParentNoDestroy = function(this: GameguiCoo
 	return box;
 }
 
-GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(this: GameguiCookbook, action: T, args: PlayerActions[T] & { lock?: boolean }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean
+GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(this: GameguiCookbook, action: T, args: PlayerActions[T] & { lock?: true | 'table' | 'player', action?: undefined, module?: undefined, class?: undefined }, callback?: (error: boolean, errorMessage?: string, errorCode?: number) => any, ajax_method?: 'post' | 'get'): boolean
 {
-	console.log("ajaxAction", action, args);
 	if (!this.checkAction(action))
 		return false;
 
@@ -136,11 +135,11 @@ GameguiCookbook.prototype.ajaxAction = function<T extends keyof PlayerActions>(t
 		args = {} as any;
 
 	// @ts-ignore - Prevents error when no PlayerActions are defined.
-	if (args.lock === undefined) args.lock = true;
+	if (!args.lock) args.lock = true;
 
 	this.ajaxcall(
 		`/${this.game_name}/${this.game_name}/${action}.html`,
-		args as PlayerActions[T] & { lock: boolean },
+		args as any,
 		this, () => {}, callback, ajax_method
 	);
 

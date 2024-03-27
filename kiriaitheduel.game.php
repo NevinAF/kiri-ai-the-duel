@@ -535,6 +535,19 @@ class KiriaiTheDuel extends Table
 	function confirmedCards()
 	{
 		self::checkAction( 'confirmedCards' );
+
+		$cards =  self::getGameStateValue( self::CARDS );
+		if(self::currentMultiPlayerIsRed())
+		{
+			if (self::get_redPlayed0($cards) == PlayedCard::NOT_PLAYED || self::get_redPlayed1($cards) == PlayedCard::NOT_PLAYED)
+				throw new BgaUserException($this->userErrors['not all cards played']);
+		}
+		else
+		{
+			if (self::get_bluePlayed0($cards) == PlayedCard::NOT_PLAYED || self::get_bluePlayed1($cards) == PlayedCard::NOT_PLAYED)
+				throw new BgaUserException($this->userErrors['not all cards played']);
+		}
+
 		$player_id = self::getCurrentPlayerId();
 		$this->gamestate->setPlayerNonMultiactive( $player_id, '');
 	}
@@ -936,30 +949,31 @@ class KiriaiTheDuel extends Table
 			}
 		}
 
-		if ($redScored) {
+		if ($redScored && !$blueScored) {
 			$redScore = self::dbIncrementScore($players, self::RED_COLOR);
-			self::notifyAllGameState($players, 'red hit', array(), $battlefield, $cards);
-
+			self::set_blueHit($battlefield, true);
+			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
 			if ($redScore >= 2)
 			{
 				$this->gamestate->nextState( "endGame" );
 				return true;
 			}
-
-			self::set_redHit($battlefield, true);
 		}
 
-		if ($blueScored) {
+		else if ($blueScored && !$redScored) {
 			$blueScore = self::dbIncrementScore($players, self::BLUE_COLOR);
-			self::notifyAllGameState($players, 'blue hit', array(), $battlefield, $cards);
+			self::set_redHit($battlefield, true);
+			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
 
 			if ($blueScore >= 2)
 			{
 				$this->gamestate->nextState( "endGame" );
 				return true;
 			}
+		}
 
-			self::set_blueHit($battlefield, true);
+		else if ($redScored && $blueScored) {
+			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
 		}
 
 		if ($red_card == PlayedCard::SPECIAL)

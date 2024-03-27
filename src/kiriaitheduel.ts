@@ -1,6 +1,7 @@
 /// <reference path="kiriaitheduel.d.ts" />
 /// <reference path="cookbook/common.ts" />
-/// <reference path="cookbook/playeractionqueue.ts" />
+/// <reference path="cookbook/nevinAF/playeractionqueue.ts" />
+/// <reference path="cookbook/nevinAF/titleLocking.ts" />
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
@@ -18,7 +19,10 @@ class KiriaiTheDuel extends GameguiCookbook
 	}
 
 	isInitialized: boolean = false;
-	playerActionQueue = new PlayerActionQueue(this);
+
+	//
+	// #region Gamedata Wrappers
+	//
 
 	isRedPlayer(): boolean { return this.gamedatas.players[this.player_id].color == 'e54025'; }
 	redPrefix(): string { return this.isRedPlayer() ? 'my' : 'opponent'; }
@@ -40,9 +44,20 @@ class KiriaiTheDuel extends GameguiCookbook
 	redSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 26) &0b1) == 1; }
 	blueSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 27) & 0b1) == 1; }
 
+	//
+	// #endregion
+	//
+
+	//
+	// #region Gamegui Methods
+	// Setup and game state methods
+	//
+
 	setup(gamedatas: Gamedatas)
 	{
 		console.log( "Starting game setup", this.gamedatas );
+
+		this.actionTitleLockingStrategy = 'actionbar';
 
 		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id].color, this.gamedatas.players[this.player_id].color == 'e54025');
 
@@ -122,9 +137,6 @@ class KiriaiTheDuel extends GameguiCookbook
 		console.log( "Ending game setup" );
 	}
 
-	///////////////////////////////////////////////////
-	//// Game & client states
-
 	onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
 	{
 		console.log( 'Entering state: '+ stateName, args );
@@ -168,26 +180,39 @@ class KiriaiTheDuel extends GameguiCookbook
 			switch( stateName )
 			{
 			case "pickCards":
-				
-				if (this.isRedPlayer()) {
-					if (this.redPlayed0() == 0 && this.redPlayed1() == 0) {
-						return;
-					}
-				}
-				else {
-					if (this.bluePlayed0() == 0 && this.bluePlayed1() == 0) {
-						return;
-					}
-				}
 
-				this.addActionButton('confirmSelectionButton', _('Confirm'), ( ) => this.ajaxAction('confirmedCards', {}));
+				this.addActionButton('confirmSelectionButton', _('Confirm'), e => {
+					console.log('Confirming selection', e);
+					
+					if (this.isRedPlayer()) {
+						if (this.redPlayed0() == 0 && this.redPlayed1() == 0) {
+							return;
+						}
+					}
+					else {
+						if (this.bluePlayed0() == 0 && this.bluePlayed1() == 0) {
+							return;
+						}
+					}
+					// This makes sure that this action button is removed from the queue.
+					this.lockTitleWithStatus(_('Sending moves to server...')); 
+					this.enqueueAjaxAction({
+						action: 'confirmedCards',
+						args: {}
+					});
+				});
 				break;
 			}
 		}
 	}
 
-	///////////////////////////////////////////////////
-	//// Utility methods
+	//
+	// #endregion
+	//
+
+	//
+	// #region Utility methods
+	//
 
 	resizeTimeout: number | null = null;
 	onScreenWidthChange = () => {
@@ -272,11 +297,14 @@ class KiriaiTheDuel extends GameguiCookbook
 		bluePlayed.push(playedToHand(this.bluePlayed1()));
 
 		for (let i = 0; i < 6; i++) {
-			if (this.redDiscarded() - 1 == i) $('redHand_' + i).parentElement.classList.add('discarded');
-			else  $('redHand_' + i).parentElement.classList.remove('discarded');
+			if (i < 5)
+			{
+				if (this.redDiscarded() - 1 == i) $('redHand_' + i).parentElement.classList.add('discarded');
+				else  $('redHand_' + i).parentElement.classList.remove('discarded');
 
-			if (this.blueDiscarded() - 1 == i) $('blueHand_' + i).parentElement.classList.add('discarded');
-			else  $('blueHand_' + i).parentElement.classList.remove('discarded');
+				if (this.blueDiscarded() - 1 == i) $('blueHand_' + i).parentElement.classList.add('discarded');
+				else  $('blueHand_' + i).parentElement.classList.remove('discarded');
+			}
 
 			if (redPlayed.includes(i)) $('redHand_' + i).parentElement.classList.add('played');
 			else  $('redHand_' + i).parentElement.classList.remove('played');
@@ -289,13 +317,13 @@ class KiriaiTheDuel extends GameguiCookbook
 		$('redHand_5').style.objectPosition = ((
 			this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9
 		) / 0.13) + '% 0px';
-		if (this.redSpecialPlayed) $('redHand_5').parentElement.classList.add('discarded');
+		if (this.redSpecialPlayed()) $('redHand_5').parentElement.classList.add('discarded');
 		else $('redHand_5').parentElement.classList.remove('discarded');
 
 		$('blueHand_5').style.objectPosition = ((
 			this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9
 		) / 0.13) + '% 0px';
-		if (this.blueSpecialPlayed) $('blueHand_5').parentElement.classList.add('discarded');
+		if (this.blueSpecialPlayed()) $('blueHand_5').parentElement.classList.add('discarded');
 		else $('blueHand_5').parentElement.classList.remove('discarded');
 
 		// Set the positions and stance
@@ -331,8 +359,14 @@ class KiriaiTheDuel extends GameguiCookbook
 		dojo.style($('blue_samurai'), 'width', samuraiWidth + 'px');
 	}
 
-	///////////////////////////////////////////////////
-	//// Player's action
+	//
+	// #endregion
+	//
+
+	//
+	// #region Action Queue + Predictions
+	// Predictions are used to simulate the state of the game before the action is acknowledged by the server.
+	//
 
 	serverCards: number;
 	predictionKey: number = 0;
@@ -365,11 +399,19 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.instantMatch();
 	}
 
+	//
+	// #endregion
+	//
+
+	//
+	// #region Player's action
+	//
+
 	onHandCardClick = ( evt: MouseEvent, index: number ) =>
 	{
 		evt.preventDefault();
 
-		if (this.playerActionQueue.actionInProgress()?.action === 'confirmedCards') {
+		if (this.actionQueue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
 			console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
@@ -391,14 +433,14 @@ class KiriaiTheDuel extends GameguiCookbook
 		let fixedIndex = index == 6 ? 8 : index;
 
 		if ((index == 1 && first == 6) ||
-			(index == 1 && second == 6) ||
+			(index == 2 && first == 7) ||
 			fixedIndex == first
 		) {
 			this.returnCardToHand(null, true);
 			return;
 		}
 
-		if ((index == 2 && first == 7) ||
+		if ((index == 1 && second == 6) ||
 			(index == 2 && second == 7) ||
 			fixedIndex == second
 		) {
@@ -451,15 +493,19 @@ class KiriaiTheDuel extends GameguiCookbook
 			return cards | (index & 0b1111) << indexOffset;
 		});
 
-		this.playerActionQueue.filterOut('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
-		this.playerActionQueue.enqueue(action, { card: index }, callback);
+		this.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
+		this.enqueueAjaxAction({
+			action,
+			args: { card: index },
+			callback
+		});
 	}
 
 	returnCardToHand = (evt: MouseEvent | null, first: boolean) =>
 	{
 		evt?.preventDefault();
 
-		if (this.playerActionQueue.actionInProgress()?.action === 'confirmedCards') {
+		if (this.actionQueue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
 			console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
@@ -467,13 +513,13 @@ class KiriaiTheDuel extends GameguiCookbook
 		if (first)
 		{
 			// Still waiting on the first card that was picked to be sent to server...
-			if (this.playerActionQueue.filterOut('pickedFirst')) {
+			if (this.filterActionQueue('pickedFirst')) {
 				return; // Removing the play action is the same as undoing it.
 			}
 		}
 		else {
 			// Still waiting on the second card that was picked to be sent to server...
-			if (this.playerActionQueue.filterOut('pickedSecond')) {
+			if (this.filterActionQueue('pickedSecond')) {
 				return; // Removing the play action is the same as undoing it.
 			}
 		}
@@ -490,12 +536,22 @@ class KiriaiTheDuel extends GameguiCookbook
 			return cards & ~(0b1111 << indexOffset);
 		});
 
-		this.playerActionQueue.filterOut('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
-		this.playerActionQueue.enqueue(first ? "undoFirst" : "undoSecond", {}, callback);
+		this.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
+		this.enqueueAjaxAction({
+			action: first ? "undoFirst" : "undoSecond",
+			args: {},
+			callback
+		});
 	}
 
-	///////////////////////////////////////////////////
-	//// Reaction to cometD notifications
+	//
+	// #endregion
+	//
+
+	//
+	// #region Notifications
+	// Server acknowledgements and game state updates
+	//
 
 	setupNotifications()
 	{
@@ -511,12 +567,12 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.subscribeNotif('player(s) moved',  this.notif_instantMatch);
 		this.subscribeNotif('player(s) changed stance',  this.notif_instantMatch);
 		this.subscribeNotif('player(s) attacked',  this.notif_instantMatch);
-		this.subscribeNotif('red hit',  this.notif_instantMatch);
-		this.subscribeNotif('blue hit',  this.notif_instantMatch);
+		this.subscribeNotif('player(s) hit',  this.notif_instantMatch);
 		this.subscribeNotif('log', a => console.log('log:', a));
 
 		this.notifqueue.setSynchronous( 'battlefield setup', 1000 );
-		this.notifqueue.setSynchronous( 'played card', 1000 );
+		// this.notifqueue.setSynchronous( 'played card', 1000 );
+		// this.notifqueue.setSynchronous( 'undo card', 1000 );
 		this.notifqueue.setSynchronous( 'before first resolve', 1000 );
 		this.notifqueue.setSynchronous( 'before second resolve', 1000 );
 		this.notifqueue.setSynchronous( 'after resolve', 1000 );
@@ -524,10 +580,8 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.notifqueue.setSynchronous( 'player(s) moved', 1000 );
 		this.notifqueue.setSynchronous( 'player(s) changed stance', 1000 );
 		this.notifqueue.setSynchronous( 'player(s) attacked', 1000 );
-		this.notifqueue.setSynchronous( 'red hit', 1000 );
-		this.notifqueue.setSynchronous( 'blue hit', 1000 );
+		this.notifqueue.setSynchronous( 'player(s) hit', 1000 );
 	}
-	// TODO: from this point and below, you can write your game notifications handling methods
 
 	notif_instantMatch = (notif: Notif<GameStateData>) =>
 	{
@@ -537,4 +591,8 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.updateCardsWithPredictions();
 		this.instantMatch();
 	}
+
+	//
+	// #endregion
+	//
 }

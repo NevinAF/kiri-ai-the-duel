@@ -25,7 +25,7 @@
     Please REMOVE this comment before publishing your game on BGA
 -->
 
-<div style="display: flex; align-items: center; width: 100%; justify-content: center; margin: 5px;">
+<div style="display: flex; align-items: center; width: calc(100% - 10px); justify-content: center; padding: 5px; user-select: none;">
 	<div id="myHandArea" style="flex-grow: 3; max-width: 310px; display: grid; grid-template-columns: 185fr 185fr; grid-template-rows: 270fr 270fr 270fr; gap: 0.5em; margin-bottom: 10px;">
 		<div class="cardslot" id="myHand_0"></div>
 		<div class="cardslot" id="myHand_1"></div>
@@ -55,10 +55,10 @@
 	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_5"></div>
 </div>
 
-<div id="red_samurai_offset" style="position: absolute;">
+<div id="red_samurai_offset" style="position: absolute; user-select: none;">
 	<div id="red_samurai"  class="cardslot"></div>
 </div>
-<div id="blue_samurai_offset" style="position: absolute;">
+<div id="blue_samurai_offset" style="position: absolute; user-select: none;">
 	<div id="blue_samurai" class="cardslot"></div>
 </div>
 
@@ -68,7 +68,7 @@
 
 var jstpl_card =
 '<div class="cardontable" style="width: 100%; height:100%;">\
-	<img src="${src}" id="${id}" style="object-position: ${x}% 0px; width: 100%; height:100%;">\
+	<img src="${src}" id="${id}" style="object-position: ${x}% 0px; width: 100%; height:100%;" draggable="false" />\
 </div>';
 
 var jstpl_field_position =
