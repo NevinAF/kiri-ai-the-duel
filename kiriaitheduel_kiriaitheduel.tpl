@@ -55,11 +55,11 @@
 	<div class="cardslot" style="max-width:120px flex: 1; flex-basis:120px" id="opponentHand_5"></div>
 </div>
 
-<div id="red_samurai_offset" style="position: absolute; user-select: none;">
-	<div id="red_samurai"  class="cardslot"></div>
+<div id="red_samurai_offset" style="position: absolute; user-select: none; pointer-events: none;">
+	<div id="red_samurai"  class="cardslot" style="pointer-events: all;"></div>
 </div>
-<div id="blue_samurai_offset" style="position: absolute; user-select: none;">
-	<div id="blue_samurai" class="cardslot"></div>
+<div id="blue_samurai_offset" style="position: absolute; user-select: none; pointer-events: none;">
+	<div id="blue_samurai" class="cardslot" style="pointer-events: all;"></div>
 </div>
 
 <script type="text/javascript">
@@ -72,7 +72,7 @@ var jstpl_card =
 </div>';
 
 var jstpl_field_position =
-'<div class="field_position">\
+'<div class="field_position" id="samurai_field_position_${id}">\
 	<div  id="red_samurai_field_position_${id}" class="red_field_position"> </div>\
 	<div id="blue_samurai_field_position_${id}" class="blue_field_position"> </div>\
 </div>';

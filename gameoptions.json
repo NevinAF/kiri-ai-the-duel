@@ -1,1 +1,14 @@
-{}
+{
+	"100": {
+		"name": "Battlefield",
+		"values": {
+			"1": {
+				"name": "Standard Battlefield"
+			},
+			"2": {
+				"name": "Advanced Battlefield",
+				"nobeginner": true
+			}
+		}
+	}
+}

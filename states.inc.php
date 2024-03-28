@@ -15,8 +15,6 @@ declare(strict_types=1);
  *
  */
 
-use function PHPSTORM_META\type;
-
 /*
    Game state machine is a tool used to facilitate game developpement by doing common stuff that can be set up
    in a very easy way from this configuration file.
@@ -80,13 +78,13 @@ $machinestates = array(
 	),
 
 	3 => array(
-			"name" => "pickCards",
-			"type" => "multipleactiveplayer",
-			'action' => 'stPickCardsInit',
-			"description" => clienttranslate('The opponent must choose two cards to play'),
-			"descriptionmyturn" => clienttranslate('${you} must choose two cards to play'),
-			"possibleactions" => array( "pickedFirst", "pickedSecond", "undoFirst", "undoSecond", "confirmedCards" ),
-			"transitions" => array( "" => 4, )
+		"name" => "pickCards",
+		"type" => "multipleactiveplayer",
+		'action' => 'stPickCardsInit',
+		"description" => clienttranslate('The opponent must choose two cards to play'),
+		"descriptionmyturn" => clienttranslate('${you} must choose two cards to play'),
+		"possibleactions" => array( "pickedFirst", "pickedSecond", "undoFirst", "undoSecond", "confirmedCards" ),
+		"transitions" => array( "" => 4, )
 	),
 
 	4 => array(
@@ -131,41 +129,3 @@ $machinestates = array(
 	)
 
 );
-
-
-
-// /**
-//  * @param array<int, array{
-//  *   name: string,
-//  *   description: string,
-//  *   type: string,
-//  *   action: string,
-//  *   args?: string,
-//  *   updateGameProgression?: bool,
-//  *   possibleactions?: string[],
-//  *   transitions: array<string, int|string>,
-//  *   descriptionmyturn?: string
-//  * }> $arg
-//  */
-// function validate($arg) {}
-
-// validate($machinestates)
-
-class MachineState {
-	public string $name;
-	public string $description;
-	public string $type;
-	public string $action;
-	public string $args;
-	public bool $updateGameProgression;
-	public array $possibleactions;
-	public array $transitions;
-	public string $descriptionmyturn;
-}
-
-/** @var array<int, string> $testing */
-$testing = array();
-
-$out = $testing["This is not a valid index"];
-$testing["This is not a valid index"] = 2345;
-

@@ -116,6 +116,309 @@ GameguiCookbook.prototype.infoDialog = function (message, title, callback) {
     });
     return myDlg;
 };
+;
+GameguiCookbook.prototype.actionErrorCodes = {
+    FILTERED_OUT: -512,
+    TIMEOUT: -513,
+    PLAYER_NOT_ACTIVE: -514,
+    DEPENDENCY_FAILED: -515,
+    ACTION_NOT_POSSIBLE: -516,
+};
+GameguiCookbook.prototype.enqueueAjaxAction = function (refItem, dependencies) {
+    var _this = this;
+    var _a, _b, _c;
+    if (this.actionQueue === undefined)
+        this.actionQueue = [];
+    var item = refItem;
+    item.dependencies = dependencies ?
+        dependencies.flatMap(function (dep) { return (typeof dep === 'string') ?
+            _this.actionQueue.filter(function (a) { return a.action === dep; }) : dep; }) :
+        null;
+    item.timestamp = Date.now();
+    item.state = 'queued';
+    this.actionQueue.push(item);
+    if (this.isTitleLocked && !this.isTitleLocked()) {
+        if (this.actionTitleLockingStrategy === 'sending')
+            (_a = this.lockTitleWithStatus) === null || _a === void 0 ? void 0 : _a.call(this, 'Sending move to server...');
+        else if (this.actionTitleLockingStrategy === 'actionbar')
+            (_b = this.lockTitle) === null || _b === void 0 ? void 0 : _b.call(this, 'pagemaintitle_wrap');
+        else if (this.actionTitleLockingStrategy === 'current')
+            (_c = this.lockTitle) === null || _c === void 0 ? void 0 : _c.call(this);
+    }
+    this.asyncPostActions();
+    return item;
+};
+GameguiCookbook.prototype.filterActionQueue = function (filter) {
+    var _a;
+    if (!this.actionQueue)
+        return false;
+    var count = this.actionQueue.length;
+    for (var i = 0; i < count; i++) {
+        var item = this.actionQueue[i];
+        if (item.state === 'inProgress')
+            continue;
+        if (typeof filter === 'string' ? item.action !== filter : !filter(item))
+            continue;
+        (_a = item.callback) === null || _a === void 0 ? void 0 : _a.call(item, true, 'Action was filtered out', this.actionErrorCodes.FILTERED_OUT);
+        this.actionQueue.splice(i, 1);
+        i--;
+    }
+    return count !== this.actionQueue.length;
+};
+GameguiCookbook.prototype.asyncPostActions = function () {
+    var _this = this;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    if (this.actionQueue === undefined)
+        return;
+    if (this.actionPostTimeout) {
+        clearTimeout(this.actionPostTimeout);
+        this.actionPostTimeout = undefined;
+    }
+    if (!this.isCurrentPlayerActive()) {
+        for (var _i = 0, _k = this.actionQueue; _i < _k.length; _i++) {
+            var item = _k[_i];
+            item.state = 'failed';
+            (_a = item.callback) === null || _a === void 0 ? void 0 : _a.call(item, true, 'Player is no longer active', this.actionErrorCodes.PLAYER_NOT_ACTIVE);
+        }
+        this.actionQueue = [];
+    }
+    var now = Date.now();
+    var _loop_1 = function (i) {
+        var item = this_1.actionQueue[i];
+        if (item.state === 'inProgress') {
+        }
+        else if ((item.dependencies === null && i == 0) ||
+            ((_b = item.dependencies) === null || _b === void 0 ? void 0 : _b.every(function (dep) { return dep.state === 'complete'; }))) {
+            item.state = 'inProgress';
+            this_1.ajaxcall("/".concat(this_1.game_name, "/").concat(this_1.game_name, "/").concat(item.action, ".html"), item.args, this_1, function () { }, function (error, errorMessage, errorCode) {
+                var _a, _b;
+                _this.actionQueue = (_a = _this.actionQueue) === null || _a === void 0 ? void 0 : _a.filter(function (a) { return a !== item || (a.dependencies === null && error); });
+                item.state = error ? 'failed' : 'complete';
+                (_b = item.callback) === null || _b === void 0 ? void 0 : _b.call(item, error, errorMessage, errorCode);
+                _this.asyncPostActions();
+            });
+            (_c = item.onSent) === null || _c === void 0 ? void 0 : _c.call(item);
+        }
+        else if ((_d = item.dependencies) === null || _d === void 0 ? void 0 : _d.some(function (dep) { return dep.state === 'failed'; })) {
+            item.state = 'failed';
+            (_e = item.callback) === null || _e === void 0 ? void 0 : _e.call(item, true, 'Dependency failed', this_1.actionErrorCodes.DEPENDENCY_FAILED);
+            this_1.actionQueue.splice(i, 1);
+            i = 0;
+        }
+        else if (item.timestamp + ((_f = this_1.actionPostTimeout) !== null && _f !== void 0 ? _f : 10000) < now) {
+            item.state = 'failed';
+            (_g = item.callback) === null || _g === void 0 ? void 0 : _g.call(item, true, 'Action took too long to post', this_1.actionErrorCodes.TIMEOUT);
+            this_1.actionQueue.splice(i, 1);
+            i = 0;
+        }
+        out_i_1 = i;
+    };
+    var this_1 = this, out_i_1;
+    for (var i = 0; i < this.actionQueue.length; i++) {
+        _loop_1(i);
+        i = out_i_1;
+    }
+    if (this.actionQueue.length === 0) {
+        if (this.actionTitleLockingStrategy && this.actionTitleLockingStrategy !== 'none')
+            (_h = this.removeTitleLocks) === null || _h === void 0 ? void 0 : _h.call(this);
+        return;
+    }
+    else if (this.actionQueue.every(function (i) { return i.state != 'inProgress'; })) {
+        console.error("There is likely a circular dependency in the action queue. None of the actions can be sent: ", this.actionQueue);
+        for (var _l = 0, _m = this.actionQueue; _l < _m.length; _l++) {
+            var item = _m[_l];
+            item.state = 'failed';
+            (_j = item.callback) === null || _j === void 0 ? void 0 : _j.call(item, true, 'Circular dependency', this.actionErrorCodes.DEPENDENCY_FAILED);
+        }
+        this.actionQueue = [];
+    }
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+GameguiCookbook.prototype.cloneHTMLWithoutIds = function (element) {
+    var maintainEvents = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        maintainEvents[_i - 1] = arguments[_i];
+    }
+    var cleanNode = function (el) {
+        var id = el.getAttribute('id');
+        el.removeAttribute('id');
+        if (el instanceof HTMLElement && id) {
+            var source = $(id);
+            if (source) {
+                var computedStyle = getComputedStyle(source);
+                for (var _i = 0, _a = ['height', 'top', 'display']; _i < _a.length; _i++) {
+                    var property = _a[_i];
+                    el.style[property] = computedStyle.getPropertyValue(property);
+                }
+                var _loop_2 = function (event_1) {
+                    el.addEventListener('click', function (e) {
+                        var _a, _b;
+                        (_b = (_a = $(id))[event_1]) === null || _b === void 0 ? void 0 : _b.call(_a, e);
+                    });
+                };
+                for (var _b = 0, maintainEvents_1 = maintainEvents; _b < maintainEvents_1.length; _b++) {
+                    var event_1 = maintainEvents_1[_b];
+                    _loop_2(event_1);
+                }
+            }
+        }
+        for (var _c = 0, _d = Array.from(el.children); _c < _d.length; _c++) {
+            var child = _d[_c];
+            cleanNode(child);
+        }
+    };
+    var clone = element.cloneNode(true);
+    cleanNode(clone);
+    return clone;
+};
+GameguiCookbook.prototype.isTitleLocked = function () {
+    return (this.titlelock_element != undefined) && this.titlelock_element.childElementCount > 0;
+};
+GameguiCookbook.prototype.createTitleLock = function () {
+    var _a;
+    if (this.titlelock_element)
+        return this.titlelock_element;
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = '.display_none { display: none !important; }';
+    document.getElementsByTagName('head')[0].appendChild(style);
+    var titlelockElement = document.createElement('div');
+    titlelockElement.id = 'titlelock_wrap';
+    titlelockElement.className = 'roundedboxinner';
+    titlelockElement.style.display = 'none';
+    (_a = document.getElementById('page-title')) === null || _a === void 0 ? void 0 : _a.appendChild(titlelockElement);
+    return this.titlelock_element = titlelockElement;
+};
+GameguiCookbook.prototype.lockTitleWithStatus = function (status) {
+    var _a;
+    (_a = this.titlelock_element) !== null && _a !== void 0 ? _a : (this.titlelock_element = this.createTitleLock());
+    var statusElement = document.getElementById('titlelock_status_text');
+    if (this.titlelock_element.childElementCount === 1 && statusElement) {
+        statusElement.innerHTML = status;
+        return;
+    }
+    this.titlelock_element.innerHTML =
+        '<div style="display:inline-block; padding-left: 22px; position:relative;">\
+			<img src="https://studio.boardgamearena.com:8084/data/themereleases/240320-1000/img/logo/waiting.gif" style="width:22px; height: 22px; position:absolute; left:-22px;" class="imgtext">\
+			<span id="titlelock_status_text">' + status + '</span>\
+		</div>';
+};
+GameguiCookbook.prototype.lockTitleWithHTML = function (html) {
+    var _a;
+    (_a = this.titlelock_element) !== null && _a !== void 0 ? _a : (this.titlelock_element = this.createTitleLock());
+    if (html instanceof HTMLElement) {
+        this.titlelock_element.innerHTML = '';
+        this.titlelock_element.appendChild(html);
+    }
+    else {
+        this.titlelock_element.innerHTML = html;
+    }
+    $('pagemaintitle_wrap').classList.add('display_none');
+    $('gameaction_status_wrap').classList.add('display_none');
+    this.titlelock_element.style.display = 'block';
+};
+GameguiCookbook.prototype.lockTitle = function (target) {
+    if (this.isTitleLocked())
+        return;
+    console.log('Locking title');
+    this.pushTitleLock(target);
+};
+GameguiCookbook.prototype.pushTitleLockFromStatus = function (status) {
+    var _a;
+    (_a = this.titlelock_element) !== null && _a !== void 0 ? _a : (this.titlelock_element = this.createTitleLock());
+    this.pushTitleLockFromHTML('<div><div style="display:inline-block; padding-left: 22px; position:relative;">\
+			<img src="https://studio.boardgamearena.com:8084/data/themereleases/240320-1000/img/logo/waiting.gif" style="width:22px; height: 22px; position:absolute; left:-22px;" class="imgtext">\
+			<span>' + status + '</span>\
+		</div></div>');
+};
+GameguiCookbook.prototype.pushTitleLockFromHTML = function (html) {
+    var _a;
+    (_a = this.titlelock_element) !== null && _a !== void 0 ? _a : (this.titlelock_element = this.createTitleLock());
+    if (this.titlelock_element.childElementCount == 0) {
+        $('pagemaintitle_wrap').classList.add('display_none');
+        $('gameaction_status_wrap').classList.add('display_none');
+        this.titlelock_element.style.display = 'block';
+    }
+    else {
+        var lastChild = this.titlelock_element.lastElementChild;
+        lastChild.style.display = 'none';
+    }
+    dojo.place(html, this.titlelock_element);
+};
+GameguiCookbook.prototype.pushTitleLock = function (target) {
+    var _a;
+    (_a = this.titlelock_element) !== null && _a !== void 0 ? _a : (this.titlelock_element = this.createTitleLock());
+    var elementCount = this.titlelock_element.childElementCount;
+    if (elementCount != 0) {
+        var lastChild = this.titlelock_element.lastElementChild;
+        lastChild.setAttribute('copycount', (parseInt(lastChild.getAttribute('copycount') || '0') + 1).toString());
+        return;
+    }
+    var element;
+    if (target) {
+        element = document.getElementById(target);
+    }
+    else {
+        element = document.getElementById('pagemaintitle_wrap');
+        if (!element || element.style.display === 'none')
+            element = document.getElementById('gameaction_status_wrap');
+    }
+    if (element && element.style.display !== 'none') {
+        var containter = document.createElement('div');
+        for (var _i = 0, _b = Array.from(element.children); _i < _b.length; _i++) {
+            var child = _b[_i];
+            containter.appendChild(this.cloneHTMLWithoutIds.apply(this, __spreadArray([child], this.titleLock_maintainEvents || ['click'], false)));
+        }
+        this.pushTitleLockFromHTML(containter);
+        return;
+    }
+};
+GameguiCookbook.prototype.popTitleLockWithoutUpdate = function () {
+    if (!this.titlelock_element)
+        return false;
+    var lastChild = this.titlelock_element.lastElementChild;
+    if (!lastChild)
+        return false;
+    var copyCount = parseInt(lastChild.getAttribute('copycount') || '0');
+    if (copyCount > 0) {
+        lastChild.setAttribute('copycount', (copyCount - 1).toString());
+        return true;
+    }
+    lastChild.remove();
+    return true;
+};
+GameguiCookbook.prototype.popTitleLock = function () {
+    if (!this.titlelock_element)
+        return false;
+    if (this.popTitleLockWithoutUpdate() == false)
+        return false;
+    if (this.titlelock_element.childElementCount == 0) {
+        $('pagemaintitle_wrap').classList.remove('display_none');
+        $('gameaction_status_wrap').classList.remove('display_none');
+        this.titlelock_element.style.display = 'none';
+    }
+    else {
+        var lastChild = this.titlelock_element.lastElementChild;
+        lastChild.style.display = 'block';
+    }
+    return true;
+};
+GameguiCookbook.prototype.removeTitleLocks = function () {
+    if (!this.titlelock_element)
+        return;
+    this.titlelock_element.innerHTML = '';
+    $('pagemaintitle_wrap').classList.remove('display_none');
+    $('gameaction_status_wrap').classList.remove('display_none');
+    this.titlelock_element.style.display = 'none';
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -261,10 +564,15 @@ var KiriaiTheDuel = (function (_super) {
         };
         _this.notif_instantMatch = function (notif) {
             console.log('notif_placeAllCards', notif);
-            _this.gamedatas.battlefield = notif.args.battlefield;
+            if (_this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
+                _this.gamedatas.battlefield = notif.args.battlefield;
             _this.serverCards = notif.args.cards;
             _this.updateCardsWithPredictions();
             _this.instantMatch();
+            if (notif.args.redScore !== undefined)
+                _this.scoreCtrl[_this.redPlayerId()].toValue(notif.args.redScore);
+            if (notif.args.blueScore !== undefined)
+                _this.scoreCtrl[_this.bluePlayerId()].toValue(notif.args.blueScore);
         };
         console.log('kiriaitheduel:', _this);
         return _this;
@@ -278,6 +586,7 @@ var KiriaiTheDuel = (function (_super) {
     KiriaiTheDuel.prototype.blueStance = function () { return (this.gamedatas.battlefield >> 9) & 1; };
     KiriaiTheDuel.prototype.redHit = function () { return ((this.gamedatas.battlefield >> 14) & 1) == 1; };
     KiriaiTheDuel.prototype.blueHit = function () { return ((this.gamedatas.battlefield >> 15) & 1) == 1; };
+    KiriaiTheDuel.prototype.battlefieldType = function () { return (this.gamedatas.battlefield >> 16) & 7; };
     KiriaiTheDuel.prototype.redPlayed0 = function () { return (this.gamedatas.cards >> 0) & 15; };
     KiriaiTheDuel.prototype.redPlayed1 = function () { return (this.gamedatas.cards >> 4) & 15; };
     KiriaiTheDuel.prototype.bluePlayed0 = function () { return (this.gamedatas.cards >> 8) & 15; };
@@ -288,6 +597,14 @@ var KiriaiTheDuel = (function (_super) {
     KiriaiTheDuel.prototype.blueSpecialCard = function () { return (this.gamedatas.cards >> 24) & 3; };
     KiriaiTheDuel.prototype.redSpecialPlayed = function () { return ((this.gamedatas.cards >> 26) & 1) == 1; };
     KiriaiTheDuel.prototype.blueSpecialPlayed = function () { return ((this.gamedatas.cards >> 27) & 1) == 1; };
+    KiriaiTheDuel.prototype.redPlayerId = function () {
+        var _this = this;
+        return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(function (i) { return i != _this.player_id; });
+    };
+    KiriaiTheDuel.prototype.bluePlayerId = function () {
+        var _this = this;
+        return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(function (i) { return i != _this.player_id; }) : this.player_id;
+    };
     KiriaiTheDuel.prototype.setup = function (gamedatas) {
         var _this = this;
         console.log("Starting game setup", this.gamedatas);
@@ -329,7 +646,8 @@ var KiriaiTheDuel = (function (_super) {
                 id: id + '_card'
             }), id);
         }
-        var battlefieldSize = 6;
+        var battlefieldType = this.battlefieldType();
+        var battlefieldSize = battlefieldType == 1 ? 5 : 7;
         for (var i = 1; i <= battlefieldSize; i++) {
             dojo.place(this.format_block('jstpl_field_position', {
                 id: i,
@@ -338,21 +656,21 @@ var KiriaiTheDuel = (function (_super) {
         if (!this.isRedPlayer())
             $('battlefield').style.flexDirection = 'column-reverse';
         this.instantMatch();
-        var _loop_1 = function (i) {
+        var _loop_3 = function (i) {
             var index = i + 1;
-            dojo.connect($('myHand_' + i), 'onclick', this_1, function (e) { return _this.onHandCardClick(e, index); });
-        };
-        var this_1 = this;
-        for (var i = 0; i < 6; i++) {
-            _loop_1(i);
-        }
-        var _loop_2 = function (i) {
-            var first = i == 0;
-            dojo.connect($('myPlayed_' + i), 'onclick', this_2, function (e) { return _this.returnCardToHand(e, first); });
+            dojo.connect($('myHand_' + i), 'onclick', this_2, function (e) { return _this.onHandCardClick(e, index); });
         };
         var this_2 = this;
+        for (var i = 0; i < 6; i++) {
+            _loop_3(i);
+        }
+        var _loop_4 = function (i) {
+            var first = i == 0;
+            dojo.connect($('myPlayed_' + i), 'onclick', this_3, function (e) { return _this.returnCardToHand(e, first); });
+        };
+        var this_3 = this;
         for (var i = 0; i < 2; i++) {
-            _loop_2(i);
+            _loop_4(i);
         }
         this.isInitialized = true;
         console.log("Ending game setup");
@@ -367,15 +685,77 @@ var KiriaiTheDuel = (function (_super) {
     KiriaiTheDuel.prototype.onLeavingState = function (stateName) {
         console.log('Leaving state: ' + stateName);
         switch (stateName) {
+            case "setupBattlefield":
+                this.cleanupSetupBattlefield();
+                break;
             default:
                 break;
         }
     };
+    KiriaiTheDuel.prototype.cleanupSetupBattlefield = function () {
+        var _a;
+        (_a = this.setupHandles) === null || _a === void 0 ? void 0 : _a.forEach(function (h) { return dojo.disconnect(h); });
+        delete this.setupHandles;
+        var index = 0;
+        while (true) {
+            var element = $('samurai_field_position_' + index);
+            if (element)
+                element.classList.remove('highlight');
+            else
+                break;
+            index++;
+        }
+    };
     KiriaiTheDuel.prototype.onUpdateActionButtons = function (stateName, args) {
         var _this = this;
+        var _a;
         console.log('onUpdateActionButtons: ' + stateName, args);
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
+                case "setupBattlefield":
+                    (_a = this.setupHandles) === null || _a === void 0 ? void 0 : _a.forEach(function (h) { return dojo.disconnect(h); });
+                    this.setupHandles = [];
+                    var startingPositions = this.isRedPlayer() ? [4, 5, 6] : [2, 3, 4];
+                    var _loop_5 = function (index) {
+                        var element = $('samurai_field_position_' + index);
+                        element.classList.add('highlight');
+                        this_4.setupHandles.push(dojo.connect(element, 'onclick', this_4, function (e) {
+                            if (_this.isRedPlayer()) {
+                                _this.gamedatas.battlefield = (_this.gamedatas.battlefield & ~(15 << 0)) | (index << 0);
+                            }
+                            else {
+                                _this.gamedatas.battlefield = (_this.gamedatas.battlefield & ~(15 << 5)) | (index << 5);
+                            }
+                            _this.instantMatch();
+                        }));
+                    };
+                    var this_4 = this;
+                    for (var _i = 0, startingPositions_1 = startingPositions; _i < startingPositions_1.length; _i++) {
+                        var index = startingPositions_1[_i];
+                        _loop_5(index);
+                    }
+                    if (this.isRedPlayer()) {
+                        this.setupHandles.push(dojo.connect($('red_samurai'), 'onclick', this, function (e) {
+                            _this.gamedatas.battlefield = _this.gamedatas.battlefield ^ (1 << 4);
+                            _this.instantMatch();
+                        }));
+                    }
+                    else {
+                        this.setupHandles.push(dojo.connect($('blue_samurai'), 'onclick', this, function (e) {
+                            _this.gamedatas.battlefield = _this.gamedatas.battlefield ^ (1 << 9);
+                            _this.instantMatch();
+                        }));
+                    }
+                    this.addActionButton('confirmBattlefieldButton', _('Confirm'), function (e) {
+                        console.log('Confirming selection', e);
+                        _this.lockTitleWithStatus(_('Sending moves to server...'));
+                        _this.ajaxAction('confirmedStanceAndPosition', {
+                            isHeavenStance: (_this.isRedPlayer() ? _this.redStance() : _this.blueStance()) == 0,
+                            position: (_this.isRedPlayer() ? _this.redPosition() : _this.bluePosition())
+                        });
+                        _this.cleanupSetupBattlefield();
+                    });
+                    break;
                 case "pickCards":
                     this.addActionButton('confirmSelectionButton', _('Confirm'), function (e) {
                         console.log('Confirming selection', e);

@@ -33,6 +33,7 @@ class KiriaiTheDuel extends GameguiCookbook
 	blueStance(): number { return (this.gamedatas.battlefield >> 9) &0b1; }
 	redHit(): boolean { return ((this.gamedatas.battlefield >> 14) & 0b1) == 1; }
 	blueHit(): boolean { return ((this.gamedatas.battlefield >> 15) & 0b1) == 1; }
+	battlefieldType(): number { return (this.gamedatas.battlefield >> 16) & 0b111; }
 	redPlayed0(): number { return (this.gamedatas.cards >> 0) & 0b1111; }
 	redPlayed1(): number { return (this.gamedatas.cards >> 4) & 0b1111; }
 	bluePlayed0(): number { return (this.gamedatas.cards >> 8) &0b1111; }
@@ -43,6 +44,9 @@ class KiriaiTheDuel extends GameguiCookbook
 	blueSpecialCard(): number  { return (this.gamedatas.cards >> 24) &0b11; }
 	redSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 26) &0b1) == 1; }
 	blueSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 27) & 0b1) == 1; }
+
+	redPlayerId(): number { return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any)); }
+	bluePlayerId(): number { return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any)) : this.player_id; }
 
 	//
 	// #endregion
@@ -107,8 +111,9 @@ class KiriaiTheDuel extends GameguiCookbook
 				id: id + '_card'
 			}), id);
 
-		//TODO FIX for advanced field
-		const battlefieldSize = 6;
+		const battlefieldType = this.battlefieldType();
+		const battlefieldSize = battlefieldType == 1 ? 5 : 7;
+
 		for (let i = 1; i <= battlefieldSize; i++)
 		{
 			dojo.place(this.format_block('jstpl_field_position', {
@@ -166,8 +171,26 @@ class KiriaiTheDuel extends GameguiCookbook
 		
 		switch( stateName )
 		{
+			case "setupBattlefield":
+				this.cleanupSetupBattlefield();
+				break;
 		default:
 			break;
+		}
+	}
+
+	setupHandles?: dojo.Handle[];
+
+	cleanupSetupBattlefield() {
+		this.setupHandles?.forEach(h => dojo.disconnect(h));
+		delete this.setupHandles;
+
+		let index = 0;
+		while (true) {
+			const element = $('samurai_field_position_' + index);
+			if (element) element.classList.remove('highlight');
+			else break;
+			index++;
 		}
 	}
 
@@ -179,6 +202,52 @@ class KiriaiTheDuel extends GameguiCookbook
 		{
 			switch( stateName )
 			{
+			case "setupBattlefield":
+				this.setupHandles?.forEach(h => dojo.disconnect(h));
+				this.setupHandles = [];
+				const startingPositions = this.isRedPlayer() ? [4, 5, 6] : [2, 3, 4];
+				for (let index of startingPositions) {
+					let element = $('samurai_field_position_' + index);
+					element.classList.add('highlight');
+					// Add an onclick event to the ::after pseudo element
+					this.setupHandles.push(dojo.connect(element, 'onclick', this, e =>
+					{
+						if (this.isRedPlayer()) {
+							this.gamedatas.battlefield = (this.gamedatas.battlefield & ~(0b1111 << 0)) | (index << 0);
+						}
+						else {
+							this.gamedatas.battlefield = (this.gamedatas.battlefield & ~(0b1111 << 5)) | (index << 5);
+						}
+						this.instantMatch();
+					}));
+				}
+
+				// Add an onclick event to the samurai to flip the stance:
+				if (this.isRedPlayer()) {
+					this.setupHandles.push(dojo.connect($('red_samurai'), 'onclick', this, e => {
+						this.gamedatas.battlefield = this.gamedatas.battlefield ^ (1 << 4);
+						this.instantMatch();
+					}));
+				}
+				else {
+					this.setupHandles.push(dojo.connect($('blue_samurai'), 'onclick', this, e => {
+						this.gamedatas.battlefield = this.gamedatas.battlefield ^ (1 << 9);
+						this.instantMatch();
+					}));
+				}
+
+				this.addActionButton('confirmBattlefieldButton', _('Confirm'), e => {
+					console.log('Confirming selection', e);
+					this.lockTitleWithStatus(_('Sending moves to server...')); // This makes sure that this action button is removed from the queue.
+					this.ajaxAction('confirmedStanceAndPosition', {
+							isHeavenStance: (this.isRedPlayer() ? this.redStance() : this.blueStance()) == 0,
+							position: (this.isRedPlayer() ? this.redPosition() : this.bluePosition())
+					});
+					this.cleanupSetupBattlefield();
+				});
+
+				break;
+
 			case "pickCards":
 
 				this.addActionButton('confirmSelectionButton', _('Confirm'), e => {
@@ -583,13 +652,19 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.notifqueue.setSynchronous( 'player(s) hit', 1000 );
 	}
 
-	notif_instantMatch = (notif: Notif<GameStateData>) =>
+	notif_instantMatch = (notif: Notif<GameStateData & { redScore?: number, blueScore?: number }>) =>
 	{
 		console.log('notif_placeAllCards', notif);
-		this.gamedatas.battlefield = notif.args.battlefield;
+		if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
+			this.gamedatas.battlefield = notif.args.battlefield;
 		this.serverCards = notif.args.cards;
 		this.updateCardsWithPredictions();
 		this.instantMatch();
+
+		if (notif.args.redScore !== undefined)
+			this.scoreCtrl[this.redPlayerId()].toValue(notif.args.redScore);
+		if (notif.args.blueScore !== undefined)
+			this.scoreCtrl[this.bluePlayerId()].toValue(notif.args.blueScore);
 	}
 
 	//

@@ -118,6 +118,11 @@ class KiriaiTheDuel extends Table
 		self::DbQuery( $sql );
 		self::reattributeColorsBasedOnPreferences( $players, $gameinfos['player_colors'] );
 		self::reloadPlayersBasicInfos();
+
+		$battlefieldType = $this->gamestate->table_globals[100];
+		$battlefield = 0;
+		self::set_battlefieldType($battlefield, $battlefieldType);
+		self::setGameStateValue( self::BATTLEFIELD, $battlefield );
 	}
 
 	/*
@@ -280,6 +285,9 @@ class KiriaiTheDuel extends Table
 	protected function get_blueHit($battlefield): bool {
 		return (($battlefield >> 15) & 0b1) == 1;
 	}
+	protected function get_battlefieldType($battlefield): int {
+		return ($battlefield >> 16) & 0b111;
+	}
 
 	protected function set_redPosition(&$battlefield, $position) {
 		$battlefield &= ~(0b1111 << 0);
@@ -308,6 +316,10 @@ class KiriaiTheDuel extends Table
 	protected function set_blueHit(&$battlefield, bool $valid) {
 		$battlefield &= ~(0b1 << 15);
 		$battlefield |= $valid ? 1 << 15 : 0;
+	}
+	protected function set_battlefieldType(&$battlefield, int $type) {
+		$battlefield &= ~(0b111 << 16);
+		$battlefield |= ($type & 0b111) << 16;
 	}
 
 	protected function get_redPlayed0($cards): int {
@@ -426,7 +438,8 @@ class KiriaiTheDuel extends Table
 	{
 		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
 
-		// TODO: Validate action
+		// The player is validated by using "checkAction"
+		self::validatePosition($position, $isRedPlayer, $battlefield);
 
 		if ($isRedPlayer)
 		{
@@ -443,6 +456,9 @@ class KiriaiTheDuel extends Table
 		{
 			// If both players have confirmed.
 			self::set_battlefieldValid($battlefield, true);
+			$cards = self::getGameStateValue( self::CARDS );
+			$players = self::loadPlayersBasicInfos();
+			$this->notifyAllGameState($players, 'battlefield setup', array(), $battlefield, $cards);
 		}
 
 		self::setGameStateValue( self::BATTLEFIELD, $battlefield );
@@ -619,6 +635,29 @@ class KiriaiTheDuel extends Table
 		}
 	}
 
+	protected function validatePosition(int $position, bool $isRedPlayer, int $battlefield)
+	{
+		$battlefieldType = self::get_battlefieldType($battlefield);
+
+		if ($battlefieldType == 1)
+			throw new BgaUserException("The standard battle field should be automatically set up.");
+		else if ($battlefieldType == 2)
+		{
+			if ($isRedPlayer)
+			{
+				if ($position < 4 || $position > 6)
+					throw new BgaUserException("Invalid position for red player. Must be 4-6 inclusive.");
+			}
+			else
+			{
+				if ($position < 2 || $position > 4)
+					throw new BgaUserException("Invalid position for blue player. Must be 2-4 inclusive.");
+			}
+		}
+		else
+			throw new BgaVisibleSystemException("Invalid battlefield type");
+	}
+
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state arguments
 ////////////
@@ -635,9 +674,9 @@ class KiriaiTheDuel extends Table
 
 	function stSetupBattlefield()
 	{
-		// These are the default, which is always the case when the game starts.
+		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
+		// This is the default, which is always the case when the game starts.
 		$cards = 0;
-		$battlefield = 0;
 
 		$first_card = bga_rand(0, 2);
 		$redSpecial = $first_card + 1;
@@ -664,9 +703,11 @@ class KiriaiTheDuel extends Table
 
 		self::setGameStateValue( self::CARDS, $cards );
 
-		if (true /* standard battlefield setup */)
+		$battlefieldType = self::get_battlefieldType($battlefield);
+
+		if ($battlefieldType == 1)
 		{
-			self::set_redPosition($battlefield, 6);
+			self::set_redPosition($battlefield, 5);
 			self::set_bluePosition($battlefield, 1);
 			self::set_redStance($battlefield, Stance::HEAVEN);
 			self::set_blueStance($battlefield, Stance::HEAVEN);
@@ -677,9 +718,12 @@ class KiriaiTheDuel extends Table
 			$this->notifyAllGameState($players, 'battlefield setup', array(), $battlefield, $cards);
 			$this->gamestate->nextState( "" );
 		}
-		else {
-			// TODO: Add advanced battlefield setup where the users can choose positions and stance to start.
+		else if ($battlefieldType == 2)
+		{
+			$this->gamestate->setAllPlayersMultiactive();
 		}
+		else
+			throw new BgaVisibleSystemException("Invalid battlefield type");
 	}
 
 	function stPickCardsInit()
@@ -738,7 +782,7 @@ class KiriaiTheDuel extends Table
 		$redPosition = self::get_redPosition($battlefield);
 		$bluePosition = self::get_bluePosition($battlefield);
 
-		$battlefieldSize = 6;
+		$battlefieldSize = self::get_battlefieldType( $battlefield ) == 1 ? 5 : 7;
 
 		//
 		// MOVEMENT
@@ -952,7 +996,10 @@ class KiriaiTheDuel extends Table
 		if ($redScored && !$blueScored) {
 			$redScore = self::dbIncrementScore($players, self::RED_COLOR);
 			self::set_blueHit($battlefield, true);
-			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
+			self::notifyAllGameState($players, 'player(s) hit', array(
+				"redScore" => $redScore
+			), $battlefield, $cards);
+
 			if ($redScore >= 2)
 			{
 				$this->gamestate->nextState( "endGame" );
@@ -963,7 +1010,9 @@ class KiriaiTheDuel extends Table
 		else if ($blueScored && !$redScored) {
 			$blueScore = self::dbIncrementScore($players, self::BLUE_COLOR);
 			self::set_redHit($battlefield, true);
-			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
+			self::notifyAllGameState($players, 'player(s) hit', array(
+				"blueScore" => $blueScore
+			), $battlefield, $cards);
 
 			if ($blueScore >= 2)
 			{

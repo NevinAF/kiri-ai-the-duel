@@ -144,6 +144,11 @@
 	transform: translate(-50%, -50%) rotate(45deg);
 }
 
+.highlight::after {
+	background-color: slategray;
+	cursor: pointer;
+}
+
 .topPicked {
 	position: relative;
 }
