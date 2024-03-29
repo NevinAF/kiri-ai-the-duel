@@ -1,136 +1,131 @@
 /**
- *------
- * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © <Your name here> <Your email address here>
- *
- * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
- * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
- *
- * kiriaitheduel.css
- *
- * KiriaiTheDuel stylesheet
- *
+ * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gamil.com
+ * -----
  */
 
+/* #region Layout */
 /*
-    This is the CSS stylesheet of your game User Interface.
-    
-    Styles defined on this file will be applied to the HTML elements you define in your
-    HTML template (kiriaitheduel_kiriaitheduel.tpl), and to HTML elements you create dynamically
-    (in kiriaitheduel.js).
-    
-    Usually, you are using CSS to:
-    
-    1°) define the overall layout of your game
-        (ex: place the board on the top left, place player's hand beside, place the deck on the right, ...).
-
-    2°) create your CSS-sprites:
-        All images of your games should be gathered into a small number of image files. Then, using
-        background-image and background-position CSS properties, you create HTML blocks that can 
-        display these images correctly (see example below).
-    
-    3°) ... anything else:
-        It is really easy to add and remove CSS classes dynamically from your Javascript with
-        dojo.addClass and dojo.removeClass. It is also easy to check if an element has a class
-        (dojo.hasClass) or to get all elements with a specific class (dojo.query). This is why,
-        very often, using CSS classes for the logic of your user interface allow you to do complex
-        thing easily.
-        
-        
-     Note: on the production platform, this file will be compressed and comments will be removed.
-           Consequently, don't hesitate to put as many comments as necessary.
+ - - - - - - - - - <Game Area> - - - - - - - - - 
+ <My Hand Area>  |  <Battlefield>  |  <Play Area>
+ - - - - - - - - - - - - - - - - - - - - - - - - 
+                <Opponent Hand Area>             
 */
-
-
-/* Note: you must not use any @import directive */
-
-
-/********* You can start writing your CSS below this line: **********/
-
-
-/*
-    Example of CSS sprites (a black token and a white token, 20x20px each, embedded in the same "tokens.png" 40x20px image):
-
-    .white_token {
-        background-image: url('img/tokens.png');
-        background-position: 0px 0px;
-    }
-    .black_token {
-        background-image: url('img/tokens.png');
-        background-position: -20px 0px;
-    }
-    .token {
-        width: 20px;
-        height: 20px;
-        background-repeat: none;
-    }
-*/
-
-.cardontable {
-	position: absolute;
-	width: 100%;
-	height: auto;
-	overflow: hidden;
-	z-index: 1;
+#game-area {
+	display: flex;
+	align-items: center;
+	width: calc(100% - 10px);
+	justify-content: center;
+	padding: 5px;
+	user-select: none;
 }
 
-.cardontable img {
+#my-hand-area {
+	flex-grow: 3;
+	max-width: 270px;
+	display: grid;
+	grid-template-columns: 185fr 185fr;
+	grid-template-rows: 270fr 270fr 270fr;
+	gap: 0.5em;
+	margin-bottom: 10px;
+}
+
+#battlefield {
+	flex-grow: 6;
+	max-width: 450px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-evenly;
+	aspect-ratio: 1/1;
+}
+
+#play-area {
+	flex-grow: 3;
+	max-width: 270px;
+	display: grid;
+	grid-template-columns: 185fr 185fr;
+	grid-template-rows: 270fr 270fr;
+	gap: 0.5em;
+}
+
+#opponent-hand-area {
+	display: flex;
+	align-content: stretch;
+	justify-content: center;
+}
+
+#opponent-hand-area > .cardslot {
+	max-width:120px;
+	flex: 1;
+}
+
+/* #endregion */
+
+/* #region Cards */
+
+.cardslot {
+	position: relative;
+	overflow: hidden;
+	width: 100%;
+	aspect-ratio: 185/270;
+	background-color: white;
+	pointer-events: all;
+}
+
+.cardslot::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	transition: 100ms;
+}
+
+.cardImg {
 	object-fit: cover;
-	width: auto;
+	width: 100%;
 	height: 100%;
 	position: relative;
 }
 
+.topPicked {
+	transform: rotate(0deg);
+}
+
+.bottomPicked {
+	transform: rotate(180deg);
+}
+
 .played::after {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
 	background-color: rgba(60, 148, 191, 0.25);
 }
 
 .discarded::after {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
 	background-color: rgba(0, 0, 0, 0.35);
 }
 
-.cardontable:hover::after {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
+.cardslot:hover::after {
 	background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* #endregion */
+
+/* #region Battlefield */
 
 #standard_battlefield {
 	padding: 100px 50px;
 }
 
+.samurai_offset {
+	position: absolute;
+	user-select: none;
+	pointer-events: none;
+}
+
 .field_position {
 	position: relative;
-}
-
-.red_field_position {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-}
-
-.blue_field_position {
-	position: absolute;
-	left: 50%;
-	top: 50%;
 }
 
 .field_position::after {
@@ -149,45 +144,4 @@
 	cursor: pointer;
 }
 
-.topPicked {
-	position: relative;
-}
-
-.bottomPicked {
-	position: relative;
-	transform: rotate(180deg);
-}
-
-
-.samurai_card {
-	position: absolute;
-	width: 185px;
-	aspect-ratio: 185/270;
-	z-index: 1;
-}
-
-.attack_icon {
-	position: absolute;
-	display: none;
-	top: 0;
-	left: 0;
-	width: 30px;
-	height: 30px;
-	background-image: url('img/attack_icon.png');
-	background-size: 30px 30px;
-}
-
-.cardrow {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-}
-
-.cardslot {
-	position: relative;
-	width: 100%;
-	aspect-ratio: 185/270;
-	background-color: white;
-}
+/* #endregion */

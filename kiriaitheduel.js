@@ -153,7 +153,7 @@ GameguiCookbook.prototype.filterActionQueue = function (filter) {
     if (!this.actionQueue)
         return false;
     var count = this.actionQueue.length;
-    for (var i = 0; i < count; i++) {
+    for (var i = count - 1; i >= 0; i--) {
         var item = this.actionQueue[i];
         if (item.state === 'inProgress')
             continue;
@@ -161,7 +161,6 @@ GameguiCookbook.prototype.filterActionQueue = function (filter) {
             continue;
         (_a = item.callback) === null || _a === void 0 ? void 0 : _a.call(item, true, 'Action was filtered out', this.actionErrorCodes.FILTERED_OUT);
         this.actionQueue.splice(i, 1);
-        i--;
     }
     return count !== this.actionQueue.length;
 };
@@ -192,9 +191,17 @@ GameguiCookbook.prototype.asyncPostActions = function () {
             item.state = 'inProgress';
             this_1.ajaxcall("/".concat(this_1.game_name, "/").concat(this_1.game_name, "/").concat(item.action, ".html"), item.args, this_1, function () { }, function (error, errorMessage, errorCode) {
                 var _a, _b;
-                _this.actionQueue = (_a = _this.actionQueue) === null || _a === void 0 ? void 0 : _a.filter(function (a) { return a !== item || (a.dependencies === null && error); });
                 item.state = error ? 'failed' : 'complete';
-                (_b = item.callback) === null || _b === void 0 ? void 0 : _b.call(item, error, errorMessage, errorCode);
+                (_a = item.callback) === null || _a === void 0 ? void 0 : _a.call(item, error, errorMessage, errorCode);
+                _this.actionQueue = (_b = _this.actionQueue) === null || _b === void 0 ? void 0 : _b.filter(function (x) {
+                    var _a;
+                    if (x.state === 'queued' && x.dependencies === null && error) {
+                        x.state = 'failed';
+                        (_a = x.callback) === null || _a === void 0 ? void 0 : _a.call(x, true, 'Dependency failed', _this.actionErrorCodes.DEPENDENCY_FAILED);
+                        return false;
+                    }
+                    return x !== item;
+                });
                 _this.asyncPostActions();
             });
             (_c = item.onSent) === null || _c === void 0 ? void 0 : _c.call(item);
@@ -456,6 +463,10 @@ var KiriaiTheDuel = (function (_super) {
         _this.onHandCardClick = function (evt, index) {
             var _a;
             evt.preventDefault();
+            if (!_this.checkAction('pickedFirst', true)) {
+                console.log('Not your turn!');
+                return;
+            }
             if ((_a = _this.actionQueue) === null || _a === void 0 ? void 0 : _a.some(function (a) { return a.action === 'confirmedCards' && a.state === 'inProgress'; })) {
                 console.log('Already confirmed cards! There is no backing out now!');
                 return;
@@ -696,7 +707,7 @@ var KiriaiTheDuel = (function (_super) {
         var _a;
         (_a = this.setupHandles) === null || _a === void 0 ? void 0 : _a.forEach(function (h) { return dojo.disconnect(h); });
         delete this.setupHandles;
-        var index = 0;
+        var index = 1;
         while (true) {
             var element = $('samurai_field_position_' + index);
             if (element)
@@ -748,7 +759,6 @@ var KiriaiTheDuel = (function (_super) {
                     }
                     this.addActionButton('confirmBattlefieldButton', _('Confirm'), function (e) {
                         console.log('Confirming selection', e);
-                        _this.lockTitleWithStatus(_('Sending moves to server...'));
                         _this.ajaxAction('confirmedStanceAndPosition', {
                             isHeavenStance: (_this.isRedPlayer() ? _this.redStance() : _this.blueStance()) == 0,
                             position: (_this.isRedPlayer() ? _this.redPosition() : _this.bluePosition())
@@ -871,20 +881,25 @@ var KiriaiTheDuel = (function (_super) {
             $('blueHand_5').parentElement.classList.add('discarded');
         else
             $('blueHand_5').parentElement.classList.remove('discarded');
-        var redRot = this.redStance() == 0 ? 'rotate(-45deg)' : 'rotate(135deg)';
-        var blueRot = this.blueStance() == 0 ? 'rotate(-45deg)' : 'rotate(135deg)';
-        if (!this.isRedPlayer()) {
-            $('red_samurai').style.transform = 'translate(-95%, -11.5%) ' + redRot;
-            $('blue_samurai').style.transform = 'translate(95%, 11.5%) ' + blueRot;
-        }
-        else {
-            $('red_samurai').style.transform = 'translate(95%, 11.5%) scale(-1, -1) ' + redRot;
-            $('blue_samurai').style.transform = 'translate(-95%, -11.5%) scale(-1, -1) ' + blueRot;
-        }
-        if ($('red_samurai_field_position_' + this.redPosition()))
-            this.placeOnObject('red_samurai_offset', 'red_samurai_field_position_' + this.redPosition());
-        if ($('blue_samurai_field_position_' + this.bluePosition()))
-            this.placeOnObject('blue_samurai_offset', 'blue_samurai_field_position_' + this.bluePosition());
+        var placeSamurai = function (stance, position, isRed) {
+            var rot = stance == 0 ? -45 : 135;
+            var posElement = $('samurai_field_position_' + position);
+            var transform;
+            if (posElement) {
+                _this.placeOnObject((isRed ? 'red' : 'blue') + '_samurai_offset', posElement);
+                if (!_this.isRedPlayer())
+                    transform = isRed ? 'translate(-95%, -11.5%) ' : 'translate(95%, 11.5%) ';
+                else
+                    transform = isRed ? 'translate(95%, 11.5%) scale(-1, -1) ' : 'translate(-95%, -11.5%) scale(-1, -1) ';
+            }
+            else {
+                rot += 45;
+                transform = 'translate(45%, ' + ((_this.isRedPlayer() ? isRed : !isRed) ? "" : "-") + '75%) ';
+            }
+            $((isRed ? 'red' : 'blue') + '_samurai').style.transform = transform + 'rotate(' + rot + 'deg)';
+        };
+        placeSamurai(this.redStance(), this.redPosition(), true);
+        placeSamurai(this.blueStance(), this.bluePosition(), false);
         var redSprite = !this.redHit() ? 0 : 2;
         var blueSprite = !this.blueHit() ? 1 : 3;
         $('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';

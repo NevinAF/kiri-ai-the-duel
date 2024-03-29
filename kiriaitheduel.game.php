@@ -2,7 +2,7 @@
  /**
   *------
   * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
-  * KiriaiTheDuel implementation : © <Your name here> <Your email address here>
+  * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gamil.com
   * 
   * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
   * See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -743,6 +743,11 @@ class KiriaiTheDuel extends Table
 
 		self::set_hidePlayedCards($cards, false);
 
+		if (self::get_redPlayed0($cards) == PlayedCard::SPECIAL || self::get_redPlayed1($cards) == PlayedCard::SPECIAL)
+			self::set_redSpecialPlayed($cards, true);
+		if (self::get_bluePlayed0($cards) == PlayedCard::SPECIAL || self::get_bluePlayed1($cards) == PlayedCard::SPECIAL)
+			self::set_blueSpecialPlayed($cards, true);
+
 		self::notifyAllGameState($players, 'before first resolve', array(), $battlefield, $cards); // Setup cards and flip first one over
 
 		if (self::DoCards($players, $battlefield, $cards, true))
@@ -766,6 +771,9 @@ class KiriaiTheDuel extends Table
 		self::notifyAllGameState($players, 'after resolve', array(), $battlefield, $cards); // Return second card as discarded.
 
 		$this->gamestate->nextState( "pickCards" );
+
+		// give player some more time
+		$this->giveExtraTime( $players );
 	}
 
 	function DoCards(&$players, &$battlefield, &$cards, bool $first): bool
@@ -1025,14 +1033,10 @@ class KiriaiTheDuel extends Table
 			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
 		}
 
-		if ($red_card == PlayedCard::SPECIAL)
-			self::set_redSpecialPlayed($cards, true);
 		if ($first)
 			self::set_redPlayed0($cards, PlayedCard::NOT_PLAYED);
 		else self::set_redPlayed1($cards, PlayedCard::NOT_PLAYED);
 
-		if ($blue_card == PlayedCard::SPECIAL)
-			self::set_blueSpecialPlayed($cards, true);
 		if ($first)
 			self::set_bluePlayed0($cards, PlayedCard::NOT_PLAYED);
 		else self::set_bluePlayed1($cards, PlayedCard::NOT_PLAYED);

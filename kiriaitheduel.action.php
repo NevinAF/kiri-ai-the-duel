@@ -2,23 +2,8 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © <Your name here> <Your email address here>
- *
- * This code has been produced on the BGA studio platform for use on https://boardgamearena.com.
- * See http://en.doc.boardgamearena.com/Studio for more information.
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gamil.com
  * -----
- * 
- * kiriaitheduel.action.php
- *
- * KiriaiTheDuel main action entry point
- *
- *
- * In this file, you are describing all the methods that can be called from your
- * user interface logic (javascript).
- *       
- * If you define a method "myAction" here, then you can call it from your javascript code with:
- * this.ajaxcall( "/kiriaitheduel/kiriaitheduel/myAction.html", ...)
- *
  */
   
   
@@ -39,6 +24,7 @@
       }
   	}
 
+	/** Confirms the Stands and Position of the player when starting a new game on the advanced battlefield. */
 	public function confirmedStanceAndPosition()
 	{
 		self::setAjaxMode();
@@ -50,6 +36,7 @@
 		self::ajaxResponse( );
 	}
 
+	/** Player picks their first card. */
 	public function pickedFirst()
 	{
 		self::setAjaxMode();
@@ -60,6 +47,7 @@
 		self::ajaxResponse( );
 	}
 
+	/** Player picks their second card. */
 	public function pickedSecond()
 	{
 		self::setAjaxMode();
@@ -70,6 +58,7 @@
 		self::ajaxResponse( );
 	}
 
+	/** Player undoes their first card pick. */
 	public function undoFirst()
 	{
 		self::setAjaxMode();
@@ -79,6 +68,7 @@
 		self::ajaxResponse( );
 	}
 
+	/** Player undoes their second card pick. */
 	public function undoSecond()
 	{
 		self::setAjaxMode();
@@ -88,6 +78,7 @@
 		self::ajaxResponse( );
 	}
 
+	/** Player confirms the cards they have picked. */
 	public function confirmedCards()
 	{
 		self::setAjaxMode();
