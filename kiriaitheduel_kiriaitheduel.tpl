@@ -46,11 +46,20 @@
 <script type="text/javascript">
 
 var jstpl_card =
-'<img class="cardImg" src="${src}" id="${id}" style="object-position: ${x}% 0px;" draggable="false" />';
+'<img class="cardImg" src="${src}" id="${id}" style="object-position: ${x}% 0px;" draggable="false">';
 
 var jstpl_field_position =
 '<div class="field_position" id="samurai_field_position_${id}"></div>';
 
-</script>  
+var jstpl_tooltip =
+'<div class="tooltip-container">\
+	<h3>${title}</h3>\
+	<div class="tooltip-tag tooltip-type-${type}">${typeName}</div>\
+	<div class="tooltip-desc">${desc}</div>\
+	<div class="tooltip-img"><img class="cardImg" src="${src}" style="object-position: ${x}% 0px;" /></div>\
+	<div class="tooltip-desc" style="font-style: italic;">${flavor}</div>\
+</div>'
+
+</script>
 
 {OVERALL_GAME_FOOTER}

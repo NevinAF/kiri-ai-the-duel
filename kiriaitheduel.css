@@ -87,7 +87,7 @@
 	object-fit: cover;
 	width: 100%;
 	height: 100%;
-	position: relative;
+	position: absolute;
 }
 
 .topPicked {
@@ -145,3 +145,47 @@
 }
 
 /* #endregion */
+
+/* #region Tooltips */
+
+.tooltip-two-column {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+}
+
+.tooltip-container {
+	padding: .5rem 1rem;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.tooltip-tag {
+	color: white;
+	padding: .5rem 1rem;
+	border-radius: 50px;
+}
+
+.tooltip-type-move {
+	background-color: #3c94bf;
+}
+
+.tooltip-type-attack {
+	background-color: #bf3c3c;
+}
+
+.tooltip-type-special {
+	background-color: #bfb63c;
+}
+
+.tooltip-desc {
+	text-align: center;
+}
+
+.tooltip-img {
+	position: relative;
+	overflow: hidden;
+	width: 75px;
+	aspect-ratio: 0.6428571428571429;
+}

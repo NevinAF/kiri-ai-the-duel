@@ -773,7 +773,9 @@ class KiriaiTheDuel extends Table
 		$this->gamestate->nextState( "pickCards" );
 
 		// give player some more time
-		$this->giveExtraTime( $players );
+		foreach ($players as $player_id => $player) {
+			$this->giveExtraTime( $player_id );
+		}
 	}
 
 	function DoCards(&$players, &$battlefield, &$cards, bool $first): bool

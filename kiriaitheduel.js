@@ -459,6 +459,39 @@ var KiriaiTheDuel = (function (_super) {
                 _this.instantMatch();
             }
         };
+        _this.tooltips = [{
+                title: 'Approach/Retreat',
+                type: 'move',
+                desc: 'Move 1 space forward (top) or backward (bottom).'
+            }, {
+                title: 'Charge/Change Stance',
+                type: 'move',
+                desc: 'Move 2 spaces forward (top) or change stance (bottom).'
+            }, {
+                title: 'High Strike',
+                type: 'attack',
+                desc: 'When in Heaven stance, attack the second space in front.'
+            }, {
+                title: 'Low Strike',
+                type: 'attack',
+                desc: 'When in Earth stance, attack the space in front.'
+            }, {
+                title: 'Balanced Strike',
+                type: 'attack',
+                desc: 'Attack the space currently occupied.'
+            }, {
+                title: 'Kesa Strike',
+                type: 'special',
+                desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.'
+            }, {
+                title: 'Zan-Tetsu Strike',
+                type: 'special',
+                desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.'
+            }, {
+                title: 'Counterattack',
+                type: 'special',
+                desc: 'If the opponent lands an attack, they take damage instead.'
+            }];
         _this.predictionKey = 0;
         _this.onHandCardClick = function (evt, index) {
             var _a;
@@ -637,11 +670,15 @@ var KiriaiTheDuel = (function (_super) {
             return div;
         };
         for (var i = 0; i < 5; i++) {
-            placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
-            placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
+            var red = placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
+            var blue = placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
+            this.addTooltipHtml(red.parentElement.id, this.createTooltip(i, this.isRedPlayer()));
+            this.addTooltipHtml(blue.parentElement.id, this.createTooltip(i, !this.isRedPlayer()));
         }
-        placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
-        placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
+        var redSP = placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
+        var blueSP = placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
+        this.addTooltipHtml(redSP.parentElement.id, "<div id=\"redSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
+        this.addTooltipHtml(blueSP.parentElement.id, "<div id=\"blueSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
         for (var i = 0; i < 2; i++) {
             var div = void 0;
             div = placeCard("redPlayed_" + i, this.redPrefix() + 'Played_' + i, 13);
@@ -789,6 +826,18 @@ var KiriaiTheDuel = (function (_super) {
             }
         }
     };
+    KiriaiTheDuel.prototype.createTooltip = function (x, play_flavor) {
+        var tooltip = this.tooltips[x];
+        return this.format_block('jstpl_tooltip', {
+            title: _(tooltip.title),
+            type: tooltip.type,
+            typeName: _(tooltip.type == 'move' ? 'Movement' : tooltip.type == 'attack' ? 'Attack' : 'Special'),
+            desc: _(tooltip.desc),
+            src: g_gamethemeurl + 'img/tooltips.jpg',
+            x: x / 0.07,
+            flavor: play_flavor ? _('Click when playing cards to add/remove from the play area.') : ''
+        });
+    };
     KiriaiTheDuel.prototype.instantMatch = function () {
         var _this = this;
         console.log('instantMatch: ', {
@@ -870,6 +919,26 @@ var KiriaiTheDuel = (function (_super) {
                 $('blueHand_' + i).parentElement.classList.add('played');
             else
                 $('blueHand_' + i).parentElement.classList.remove('played');
+        }
+        if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
+            var redTarget = $('redHand_5').parentElement;
+            var blueTarget = $('blueHand_5').parentElement;
+            var notPlayedTooltip = function (cardVisible) {
+                var pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
+                return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + _this.createTooltip(pair[0], false) + _this.createTooltip(pair[1], false) + '</div>';
+            };
+            if (this.redSpecialCard() == 0) {
+                this.addTooltipHtml(redTarget.id, notPlayedTooltip(this.blueSpecialCard()));
+            }
+            else {
+                this.addTooltipHtml(redTarget.id, this.createTooltip(4 + this.redSpecialCard(), this.isRedPlayer()));
+            }
+            if (this.blueSpecialCard() == 0) {
+                this.addTooltipHtml(blueTarget.id, notPlayedTooltip(this.redSpecialCard()));
+            }
+            else {
+                this.addTooltipHtml(blueTarget.id, this.createTooltip(4 + this.blueSpecialCard(), !this.isRedPlayer()));
+            }
         }
         $('redHand_5').style.objectPosition = ((this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9) / 0.13) + '% 0px';
         if (this.redSpecialPlayed())
