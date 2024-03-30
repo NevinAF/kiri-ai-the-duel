@@ -459,7 +459,7 @@ var KiriaiTheDuel = (function (_super) {
                 _this.instantMatch();
             }
         };
-        _this.tooltips = [{
+        _this.card_tooltips = [{
                 title: 'Approach/Retreat',
                 type: 'move',
                 desc: 'Move 1 space forward (top) or backward (bottom).'
@@ -827,7 +827,7 @@ var KiriaiTheDuel = (function (_super) {
         }
     };
     KiriaiTheDuel.prototype.createTooltip = function (x, play_flavor) {
-        var tooltip = this.tooltips[x];
+        var tooltip = this.card_tooltips[x];
         return this.format_block('jstpl_tooltip', {
             title: _(tooltip.title),
             type: tooltip.type,
