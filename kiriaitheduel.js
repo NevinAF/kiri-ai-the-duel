@@ -99,23 +99,6 @@ GameguiCookbook.prototype.setDescriptionOnMyTurn = function (description) {
     var title = this.format_string_recursive(description, tpl);
     this.setMainTitle(title !== null && title !== void 0 ? title : '');
 };
-GameguiCookbook.prototype.infoDialog = function (message, title, callback) {
-    var myDlg = new ebg.popindialog();
-    console.log(myDlg);
-    myDlg.create('myDialogUniqueId');
-    myDlg.setTitle(_(title));
-    myDlg.setMaxWidth(500);
-    var html = '<div>' + message + '</div><a href="#" id="info_dialog_button" class="bgabutton bgabutton_blue"><span>Ok</span></a>';
-    myDlg.setContent(html);
-    myDlg.show(!1);
-    myDlg.hideCloseIcon();
-    dojo.connect($('info_dialog_button'), 'onclick', this, function (event) {
-        event.preventDefault();
-        callback === null || callback === void 0 ? void 0 : callback(event);
-        myDlg.destroy();
-    });
-    return myDlg;
-};
 ;
 GameguiCookbook.prototype.actionErrorCodes = {
     FILTERED_OUT: -512,
@@ -568,7 +551,7 @@ var KiriaiTheDuel = (function (_super) {
             _this.filterActionQueue('confirmedCards');
             _this.enqueueAjaxAction({
                 action: action,
-                args: { card: index },
+                args: { card_id: index },
                 callback: callback
             });
         };
