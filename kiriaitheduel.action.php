@@ -1,93 +1,88 @@
 <?php
 /**
+ * THIS FILE HAS BEEN AUTOMATICALLY GENERATED. ANY CHANGES MADE DIRECTLY MAY BE OVERWRITTEN.
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gamil.com
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster@gmail.com
+ *
+ * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
+ * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  */
-  
-  
-  class action_kiriaitheduel extends APP_GameAction
-  { 
-    // Constructor: please do not modify
-   	public function __default()
-  	{
-  	    if( self::isArg( 'notifwindow') )
-  	    {
-            $this->view = "common_notifwindow";
-  	        $this->viewArgs['table'] = self::getArg( "table", AT_posint, true );
-  	    }
-  	    else
-  	    {
-            $this->view = "kiriaitheduel_kiriaitheduel";
-            self::trace( "Complete reinitialization of board game" );
-      }
-  	}
 
-	/** Confirms the Stands and Position of the player when starting a new game on the advanced battlefield. */
-	public function confirmedStanceAndPosition()
+class action_kiriaitheduel extends APP_GameAction
+{
+	/** @var kiriaitheduel $game */
+	protected $game; // Enforces functions exist on Table class
+
+	// Constructor: please do not modify
+	public function __default()
 	{
-		self::setAjaxMode();
-
-		$arg1 = self::getArg( "isHeavenStance", AT_bool, true );
-		$arg2 = self::getArg( "position", AT_posint, true );
-		$this->game->confirmedStanceAndPosition( $arg1, $arg2 );
-
-		self::ajaxResponse( );
+		if (self::isArg('notifwindow')) {
+			$this->view = "common_notifwindow";
+			$this->viewArgs['table'] = self::getArg("table", AT_posint, true);
+		} else {
+			$this->view = "kiriaitheduel_kiriaitheduel";
+			self::trace("Complete reinitialization of board game");
+		}
 	}
 
-	/** Player picks their first card. */
-	public function pickedFirst()
-	{
+	public function confirmedStanceAndPosition() {
 		self::setAjaxMode();
 
-		$arg1 = self::getArg( "card", AT_posint, true );
-		$this->game->pickedFirst( $arg1 );
+		/** @var bool $isHeavenStance */
+		$isHeavenStance = self::getArg('isHeavenStance', AT_bool, true);
+		/** @var int $position */
+		$position = self::getArg('position', AT_int, true);
 
-		self::ajaxResponse( );
+		$this->game->confirmedStanceAndPosition( $isHeavenStance, $position );
+
+		self::ajaxResponse();
 	}
 
-	/** Player picks their second card. */
-	public function pickedSecond()
-	{
+	public function pickedFirst() {
 		self::setAjaxMode();
 
-		$arg1 = self::getArg( "card", AT_posint, true );
-		$this->game->pickedSecond( $arg1 );
+		/** @var int $card_id */
+		$card_id = self::getArg('card_id', AT_int, true);
 
-		self::ajaxResponse( );
+		$this->game->pickedFirst( $card_id );
+
+		self::ajaxResponse();
 	}
 
-	/** Player undoes their first card pick. */
-	public function undoFirst()
-	{
+	public function pickedSecond() {
 		self::setAjaxMode();
 
-		$this->game->undoFirst( );
+		/** @var int $card_id */
+		$card_id = self::getArg('card_id', AT_int, true);
 
-		self::ajaxResponse( );
+		$this->game->pickedSecond( $card_id );
+
+		self::ajaxResponse();
 	}
 
-	/** Player undoes their second card pick. */
-	public function undoSecond()
-	{
+	public function undoFirst() {
 		self::setAjaxMode();
 
-		$this->game->undoSecond( );
+		$this->game->undoFirst(  );
 
-		self::ajaxResponse( );
+		self::ajaxResponse();
 	}
 
-	/** Player confirms the cards they have picked. */
-	public function confirmedCards()
-	{
+	public function undoSecond() {
 		self::setAjaxMode();
 
-		$this->game->confirmedCards( );
+		$this->game->undoSecond(  );
 
-		self::ajaxResponse( );
+		self::ajaxResponse();
 	}
 
-  }
-  
+	public function confirmedCards() {
+		self::setAjaxMode();
 
+		$this->game->confirmedCards(  );
+
+		self::ajaxResponse();
+	}
+}
