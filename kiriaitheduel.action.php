@@ -1,9 +1,9 @@
 <?php
-/**
+/*
  * THIS FILE HAS BEEN AUTOMATICALLY GENERATED. ANY CHANGES MADE DIRECTLY MAY BE OVERWRITTEN.
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © Nevin Foster nevin.foster@gmail.com
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gmail.com
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -27,7 +27,8 @@ class action_kiriaitheduel extends APP_GameAction
 		}
 	}
 
-	public function confirmedStanceAndPosition() {
+	public function confirmedStanceAndPosition()
+	{
 		self::setAjaxMode();
 
 		/** @var bool $isHeavenStance */
@@ -36,53 +37,52 @@ class action_kiriaitheduel extends APP_GameAction
 		$position = self::getArg('position', AT_int, true);
 
 		$this->game->confirmedStanceAndPosition( $isHeavenStance, $position );
-
 		self::ajaxResponse();
 	}
 
-	public function pickedFirst() {
+	public function pickedFirst()
+	{
 		self::setAjaxMode();
 
 		/** @var int $card_id */
 		$card_id = self::getArg('card_id', AT_int, true);
 
 		$this->game->pickedFirst( $card_id );
-
 		self::ajaxResponse();
 	}
 
-	public function pickedSecond() {
+	public function pickedSecond()
+	{
 		self::setAjaxMode();
 
 		/** @var int $card_id */
 		$card_id = self::getArg('card_id', AT_int, true);
 
 		$this->game->pickedSecond( $card_id );
-
 		self::ajaxResponse();
 	}
 
-	public function undoFirst() {
+	public function undoFirst()
+	{
 		self::setAjaxMode();
 
 		$this->game->undoFirst(  );
-
 		self::ajaxResponse();
 	}
 
-	public function undoSecond() {
+	public function undoSecond()
+	{
 		self::setAjaxMode();
 
 		$this->game->undoSecond(  );
-
 		self::ajaxResponse();
 	}
 
-	public function confirmedCards() {
+	public function confirmedCards()
+	{
 		self::setAjaxMode();
 
 		$this->game->confirmedCards(  );
-
 		self::ajaxResponse();
 	}
 }

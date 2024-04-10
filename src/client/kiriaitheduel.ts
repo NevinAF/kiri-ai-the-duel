@@ -1,30 +1,33 @@
-/// <reference path="kiriaitheduel.d.ts" />
-/// <reference path="../template/client/cookbook/common.ts" />
-/// <reference path="../template/client/cookbook/nevinAF/playeractionqueue.ts" />
-/// <reference path="../template/client/cookbook/nevinAF/titleLocking.ts" />
-/**
+/// <amd-module name="bgagame/kiriaitheduel"/>
+/*
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © Nevin Foster - nevin.foster2@gmail.com
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gmail.com
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  */
-class KiriaiTheDuel extends GameguiCookbook
-{
-	constructor() {
-		super();
-		console.log('kiriaitheduel:', this);
-	}
+import dojo = require('dojo');
+import Gamegui = require('ebg/core/gamegui');
+import CommonMixin = require('cookbook/common');
+import TitleLockingMixin = require('cookbook/nevinaf/titlelocking');
+import PlayerActionQueue = require('cookbook/nevinaf/playeractionqueue');
 
+declare function $<E extends Element>(id: string | E): E;
+
+/** The root for all of your game code. */
+class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
+{
+	/** @gameSpecific See {@link Gamegui.setup} for more information. */
 	isInitialized: boolean = false;
+	actionQueue = new PlayerActionQueue(this);
 
 	//
 	// #region Gamedata Wrappers
 	//
 
-	isRedPlayer(): boolean { return this.gamedatas.players[this.player_id].color == 'e54025'; }
+	isRedPlayer(): boolean { return this.gamedatas.players[this.player_id]!.color == 'e54025'; }
 	redPrefix(): string { return this.isRedPlayer() ? 'my' : 'opponent'; }
 	bluePrefix(): string { return this.isRedPlayer() ? 'opponent' : 'my'; }
 	redPosition(): number { return (this.gamedatas.battlefield >> 0) &0b1111; }
@@ -45,8 +48,8 @@ class KiriaiTheDuel extends GameguiCookbook
 	redSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 26) &0b1) == 1; }
 	blueSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 27) & 0b1) == 1; }
 
-	redPlayerId(): number { return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any)); }
-	bluePlayerId(): number { return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any)) : this.player_id; }
+	redPlayerId(): number { return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any))!; }
+	bluePlayerId(): number { return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any))! : this.player_id; }
 
 	//
 	// #endregion
@@ -61,20 +64,20 @@ class KiriaiTheDuel extends GameguiCookbook
 	{
 		console.log( "Starting game setup", this.gamedatas );
 
-		this.actionTitleLockingStrategy = 'actionbar';
+		this.actionQueue.actionTitleLockingStrategy = 'actionbar';
 
-		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id].color, this.gamedatas.players[this.player_id].color == 'e54025');
+		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id]!.color, this.gamedatas.players[this.player_id]!.color == 'e54025');
 
 		this.serverCards = gamedatas.cards;
-		this.predictionModifiers = [];
 
 		// Setup game notifications to handle (see "setupNotifications" method below)
 		this.setupNotifications();
 
-		const placeCard = (id: string, target: string, offset: number) => {
+		const placeCard = (id: string, target: string, offset: number): HTMLElement => {
 			if ($(target) == null) {
 				console.error('Div "' + target + '" does not exist.');
-				return;
+				// @ts-ignore
+				return null;
 			}
 			const div = dojo.place(this.format_block('jstpl_card', {
 				src: g_gamethemeurl + 'img/placeholderCards.jpg',
@@ -89,15 +92,15 @@ class KiriaiTheDuel extends GameguiCookbook
 			let red  = placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
 			let blue = placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
 
-			this.addTooltipHtml(red.parentElement.id,  this.createTooltip(i, this.isRedPlayer()));
-			this.addTooltipHtml(blue.parentElement.id, this.createTooltip(i, !this.isRedPlayer()));
+			this.addTooltipHtml(red.parentElement!.id,  this.createTooltip(i, this.isRedPlayer()));
+			this.addTooltipHtml(blue.parentElement!.id, this.createTooltip(i, !this.isRedPlayer()));
 		}
 
 		let redSP  = placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
 		let blueSP = placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
 
-		this.addTooltipHtml(redSP.parentElement.id, `<div id="redSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
-		this.addTooltipHtml(blueSP.parentElement.id, `<div id="blueSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
+		this.addTooltipHtml(redSP.parentElement!.id, `<div id="redSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
+		this.addTooltipHtml(blueSP.parentElement!.id, `<div id="blueSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
 		
 
 		// Add tooltips to the cards
@@ -109,8 +112,8 @@ class KiriaiTheDuel extends GameguiCookbook
 			div = placeCard("redPlayed_" + i, this.redPrefix() + 'Played_' + i, 13);
 			div = placeCard("bluePlayed_" + i, this.bluePrefix() + 'Played_' + i, 13);
 
-			$('redPlayed_' + i).style.display = 'none';
-			$('bluePlayed_' + i).style.display = 'none';
+			$<HTMLElement>('redPlayed_' + i).style.display = 'none';
+			$<HTMLElement>('bluePlayed_' + i).style.display = 'none';
 		}
 
 		for (let id of ['red_samurai', 'blue_samurai'])
@@ -131,7 +134,7 @@ class KiriaiTheDuel extends GameguiCookbook
 		}
 
 		if (!this.isRedPlayer())
-			$('battlefield').style.flexDirection = 'column-reverse';
+			$<HTMLElement>('battlefield').style.flexDirection = 'column-reverse';
 
 		this.instantMatch();
 
@@ -245,7 +248,7 @@ class KiriaiTheDuel extends GameguiCookbook
 					}));
 				}
 
-				this.addActionButton('confirmBattlefieldButton', _('Confirm'), e => {
+				this.addActionButton('confirmBattlefieldButton', _('Confirm'), (e: any) => {
 					console.log('Confirming selection', e);
 					this.ajaxAction('confirmedStanceAndPosition', {
 							isHeavenStance: (this.isRedPlayer() ? this.redStance() : this.blueStance()) == 0,
@@ -258,7 +261,7 @@ class KiriaiTheDuel extends GameguiCookbook
 
 			case "pickCards":
 
-				this.addActionButton('confirmSelectionButton', _('Confirm'), e => {
+				this.addActionButton('confirmSelectionButton', _('Confirm'), (e: any) => {
 					console.log('Confirming selection', e);
 					
 					if (this.isRedPlayer()) {
@@ -273,7 +276,7 @@ class KiriaiTheDuel extends GameguiCookbook
 					}
 					// This makes sure that this action button is removed.
 					this.lockTitleWithStatus(_('Sending moves to server...')); 
-					this.enqueueAjaxAction({
+					this.actionQueue.enqueueAjaxAction({
 						action: 'confirmedCards',
 						args: {}
 					});
@@ -345,6 +348,8 @@ class KiriaiTheDuel extends GameguiCookbook
 	createTooltip(x: number, play_flavor: boolean)
 	{
 		const tooltip = this.card_tooltips[x];
+		if (!tooltip) return '';
+
 		return this.format_block('jstpl_tooltip', {
 			title: _(tooltip.title),
 			type: tooltip.type,
@@ -378,7 +383,10 @@ class KiriaiTheDuel extends GameguiCookbook
 			blueSpecialPlayed: this.blueSpecialPlayed()
 		});
 
-		const updateCard = (target: HTMLElement, card: number, isRed: boolean) => {
+		const updateCard = (target: Element, card: number, isRed: boolean) => {
+			if (!(target instanceof HTMLElement))
+				return;
+
 			if (card == 0) {
 				target.style.display = 'none';
 				return;
@@ -425,28 +433,28 @@ class KiriaiTheDuel extends GameguiCookbook
 		for (let i = 0; i < 6; i++) {
 			if (i < 5)
 			{
-				if (this.redDiscarded() - 1 == i) $('redHand_' + i).parentElement.classList.add('discarded');
-				else  $('redHand_' + i).parentElement.classList.remove('discarded');
+				if (this.redDiscarded() - 1 == i) $('redHand_' + i).parentElement!.classList.add('discarded');
+				else  $('redHand_' + i).parentElement!.classList.remove('discarded');
 
-				if (this.blueDiscarded() - 1 == i) $('blueHand_' + i).parentElement.classList.add('discarded');
-				else  $('blueHand_' + i).parentElement.classList.remove('discarded');
+				if (this.blueDiscarded() - 1 == i) $('blueHand_' + i).parentElement!.classList.add('discarded');
+				else  $('blueHand_' + i).parentElement!.classList.remove('discarded');
 			}
 
-			if (redPlayed.includes(i)) $('redHand_' + i).parentElement.classList.add('played');
-			else  $('redHand_' + i).parentElement.classList.remove('played');
+			if (redPlayed.includes(i)) $('redHand_' + i).parentElement!.classList.add('played');
+			else  $('redHand_' + i).parentElement!.classList.remove('played');
 
-			if (bluePlayed.includes(i)) $('blueHand_' + i).parentElement.classList.add('played');
-			else  $('blueHand_' + i).parentElement.classList.remove('played');
+			if (bluePlayed.includes(i)) $('blueHand_' + i).parentElement!.classList.add('played');
+			else  $('blueHand_' + i).parentElement!.classList.remove('played');
 		}
 
 		if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
 
-			const redTarget = $('redHand_5').parentElement;
-			const blueTarget = $('blueHand_5').parentElement;
+			const redTarget = $('redHand_5').parentElement!;
+			const blueTarget = $('blueHand_5').parentElement!;
 
 			const notPlayedTooltip = (cardVisible: number) => {
 				const pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
-				return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + this.createTooltip(pair[0], false) + this.createTooltip(pair[1], false) + '</div>';
+				return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + this.createTooltip(pair[0]!, false) + this.createTooltip(pair[1]!, false) + '</div>';
 			};
 
 			if (this.redSpecialCard() == 0) {
@@ -466,22 +474,22 @@ class KiriaiTheDuel extends GameguiCookbook
 			}
 		}
 
-		$('redHand_5').style.objectPosition = ((
+		$<HTMLElement>('redHand_5').style.objectPosition = ((
 			this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9
 		) / 0.13) + '% 0px';
-		if (this.redSpecialPlayed()) $('redHand_5').parentElement.classList.add('discarded');
-		else $('redHand_5').parentElement.classList.remove('discarded');
+		if (this.redSpecialPlayed()) $('redHand_5').parentElement!.classList.add('discarded');
+		else $('redHand_5').parentElement!.classList.remove('discarded');
 
-		$('blueHand_5').style.objectPosition = ((
+		$<HTMLElement>('blueHand_5').style.objectPosition = ((
 			this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9
 		) / 0.13) + '% 0px';
-		if (this.blueSpecialPlayed()) $('blueHand_5').parentElement.classList.add('discarded');
-		else $('blueHand_5').parentElement.classList.remove('discarded');
+		if (this.blueSpecialPlayed()) $('blueHand_5').parentElement!.classList.add('discarded');
+		else $('blueHand_5').parentElement!.classList.remove('discarded');
 
 		// Set the positions and stance
 		const placeSamurai = (stance: number, position: number, isRed: boolean) => {
 			let rot = stance == 0 ? -45 : 135;
-			let posElement = $('samurai_field_position_' + position);
+			let posElement = $<HTMLElement>('samurai_field_position_' + position);
 			let transform: string;
 
 			if (posElement) {
@@ -495,7 +503,7 @@ class KiriaiTheDuel extends GameguiCookbook
 				transform = 'translate(45%, ' + ((this.isRedPlayer() ? isRed : !isRed) ? "" : "-") + '75%) ';
 			}
 
-			$((isRed ? 'red' : 'blue') + '_samurai').style.transform = transform + 'rotate(' + rot + 'deg)';
+			$<HTMLElement>((isRed ? 'red' : 'blue') + '_samurai').style.transform = transform + 'rotate(' + rot + 'deg)';
 		}
 
 		placeSamurai(this.redStance(), this.redPosition(), true);
@@ -503,8 +511,8 @@ class KiriaiTheDuel extends GameguiCookbook
 
 		let redSprite = !this.redHit() ? 0 : 2;
 		let blueSprite = !this.blueHit() ? 1 : 3;
-		$('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';
-		$('blue_samurai_card').style.objectPosition = (blueSprite / 0.03) + '% 0px';
+		$<HTMLElement>('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';
+		$<HTMLElement>('blue_samurai_card').style.objectPosition = (blueSprite / 0.03) + '% 0px';
 
 		// Set the width of the samuira to 30% the width of the battlefield
 		let battlefield = $('battlefield');
@@ -524,9 +532,9 @@ class KiriaiTheDuel extends GameguiCookbook
 	// Predictions are used to simulate the state of the game before the action is acknowledged by the server.
 	//
 
-	serverCards: number;
+	serverCards: number = 0;
 	predictionKey: number = 0;
-	predictionModifiers: { key: number, func: ((cards: number) => number) }[];
+	predictionModifiers: { key: number, func: ((cards: number) => number) }[] = [];
 
 	addPredictionModifier(func: ((cards: number) => number)):
 		() => void
@@ -573,7 +581,7 @@ class KiriaiTheDuel extends GameguiCookbook
 			return;
 		}
 
-		if (this.actionQueue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
+		if (this.actionQueue.queue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
 			console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
@@ -627,7 +635,7 @@ class KiriaiTheDuel extends GameguiCookbook
 		else if (index == 6)
 			index = 8;
 
-		let action: "pickedFirst" | "pickedSecond";
+		let action: "pickedFirst" | "pickedSecond" | null = null;
 		let indexOffset: number;
 		if (this.isRedPlayer()) {
 			if (this.redPlayed0() == 0) {
@@ -650,13 +658,18 @@ class KiriaiTheDuel extends GameguiCookbook
 			}
 		}
 
+		if (!action) {
+			console.error('Both cards have already been picked! but not caught!');
+			return;
+		}
+
 		const callback = this.addPredictionModifier((cards) => {
 			cards &= ~(0b1111 << indexOffset);
 			return cards | (index & 0b1111) << indexOffset;
 		});
 
-		this.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
-		this.enqueueAjaxAction({
+		this.actionQueue.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
+		this.actionQueue.enqueueAjaxAction({
 			action,
 			args: { card_id: index },
 			callback
@@ -667,7 +680,7 @@ class KiriaiTheDuel extends GameguiCookbook
 	{
 		evt?.preventDefault();
 
-		if (this.actionQueue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
+		if (this.actionQueue.queue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
 			console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
@@ -675,13 +688,13 @@ class KiriaiTheDuel extends GameguiCookbook
 		if (first)
 		{
 			// Still waiting on the first card that was picked to be sent to server...
-			if (this.filterActionQueue('pickedFirst')) {
+			if (this.actionQueue.filterActionQueue('pickedFirst')) {
 				return; // Removing the play action is the same as undoing it.
 			}
 		}
 		else {
 			// Still waiting on the second card that was picked to be sent to server...
-			if (this.filterActionQueue('pickedSecond')) {
+			if (this.actionQueue.filterActionQueue('pickedSecond')) {
 				return; // Removing the play action is the same as undoing it.
 			}
 		}
@@ -698,8 +711,8 @@ class KiriaiTheDuel extends GameguiCookbook
 			return cards & ~(0b1111 << indexOffset);
 		});
 
-		this.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
-		this.enqueueAjaxAction({
+		this.actionQueue.filterActionQueue('confirmedCards'); // If this is waiting to be sent, we don't want it to be sent.
+		this.actionQueue.enqueueAjaxAction({
 			action: first ? "undoFirst" : "undoSecond",
 			args: {},
 			callback
@@ -755,12 +768,15 @@ class KiriaiTheDuel extends GameguiCookbook
 		this.instantMatch();
 
 		if (notif.args.redScore !== undefined)
-			this.scoreCtrl[this.redPlayerId()].toValue(notif.args.redScore);
+			this.scoreCtrl[this.redPlayerId()]?.toValue(notif.args.redScore);
 		if (notif.args.blueScore !== undefined)
-			this.scoreCtrl[this.bluePlayerId()].toValue(notif.args.blueScore);
+			this.scoreCtrl[this.bluePlayerId()]?.toValue(notif.args.blueScore);
 	}
 
 	//
 	// #endregion
 	//
 }
+
+dojo.setObject( "bgagame.kiriaitheduel", KiriaiTheDuel );
+(window.bgagame ??= {}).kiriaitheduel = KiriaiTheDuel;

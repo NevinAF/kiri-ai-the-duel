@@ -1,11 +1,16 @@
-/// <reference path="build/index.d.ts" />
-
-/** @gameSpecific Add additional dojo dependency types here. See {@link DojoDependencies} for more information. */
-interface DojoDependencies {}
+/**
+ *------
+ * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gmail.com
+ *
+ * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
+ * See http://en.boardgamearena.com/#!doc/Studio for more information.
+ * -----
+ */
 
 /** @gameSpecific Add game specific notifications / arguments here. See {@link NotifTypes} for more information. */
 interface NotifTypes {
-	// [name: string]: object; // Uncomment to remove type safety on notification names and arguments
+	// [name: string]: any; // Uncomment to remove type safety on notification names and arguments
 	'starting special card': { card_name: string } & GameStateData;
 	'battlefield setup': GameStateData;
 	'played card': GameStateData;
@@ -24,15 +29,13 @@ interface NotifTypes {
 
 /** @gameSpecific Add game specific gamedatas arguments here. See {@link Gamedatas} for more information. */
 interface Gamedatas extends GameStateData {
-	// [key: string | number]: object; // Uncomment to remove type safety on game state arguments
+	// [key: string | number]: Record<keyof any, any>; // Uncomment to remove type safety on game state arguments
 }
 
 interface GameStateData {
 	battlefield: number;
 	cards: number;
 }
-
-type ValueOf<T> = T[keyof T];
 
 interface Stance
 {

@@ -1,0 +1,17 @@
+{
+	"version": "1.0.0",
+	"description": "This package initializes and builds type safe code using TypeScript and json schema files.",
+	"scripts": {
+		"init": "npm install bga-ts-template && npx bga-init KiriaiTheDuel \"Nevin Foster nevin.foster2@gmail.com\" src --typescript --scss --vscode-extension-pack --php-8.2 --gameinfos.jsonc --gameoptions.jsonc --gamepreferences.jsonc --stats.jsonc --gamestates.jsonc",
+		"build": "npx bga-build",
+		"watch": "npx bga-build --watch"
+	},
+	"author": "NevinAF",
+	"license": "MIT",
+	"devDependencies": {
+		"bga-ts-template": "file:../bga-ts-template"
+	},
+	"dependencies": {
+		"sass": "^1.74.1"
+	}
+}

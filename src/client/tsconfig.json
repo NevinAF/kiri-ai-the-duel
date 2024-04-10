@@ -1,24 +1,46 @@
-/**
+/*
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * KiriaiTheDuel implementation : © Nevin Foster nevin.foster@gmail.com
+ * KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gmail.com
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  */
 {
-	"include": [ "define.ts" ], // This will include all source that is needed
+	"files": [
+		"kiriaitheduel.ts",
+		"kiriaitheduel.d.ts",
+		// Add Cookbook files here: ../../node_modules/bga-ts-template/typescript/cookbook/<module>.ts
+		"../../node_modules/bga-ts-template/typescript/cookbook/common.ts",
+		"../../node_modules/bga-ts-template/typescript/cookbook/nevinaf/playeractionqueue.ts",
+		"../../node_modules/bga-ts-template/typescript/cookbook/nevinaf/titlelocking.ts",
+	],
+	"include": [
+		"build/**/*.ts", // Extra auto generated type files based on shared files
+	],
 	"compilerOptions": {
-		"target": "es5", // NEVER CHANGE THIS
-		"module": "none", // NEVER CHANGE THIS
-		"lib": [ "dom", "esnext" ], // Never should need to change.
-		"removeComments": true, // Preference. Comments are always removed in production.
-		"sourceMap": false, // Preference. Most debugging will be done in the browser, so source maps are not needed. 
+		/* NEVER CHANGE THESE */
+		"target": "es5", // This is the framework's version
+		"module": "AMD", // This is what allows for imports and automatically creates the define function.
+
+		/* Recommended, should not need to change. */
+		"moduleResolution": "node10",
+		"lib": [ "dom", "esnext" ],
 		"typeRoots": [
-			"template/client/types/**",
-			"./node_modules/@types"
+			"../../node_modules/bga-ts-template/typescript/types", // NEVER CHANGE. This ensures modules have the correct paths.
+			"../../node_modules/@types", // Recommended (default when typeRoots not defined)
 		],
-		"outFile": "../../kiriaitheduel.js"
+		"paths": {
+			"cookbook/*": [ "../../node_modules/bga-ts-template/typescript/cookbook/*" ]
+		},
+
+		/* Preference. This defaults to the most strict ts rules. */
+		"strict": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"removeComments": true, // Comments are always removed from JS in production, so you don't need to remove them when compiling.
+		"sourceMap": false,
 	},
 }
