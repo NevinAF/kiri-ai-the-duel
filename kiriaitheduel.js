@@ -468,7 +468,7 @@ define("cookbook/nevinAF/playeractionqueue", ["require", "exports"], function (r
     }());
     return PlayerActionQueue;
 });
-define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui", "cookbook/common", "cookbook/nevinAF/titlelocking", "cookbook/nevinAF/playeractionqueue"], function (require, exports, dojo, Gamegui, CommonMixin, TitleLockingMixin, PlayerActionQueue) {
+define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui", "cookbook/common", "cookbook/nevinAF/titlelocking", "cookbook/nevinAF/playeractionqueue", "ebg/counter"], function (require, exports, dojo, Gamegui, CommonMixin, TitleLockingMixin, PlayerActionQueue) {
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });

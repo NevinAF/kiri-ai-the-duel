@@ -10,6 +10,8 @@
  */
 import dojo = require('dojo');
 import Gamegui = require('ebg/core/gamegui');
+import "ebg/counter";
+
 import CommonMixin = require('cookbook/common');
 import TitleLockingMixin = require('cookbook/nevinaf/titlelocking');
 import PlayerActionQueue = require('cookbook/nevinaf/playeractionqueue');
