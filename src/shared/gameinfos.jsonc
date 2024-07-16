@@ -23,7 +23,7 @@
 
 	// Players
 	"players": [ 2 ],
-	"player_colors": [ "e54025", "5093a3" ],
+	"player_colors": [ "c93941", "4e93a6" ],
 	"favorite_colors_support": true,
 	"suggest_player_number": null,
 	"not_recommend_player_number": null,

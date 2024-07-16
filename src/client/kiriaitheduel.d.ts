@@ -33,14 +33,21 @@ interface Gamedatas extends GameStateData {
 }
 
 interface GameStateData {
-	battlefield: number;
-	cards: number;
+	player_state: number;
+	opponent_state: number;
+	battlefield_type: BattlefieldType[keyof BattlefieldType];
 }
 
 interface Stance
 {
 	HEAVEN: 0;
 	EARTH: 1;
+}
+
+interface BattlefieldType
+{
+	Standard: 1;
+	Advanced: 2;
 }
 
 interface PlayedCard

@@ -51,7 +51,7 @@ $this->userErrors = array (
 	'already played first' => clienttranslate("You have already played your first card for this turn."),
 	'already played second' => clienttranslate("You have already played your second card for this turn."),
 	'not all cards played' => clienttranslate("Trying to resolve cards by not all cards were played!"),
-	'player color not found' => clienttranslate("Player with color '%s' not found in database."),
+	'player not found in db' => clienttranslate("Player was somehow not found in database."),
 );
 
 $this->notifMessages = array (

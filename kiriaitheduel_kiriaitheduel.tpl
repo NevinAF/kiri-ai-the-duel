@@ -7,56 +7,104 @@
 -------
 -->
 
-<div id="game-area">
-	<div id="my-hand-area">
-		<div class="cardslot" id="myHand_0"></div>
-		<div class="cardslot" id="myHand_1"></div>
-		<div class="cardslot" id="myHand_2"></div>
-		<div class="cardslot" id="myHand_3"></div>
-		<div class="cardslot" id="myHand_4"></div>
-		<div class="cardslot" id="myHand_5"></div>
-	</div>
+<div id="game-area" style="--opponent-color: #{OPPONENT_COLOR}; --player-color: #{PLAYER_COLOR};">
 
-	<div id="battlefield">
-		<div id="red_samurai_offset" class="samurai_offset">
-			<div id="red_samurai"  class="cardslot"></div>
+	<div id="hands">
+
+		<div id="hand-icons">
+			<img id="discard_icon" src="img/dynamic/player-card-approach.svg" draggable="false"/>
+			<img id="special_icon" src="img/dynamic/player-card-approach.svg" draggable="false"/>
 		</div>
-		<div id="blue_samurai_offset" class="samurai_offset">
-			<div id="blue_samurai" class="cardslot"></div>
+
+		<div id="player-area" class="hand-area">
+			<div class="cardslot" id="player-hand_0">
+				<img src="img/dynamic/player-card-approach.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="player-hand_1">
+				<img src="img/dynamic/player-card-charge.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="player-hand_2">
+				<img src="img/dynamic/player-card-high-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="player-hand_3">
+				<img src="img/dynamic/player-card-low-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="player-hand_4">
+				<img src="img/dynamic/player-card-balance-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="player-hand_5">
+				<img src="card-back.svg" draggable="false"/>
+			</div>
 		</div>
+
+		<div id="opponent-area" class="hand-area">
+			<div class="cardslot" id="opponent-hand_0">
+				<img src="img/dynamic/opponent-card-approach.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="opponent-hand_1">
+				<img src="img/dynamic/opponent-card-charge.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="opponent-hand_2">
+				<img src="img/dynamic/opponent-card-high-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="opponent-hand_3">
+				<img src="img/dynamic/opponent-card-low-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="opponent-hand_4">
+				<img src="img/dynamic/opponent-card-balance-strike.svg" draggable="false"/>
+			</div>
+			<div class="cardslot" id="opponent-hand_5">
+				<img src="card-back.svg" draggable="false"/>
+			</div>
+		</div>
+
 	</div>
 
 	<div id="play-area">
-		<div class="cardslot" id="myPlayed_0"></div>
-		<div class="cardslot" id="myPlayed_1"></div>
-		<div class="cardslot" id="opponentPlayed_0"></div>
-		<div class="cardslot" id="opponentPlayed_1"></div>
+
+		<div id="battlefield" class="{BATTLEFIELD_TYPE}" class="cardslot">
+			<img src="img/dynamic/{BATTLEFIELD_TYPE}.svg" draggable="false"/>
+			<div class="battlefield_position" id="battlefield_position_1"></div>
+			<div class="battlefield_position" id="battlefield_position_2"></div>
+			<div class="battlefield_position" id="battlefield_position_3"></div>
+			<div class="battlefield_position" id="battlefield_position_4"></div>
+			<div class="battlefield_position" id="battlefield_position_5"></div>
+			<div class="battlefield_position" id="battlefield_position_6"></div>
+			<div class="battlefield_position" id="battlefield_position_7"></div>
+		</div>
+
+		<div id="player_samurai"  class="cardslot">
+			<img src="img/dynamic/player-stance-healthy.svg" draggable="false"/>
+		</div>
+
+		<div id="opponent_samurai"  class="cardslot">
+			<img src="img/dynamic/opponent-stance-healthy.svg" draggable="false"/>
+		</div>
+
+		<div class="cardslot" id="player_played_0">
+			<img src="img/dynamic/card-back.svg" draggable="false"/>
+		</div>
+		<div class="cardslot" id="player_played_1">
+			<img src="img/dynamic/card-back.svg" draggable="false"/>
+		</div>
+		<div class="cardslot" id="opponent_played_0">
+			<img src="img/dynamic/card-back.svg" draggable="false"/>
+		</div>
+		<div class="cardslot" id="opponent_played_1">
+			<img src="img/dynamic/card-back.svg" draggable="false"/>
+		</div>
 	</div>
 </div>
 
-<div id="opponent-hand-area">
-	<div class="cardslot" id="opponentHand_0"></div>
-	<div class="cardslot" id="opponentHand_1"></div>
-	<div class="cardslot" id="opponentHand_2"></div>
-	<div class="cardslot" id="opponentHand_3"></div>
-	<div class="cardslot" id="opponentHand_4"></div>
-	<div class="cardslot" id="opponentHand_5"></div>
-</div>
 
 <script type="text/javascript">
-
-var jstpl_card =
-'<img class="cardImg" src="${src}" id="${id}" style="object-position: ${x}% 0px;" draggable="false">';
-
-var jstpl_field_position =
-'<div class="field_position" id="samurai_field_position_${id}"></div>';
 
 var jstpl_tooltip =
 '<div class="tooltip-container">\
 	<h3>${title}</h3>\
 	<div class="tooltip-tag tooltip-type-${type}">${typeName}</div>\
 	<div class="tooltip-desc">${desc}</div>\
-	<div class="tooltip-img"><img class="cardImg" src="${src}" style="object-position: ${x}% 0px;" /></div>\
+	<div class="tooltip-img"><img src="img/dynamic/${card_name}.svg"/></div>\
 	<div class="tooltip-desc" style="font-style: italic;">${flavor}</div>\
 </div>'
 

@@ -470,29 +470,51 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// #region Gamedata Wrappers
 	//
 
-	isRedPlayer(): boolean { return this.gamedatas.players[this.player_id]!.color == 'e54025'; }
-	redPrefix(): string { return this.isRedPlayer() ? 'my' : 'opponent'; }
-	bluePrefix(): string { return this.isRedPlayer() ? 'opponent' : 'my'; }
-	redPosition(): number { return (this.gamedatas.battlefield >> 0) &0b1111; }
-	redStance(): number { return (this.gamedatas.battlefield >> 4) &0b1; }
-	bluePosition(): number { return (this.gamedatas.battlefield >> 5) &0b1111; }
-	blueStance(): number { return (this.gamedatas.battlefield >> 9) &0b1; }
-	redHit(): boolean { return ((this.gamedatas.battlefield >> 14) & 0b1) == 1; }
-	blueHit(): boolean { return ((this.gamedatas.battlefield >> 15) & 0b1) == 1; }
-	battlefieldType(): number { return (this.gamedatas.battlefield >> 16) & 0b111; }
-	redPlayed0(): number { return (this.gamedatas.cards >> 0) & 0b1111; }
-	redPlayed1(): number { return (this.gamedatas.cards >> 4) & 0b1111; }
-	bluePlayed0(): number { return (this.gamedatas.cards >> 8) &0b1111; }
-	bluePlayed1(): number { return (this.gamedatas.cards >> 12) &0b1111; }
-	redDiscarded(): number { return (this.gamedatas.cards >> 16) &0b111; }
-	blueDiscarded(): number { return (this.gamedatas.cards >> 19) &0b111; }
-	redSpecialCard(): number  { return (this.gamedatas.cards >> 22) &0b11; }
-	blueSpecialCard(): number  { return (this.gamedatas.cards >> 24) &0b11; }
-	redSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 26) &0b1) == 1; }
-	blueSpecialPlayed(): boolean { return ((this.gamedatas.cards >> 27) & 0b1) == 1; }
+	playerPosition(): number { return (this.gamedatas.player_state >> 0) & 0b1111; }
+	playerStance(): number { return (this.gamedatas.player_state >> 4) & 0b1; }
+	playerHit(): boolean { return ((this.gamedatas.player_state >> 5) & 0b1) == 1; }
+	playerPlayed0(): number { return (this.gamedatas.player_state >> 6) & 0b1111; }
+	playerPlayed1(): number { return (this.gamedatas.player_state >> 10) & 0b1111; }
+	playerDiscarded(): number { return (this.gamedatas.player_state >> 14) & 0b111; }
+	playerSpecialCard(): number { return (this.gamedatas.player_state >> 17) & 0b11; }
+	playerSpecialPlayed(): boolean { return ((this.gamedatas.player_state >> 19) & 0b1) == 1; }
 
-	redPlayerId(): number { return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any))!; }
-	bluePlayerId(): number { return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(i => i != (this.player_id as any))! : this.player_id; }
+	opponentPosition(): number { return (this.gamedatas.opponent_state >> 0) & 0b1111; }
+	opponentStance(): number { return (this.gamedatas.opponent_state >> 4) & 0b1; }
+	opponentHit(): boolean { return ((this.gamedatas.opponent_state >> 5) & 0b1) == 1; }
+	opponentPlayed0(): number { return (this.gamedatas.opponent_state >> 6) & 0b1111; }
+	opponentPlayed1(): number { return (this.gamedatas.opponent_state >> 10) & 0b1111; }
+	opponentDiscarded(): number { return (this.gamedatas.opponent_state >> 14) & 0b111; }
+	opponentSpecialCard(): number { return (this.gamedatas.opponent_state >> 17) & 0b11; }
+	opponentSpecialPlayed(): boolean { return ((this.gamedatas.opponent_state >> 19) & 0b1) == 1; }
+
+	//
+	// #endregion
+	//
+
+	//
+	// #region Document/URL Utilities
+	//
+
+	formatSVGURL(name: string) { return `${g_gamethemeurl}img/dynamic/${name}.svg` }
+
+	stanceURL(player: boolean) {
+		return this.formatSVGURL(`${player ? 'player-' : 'opponent-'}-stance-${(player ? this.playerHit() : this.opponentHit()) ? 'damaged' : 'healthy'}`);
+	}
+
+	setCardSlot(slot: string | Element, src: string | null) {
+		if (typeof slot == 'string')
+			slot = $(slot) as Element;
+
+		if (slot instanceof HTMLElement && slot.children.length > 0 && slot.children[0] instanceof HTMLImageElement)
+		{
+			(slot.children[0] as HTMLImageElement).style.display = src ? 'block' : 'none';
+			if (src != null)
+				(slot.children[0] as HTMLImageElement).src = src;
+		}
+
+		console.error('Invalid slot: ', slot);
+	}
 
 	//
 	// #endregion
@@ -509,75 +531,21 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		this.actionQueue.actionTitleLockingStrategy = 'actionbar';
 
-		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id]!.color, this.gamedatas.players[this.player_id]!.color == 'e54025');
+		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id] );
 
-		this.serverCards = gamedatas.cards;
+		this.server_player_state = gamedatas.player_state;
 
 		// Setup game notifications to handle (see "setupNotifications" method below)
 		this.setupNotifications();
 
-		const placeCard = (id: string, target: string, offset: number): HTMLElement => {
-			if ($(target) == null) {
-				console.error('Div "' + target + '" does not exist.');
-				// @ts-ignore
-				return null;
-			}
-			const div = dojo.place(this.format_block('jstpl_card', {
-				src: g_gamethemeurl + 'img/placeholderCards.jpg',
-				x: offset / 0.13,
-				id: id
-			}), target);
-			return div;
-		};
-
+		// Add tooltips to the cards
 		for (let i = 0; i < 5; i++)
 		{
-			let red  = placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
-			let blue = placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
-
-			this.addTooltipHtml(red.parentElement!.id,  this.createTooltip(i, this.isRedPlayer()));
-			this.addTooltipHtml(blue.parentElement!.id, this.createTooltip(i, !this.isRedPlayer()));
+			this.addTooltipHtml('player-hand_' + i,  this.createTooltip(i, true));
+			this.addTooltipHtml('opponent-hand_' + i, this.createTooltip(i, false));
 		}
-
-		let redSP  = placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
-		let blueSP = placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
-
-		this.addTooltipHtml(redSP.parentElement!.id, `<div id="redSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
-		this.addTooltipHtml(blueSP.parentElement!.id, `<div id="blueSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
-		
-
-		// Add tooltips to the cards
-
-		for (let i = 0; i < 2; i++)
-		{
-			let div: HTMLElement;
-
-			div = placeCard("redPlayed_" + i, this.redPrefix() + 'Played_' + i, 13);
-			div = placeCard("bluePlayed_" + i, this.bluePrefix() + 'Played_' + i, 13);
-
-			$<HTMLElement>('redPlayed_' + i).style.display = 'none';
-			$<HTMLElement>('bluePlayed_' + i).style.display = 'none';
-		}
-
-		for (let id of ['red_samurai', 'blue_samurai'])
-			dojo.place(this.format_block('jstpl_card', {
-				src: g_gamethemeurl + 'img/placeholder_SamuraiCards.jpg',
-				x: 0,
-				id: id + '_card'
-			}), id);
-
-		const battlefieldType = this.battlefieldType();
-		const battlefieldSize = battlefieldType == 1 ? 5 : 7;
-
-		for (let i = 1; i <= battlefieldSize; i++)
-		{
-			dojo.place(this.format_block('jstpl_field_position', {
-				id: i,
-			}), $('battlefield'));
-		}
-
-		if (!this.isRedPlayer())
-			$<HTMLElement>('battlefield').style.flexDirection = 'column-reverse';
+		this.addTooltipHtml('player-hand_5', `<div id="redSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
+		this.addTooltipHtml('opponent-hand_5', `<div id="blueSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
 
 		this.instantMatch();
 
@@ -660,36 +628,22 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			case "setupBattlefield":
 				this.setupHandles?.forEach(h => dojo.disconnect(h));
 				this.setupHandles = [];
-				const startingPositions = this.isRedPlayer() ? [4, 5, 6] : [2, 3, 4];
-				for (let index of startingPositions) {
-					let element = $('samurai_field_position_' + index);
+				for (let index of [2, 3, 4]) {
+					let element = $('battlefield_position_' + index);
 					element.classList.add('highlight');
 					// Add an onclick event to the ::after pseudo element
 					this.setupHandles.push(dojo.connect(element, 'onclick', this, e =>
 					{
-						if (this.isRedPlayer()) {
-							this.gamedatas.battlefield = (this.gamedatas.battlefield & ~(0b1111 << 0)) | (index << 0);
-						}
-						else {
-							this.gamedatas.battlefield = (this.gamedatas.battlefield & ~(0b1111 << 5)) | (index << 5);
-						}
+						this.gamedatas.player_state = (this.gamedatas.player_state & ~(0b1111 << 0)) | (index << 0);
 						this.instantMatch();
 					}));
 				}
 
 				// Add an onclick event to the samurai to flip the stance:
-				if (this.isRedPlayer()) {
-					this.setupHandles.push(dojo.connect($('red_samurai'), 'onclick', this, e => {
-						this.gamedatas.battlefield = this.gamedatas.battlefield ^ (1 << 4);
-						this.instantMatch();
-					}));
-				}
-				else {
-					this.setupHandles.push(dojo.connect($('blue_samurai'), 'onclick', this, e => {
-						this.gamedatas.battlefield = this.gamedatas.battlefield ^ (1 << 9);
-						this.instantMatch();
-					}));
-				}
+				this.setupHandles.push(dojo.connect($('player_samurai'), 'onclick', this, e => {
+					this.gamedatas.player_state = this.gamedatas.player_state ^ (1 << 4);
+					this.instantMatch();
+				}));
 
 				this.addActionButton('confirmBattlefieldButton', _('Confirm'), async (e: any) => {
 					console.log('Confirming selection', e);
@@ -700,8 +654,8 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 					await this.confirmationTimeout.promise(e);
 
 					this.ajaxAction('confirmedStanceAndPosition', {
-							isHeavenStance: (this.isRedPlayer() ? this.redStance() : this.blueStance()) == 0,
-							position: (this.isRedPlayer() ? this.redPosition() : this.bluePosition())
+						isHeavenStance: this.playerStance() == 0,
+						position: this.playerPosition()
 					});
 					this.cleanupSetupBattlefield();
 				});
@@ -713,16 +667,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 				this.addActionButton('confirmSelectionButton', _('Confirm'), (e: any) => {
 					console.log('Confirming selection', e);
 					
-					if (this.isRedPlayer()) {
-						if (this.redPlayed0() == 0 && this.redPlayed1() == 0) {
-							return;
-						}
+					if (this.playerPlayed0() == 0 && this.playerPlayed1() == 0) {
+						return;
 					}
-					else {
-						if (this.bluePlayed0() == 0 && this.bluePlayed1() == 0) {
-							return;
-						}
-					}
+
 					// This makes sure that this action button is removed.
 					this.lockTitleWithStatus(_('Sending moves to server...')); 
 					this.actionQueue.enqueueAjaxAction({
@@ -813,163 +761,134 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	instantMatch() {
 		// print all fields
 		console.log('instantMatch: ', {
-			isRedPlayer: this.isRedPlayer(),
-			redPrefix: this.redPrefix(),
-			bluePrefix: this.bluePrefix(),
-			redPosition: this.redPosition(),
-			redStance: this.redStance(),
-			bluePosition: this.bluePosition(),
-			blueStance: this.blueStance(),
-			redPlayed0: this.redPlayed0(),
-			redPlayed1: this.redPlayed1(),
-			bluePlayed0: this.bluePlayed0(),
-			bluePlayed1: this.bluePlayed1(),
-			redDiscarded: this.redDiscarded(),
-			blueDiscarded: this.blueDiscarded(),
-			redSpecialCard: this.redSpecialCard(),
-			blueSpecialCard: this.blueSpecialCard(),
-			redSpecialPlayed: this.redSpecialPlayed(),
-			blueSpecialPlayed: this.blueSpecialPlayed()
+			playerPosition: this.playerPosition(),
+			playerStance: this.playerStance(),
+			playerHit: this.playerHit(),
+			playerPlayed0: this.playerPlayed0(),
+			playerPlayed1: this.playerPlayed1(),
+			playerDiscarded: this.playerDiscarded(),
+			playerSpecialCard: this.playerSpecialCard(),
+			playerSpecialPlayed: this.playerSpecialPlayed(),
+			opponentPosition: this.opponentPosition(),
+			opponentStance: this.opponentStance(),
+			opponentHit: this.opponentHit(),
+			opponentPlayed0: this.opponentPlayed0(),
+			opponentPlayed1: this.opponentPlayed1(),
+			opponentDiscarded: this.opponentDiscarded(),
+			opponentSpecialCard: this.opponentSpecialCard(),
 		});
 
-		const updateCard = (target: Element, card: number, isRed: boolean) => {
+		const player_area = $('hands');
+
+		const card_names: string[] = [
+			'approach',
+			'charge',
+			'high-strike',
+			'low-strike',
+			'balanced-strike',
+			'retreat',
+			'change-stance',
+			'special'
+		];
+		
+		player_area.className = '';
+
+		const updatePlayed = (target: Element, card: number, player: boolean) => {
 			if (!(target instanceof HTMLElement))
 				return;
 
-			if (card == 0) {
-				target.style.display = 'none';
-				return;
-			}
+			let src: string | null = null;
 
-			target.style.display = 'block';
+			if (player && card != 0)
+				player_area.classList.add(card_names[card - 1] + "-played");
+
 			target.classList.remove('bottomPicked');
 
-			let offset;
-			if (card <= 5) offset = (isRed ? card : card + 5) - 1;
-			else if (card <= 7)
-			{
-				offset = (isRed ? card - 5 : card) - 1;
-				target.classList.add('bottomPicked');
+			let prefix = player ? 'player-card-' : 'opponent-card-'
+			switch (card) {
+				case 0: break;
+				case 1: src = this.formatSVGURL(prefix + 'approach'); break;
+				case 2: src = this.formatSVGURL(prefix + 'charge'); break;
+				case 3: src = this.formatSVGURL(prefix + 'high-strike'); break;
+				case 4: src = this.formatSVGURL(prefix + 'low-strike'); break;
+				case 5: src = this.formatSVGURL(prefix + 'balanced-strike'); break;
+				case 6:
+					src = this.formatSVGURL(prefix + 'approach');
+					target.classList.add('bottomPicked');
+					break;
+				case 7:
+					src = this.formatSVGURL(prefix + 'charge');
+					target.classList.add('bottomPicked');
+					break;
+				case 8:
+					switch (player ? this.playerSpecialCard() : this.opponentSpecialCard()) {
+						case 1: src = this.formatSVGURL('special-kesa'); break;
+						case 2: src = this.formatSVGURL('special-zantetsu'); break;
+						case 3: src = this.formatSVGURL('special-counter'); break;
+						throw new Error('Invalid special card!');
+					}
+					break;
+				case 9: src = this.formatSVGURL('card-back');
+					break;
+				default:
+					throw new Error('Invalid card: ' + card);
 			}
-			else if (card == 8) offset = isRed ? this.redSpecialCard() + 9 : this.blueSpecialCard() + 9;
-			else offset = 13;
 
-			target.style.objectPosition = (offset / 0.13) + '% 0px';
+			this.setCardSlot(target, src);
 		};
 
-		updateCard($('redPlayed_0'), this.redPlayed0(), true);
-		updateCard($('redPlayed_1'), this.redPlayed1(), true);
-		updateCard($('bluePlayed_0'), this.bluePlayed0(), false);
-		updateCard($('bluePlayed_1'), this.bluePlayed1(), false);
+		updatePlayed($('player_played_0'), this.playerPlayed0(), true);
+		updatePlayed($('player_played_1'), this.playerPlayed1(), true);
+		updatePlayed($('opponent_played_0'), this.opponentPlayed0(), false);
+		updatePlayed($('opponent_played_1'), this.opponentPlayed1(), false);
 
 		// Add class to the discarded card:
 
-		const playedToHand = (index: number) => {
-			if (index == 0) return -1;
-			if (index <= 5) return index - 1;
-			if (index <= 7) return index - 6;
-			if (index == 8) return 5;
-			return -1;
-		}
+		// Discards
+		if (this.playerDiscarded() != 0)
+			player_area.classList.add(card_names[this.playerDiscarded() - 1] + "-player-discarded");
+		if (this.opponentDiscarded() != 0)
+			player_area.classList.add(card_names[this.opponentDiscarded() - 1] + "-opponent-discarded");
 
-		let redPlayed: number[] = [];
-		let bluePlayed: number[] = [];
-		redPlayed.push(playedToHand(this.redPlayed0()));
-		redPlayed.push(playedToHand(this.redPlayed1()));
-		bluePlayed.push(playedToHand(this.bluePlayed0()));
-		bluePlayed.push(playedToHand(this.bluePlayed1()));
+		if (this.opponentSpecialPlayed())
+			player_area.classList.add("opponent-played-special");
+		if (this.playerSpecialPlayed())
+			player_area.classList.add("player-played-special");
 
-		for (let i = 0; i < 6; i++) {
-			if (i < 5)
-			{
-				if (this.redDiscarded() - 1 == i) $('redHand_' + i).parentElement!.classList.add('discarded');
-				else  $('redHand_' + i).parentElement!.classList.remove('discarded');
+		// if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
 
-				if (this.blueDiscarded() - 1 == i) $('blueHand_' + i).parentElement!.classList.add('discarded');
-				else  $('blueHand_' + i).parentElement!.classList.remove('discarded');
-			}
+		// 	const redTarget = $('redHand_5').parentElement!;
+		// 	const blueTarget = $('blueHand_5').parentElement!;
 
-			if (redPlayed.includes(i)) $('redHand_' + i).parentElement!.classList.add('played');
-			else  $('redHand_' + i).parentElement!.classList.remove('played');
+		// 	const notPlayedTooltip = (cardVisible: number) => {
+		// 		const pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
+		// 		return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + this.createTooltip(pair[0]!, false) + this.createTooltip(pair[1]!, false) + '</div>';
+		// 	};
 
-			if (bluePlayed.includes(i)) $('blueHand_' + i).parentElement!.classList.add('played');
-			else  $('blueHand_' + i).parentElement!.classList.remove('played');
-		}
+		// 	if (this.redSpecialCard() == 0) {
+		// 		// Add both tooltips to the red special card
+		// 		this.addTooltipHtml(redTarget.id, notPlayedTooltip(this.blueSpecialCard()));
+		// 	}
+		// 	else {
+		// 		this.addTooltipHtml(redTarget.id, this.createTooltip(4 + this.redSpecialCard(), this.isRedPlayer()));
+		// 	}
 
-		if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
-
-			const redTarget = $('redHand_5').parentElement!;
-			const blueTarget = $('blueHand_5').parentElement!;
-
-			const notPlayedTooltip = (cardVisible: number) => {
-				const pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
-				return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + this.createTooltip(pair[0]!, false) + this.createTooltip(pair[1]!, false) + '</div>';
-			};
-
-			if (this.redSpecialCard() == 0) {
-				// Add both tooltips to the red special card
-				this.addTooltipHtml(redTarget.id, notPlayedTooltip(this.blueSpecialCard()));
-			}
-			else {
-				this.addTooltipHtml(redTarget.id, this.createTooltip(4 + this.redSpecialCard(), this.isRedPlayer()));
-			}
-
-			if (this.blueSpecialCard() == 0) {
-				// Add both tooltips to the blue special card
-				this.addTooltipHtml(blueTarget.id, notPlayedTooltip(this.redSpecialCard()));
-			}
-			else {
-				this.addTooltipHtml(blueTarget.id, this.createTooltip(4 + this.blueSpecialCard(), !this.isRedPlayer()));
-			}
-		}
-
-		$<HTMLElement>('redHand_5').style.objectPosition = ((
-			this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9
-		) / 0.13) + '% 0px';
-		if (this.redSpecialPlayed()) $('redHand_5').parentElement!.classList.add('discarded');
-		else $('redHand_5').parentElement!.classList.remove('discarded');
-
-		$<HTMLElement>('blueHand_5').style.objectPosition = ((
-			this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9
-		) / 0.13) + '% 0px';
-		if (this.blueSpecialPlayed()) $('blueHand_5').parentElement!.classList.add('discarded');
-		else $('blueHand_5').parentElement!.classList.remove('discarded');
+		// 	if (this.blueSpecialCard() == 0) {
+		// 		// Add both tooltips to the blue special card
+		// 		this.addTooltipHtml(blueTarget.id, notPlayedTooltip(this.redSpecialCard()));
+		// 	}
+		// 	else {
+		// 		this.addTooltipHtml(blueTarget.id, this.createTooltip(4 + this.blueSpecialCard(), !this.isRedPlayer()));
+		// 	}
+		// }
 
 		// Set the positions and stance
-		const placeSamurai = (stance: number, position: number, isRed: boolean) => {
-			let rot = stance == 0 ? -45 : 135;
-			let posElement = $<HTMLElement>('samurai_field_position_' + position);
-			let transform: string;
+		let battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
+		this.placeOnObject('player_samurai', 'battlefield_position_' + this.playerPosition());
+		this.placeOnObject('opponent_samurai', 'battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1));
 
-			if (posElement) {
-				this.placeOnObject((isRed ? 'red' : 'blue') + '_samurai_offset', posElement);
-				if (!this.isRedPlayer())
-					transform = isRed ? 'translate(-95%, -11.5%) ' : 'translate(95%, 11.5%) ';
-				else transform = isRed ? 'translate(95%, 11.5%) scale(-1, -1) ' : 'translate(-95%, -11.5%) scale(-1, -1) ';
-			}
-			else {
-				rot += 45;
-				transform = 'translate(45%, ' + ((this.isRedPlayer() ? isRed : !isRed) ? "" : "-") + '75%) ';
-			}
-
-			$<HTMLElement>((isRed ? 'red' : 'blue') + '_samurai').style.transform = transform + 'rotate(' + rot + 'deg)';
-		}
-
-		placeSamurai(this.redStance(), this.redPosition(), true);
-		placeSamurai(this.blueStance(), this.bluePosition(), false);
-
-		let redSprite = !this.redHit() ? 0 : 2;
-		let blueSprite = !this.blueHit() ? 1 : 3;
-		$<HTMLElement>('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';
-		$<HTMLElement>('blue_samurai_card').style.objectPosition = (blueSprite / 0.03) + '% 0px';
-
-		// Set the width of the samuira to 30% the width of the battlefield
-		let battlefield = $('battlefield');
-		let battlefieldWidth = battlefield.getBoundingClientRect().width;
-		let samuraiWidth = battlefieldWidth * 0.24;
-
-		dojo.style($('red_samurai'), 'width', samuraiWidth + 'px');
-		dojo.style($('blue_samurai'), 'width', samuraiWidth + 'px');
+		this.setCardSlot('player_samurai', this.stanceURL(true));
+		this.setCardSlot('player_samurai', this.stanceURL(false));
 	}
 
 	//
@@ -981,7 +900,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// Predictions are used to simulate the state of the game before the action is acknowledged by the server.
 	//
 
-	serverCards: number = 0;
+	server_player_state: number = 0;
 	predictionKey: number = 0;
 	predictionModifiers: { key: number, func: ((cards: number) => number) }[] = [];
 
@@ -1001,14 +920,14 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 	updateCardsWithPredictions()
 	{
-		let cards = this.serverCards;
+		let cards = this.server_player_state;
 		for (let mod of this.predictionModifiers) {
 			// Print cards as binary
 			console.log('cards:', cards.toString(2));
 			cards = mod.func(cards);
 		}
 			console.log('cards:', cards.toString(2));
-			this.gamedatas.cards = cards;
+			this.gamedatas.player_state = cards;
 		this.instantMatch();
 	}
 
@@ -1035,20 +954,20 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			return;
 		}
 
-		if (index == (this.isRedPlayer() ? this.redDiscarded() : this.blueDiscarded()))
+		if (index == this.playerDiscarded())
 		{
 			console.log('This card has already been discarded!');
 			return;
 		}
 		
-		if (index == 6 && (this.isRedPlayer() ? this.redSpecialPlayed() : this.blueSpecialPlayed()))
+		if (index == 6 && this.playerSpecialPlayed())
 		{
 			console.log('Thee special card has already been played!');
 			return;
 		}
 
-		let first = this.isRedPlayer() ? this.redPlayed0() : this.bluePlayed0();
-		let second = this.isRedPlayer() ? this.redPlayed1() : this.bluePlayed1();
+		let first = this.playerPlayed0();
+		let second = this.playerPlayed1();
 		let fixedIndex = index == 6 ? 8 : index;
 
 		if ((index == 1 && first == 6) ||
@@ -1086,25 +1005,13 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		let action: "pickedFirst" | "pickedSecond" | null = null;
 		let indexOffset: number;
-		if (this.isRedPlayer()) {
-			if (this.redPlayed0() == 0) {
-				action = 'pickedFirst';
-				indexOffset = 0;
-			}
-			else if (this.redPlayed1() == 0) {
-				action = 'pickedSecond';
-				indexOffset = 4;
-			}
+		if (this.playerPlayed0() == 0) {
+			action = 'pickedFirst';
+			indexOffset = 6;
 		}
-		else {
-			if (this.bluePlayed0() == 0){
-				action = 'pickedFirst';
-				indexOffset = 8;
-			}
-			else if (this.bluePlayed1() == 0) {
-				action = 'pickedSecond';
-				indexOffset = 12;
-			}
+		else if (this.playerPlayed1() == 0) {
+			action = 'pickedSecond';
+			indexOffset = 10;
 		}
 
 		if (!action) {
@@ -1148,14 +1055,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			}
 		}
 
-		let indexOffset: number;
-		if (this.isRedPlayer()) {
-			indexOffset = first ? 0 : 4;
-		}
-		else {
-			indexOffset = first ? 8 : 12;
-		}
-
+		let indexOffset: number = first ? 6 : 10;
 		const callback = this.addPredictionModifier((cards) => {
 			return cards & ~(0b1111 << indexOffset);
 		});
@@ -1207,19 +1107,32 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		this.notifqueue.setSynchronous( 'player(s) hit', 1000 );
 	}
 
-	notif_instantMatch = (notif: NotifFrom<GameStateData & { redScore?: number, blueScore?: number }>) =>
+	notif_instantMatch = (notif: NotifFrom<GameStateData & { winner?: string }>) =>
 	{
 		console.log('notif_placeAllCards', notif);
-		if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
-			this.gamedatas.battlefield = notif.args.battlefield;
-		this.serverCards = notif.args.cards;
+		// if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
+		// 	this.gamedatas.battlefield = notif.args.battlefield;
+		this.gamedatas.player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
 		this.updateCardsWithPredictions();
 		this.instantMatch();
 
-		if (notif.args.redScore !== undefined)
-			this.scoreCtrl[this.redPlayerId()]?.toValue(notif.args.redScore);
-		if (notif.args.blueScore !== undefined)
-			this.scoreCtrl[this.bluePlayerId()]?.toValue(notif.args.blueScore);
+		for (let player in this.gamedatas.players)
+		{
+			let winner = notif.args.winner == player;
+			if (player == this.player_id.toString())
+			{
+				this.scoreCtrl[player]?.toValue(
+					this.opponentHit() ? (winner ? 2 : 1) : 0
+				);
+			}
+			else
+			{
+				this.scoreCtrl[player]?.toValue(
+					this.playerHit() ? (winner ? 2 : 1) : 0
+				);
+			}
+		}
 	}
 
 	//

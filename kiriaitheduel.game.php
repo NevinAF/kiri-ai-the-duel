@@ -62,8 +62,10 @@ class SpecialCard
 
 class KiriaiTheDuel extends Table
 {
-	const BATTLEFIELD = 'battlefield';
-	const CARDS = 'cardsPlayed';
+	const PRIMARY_PLAYER_ID = 'PRIMARY_PLAYER_ID';
+	const PRIMARY_PLAYER_STATE = 'PRIMARY_PLAYER_STATE';
+	const SECONDARY_PLAYER_STATE = 'SECONDARY_PLAYER_STATE';
+	const BATTLEFIELD_TYPE = 'BATTLEFIELD_TYPE';
 
 	protected $stanceNames;
 	protected $playedCardNames;
@@ -72,17 +74,14 @@ class KiriaiTheDuel extends Table
 	protected $userErrors;
 	protected $notifMessages;
 
-	const RED_COLOR = "e54025";
-	const BLUE_COLOR = "5093a3";
-
 	function __construct( )
 	{
 		parent::__construct();
-		
 		self::initGameStateLabels( array(
-
-			self::BATTLEFIELD => 10,
-			self::CARDS => 11,
+			self::PRIMARY_PLAYER_ID => 10,
+			self::PRIMARY_PLAYER_STATE => 11,
+			self::SECONDARY_PLAYER_STATE => 12,
+			self::BATTLEFIELD_TYPE => 100,
 		) );
 	}
 
@@ -103,6 +102,7 @@ class KiriaiTheDuel extends Table
 		// The default below is red/green/blue/orange/brown
 		// The number of colors defined here must correspond to the maximum number of players allowed for the gams
 		$gameinfos = self::getGameinfos();
+		/** @var array<string> $default_colors */
 		$default_colors = $gameinfos['player_colors'];
  
 		// Create players
@@ -119,10 +119,7 @@ class KiriaiTheDuel extends Table
 		self::reattributeColorsBasedOnPreferences( $players, $gameinfos['player_colors'] );
 		self::reloadPlayersBasicInfos();
 
-		$battlefieldType = $this->gamestate->table_globals[100];
-		$battlefield = 0;
-		self::set_battlefieldType($battlefield, $battlefieldType);
-		self::setGameStateValue( self::BATTLEFIELD, $battlefield );
+		self::setGameStateInitialValue( self::PRIMARY_PLAYER_ID, reset($players)['player_id'] );
 	}
 
 	/*
@@ -143,12 +140,10 @@ class KiriaiTheDuel extends Table
 		$sql = "SELECT player_id id, player_score score FROM player ";
 		$result['players'] = self::getCollectionFromDb( $sql );
 
-		// Get game state data
-		self::addStateArgs(
-			$result,
-			self::getGameStateValue( self::BATTLEFIELD ),
-			self::getGameStateValue( self::CARDS ),
-			self::getCurrentPlayerColor());
+		$current_player_id = self::getCurrentPlayerId();
+		self::addStateArgs($result, $current_player_id);
+
+		$result['battlefield_type'] = self::getGameStateValue( self::BATTLEFIELD_TYPE );
 
 		return $result;
 	}
@@ -160,6 +155,7 @@ class KiriaiTheDuel extends Table
 	{
 		$progression = 0;
 
+		// 30% completion for each hit landed.
 		$players = self::loadPlayersBasicInfos();
 		foreach ($players as $player_id => $player)
 		{
@@ -172,8 +168,10 @@ class KiriaiTheDuel extends Table
 			$progression += $score * 30;
 		}
 
-		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
-		if ($battlefield != 0) // battlefield is setup
+		// %10 completion if the battlefield is setup 
+		$primary_state = self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
+		$secondary_state = self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
+		if (self::getState_position($primary_state) + self::getState_position($secondary_state) > 0)
 			$progression += 10;
 
 		return $progression;
@@ -184,75 +182,74 @@ class KiriaiTheDuel extends Table
 //////////// Utility functions
 ////////////
 
-	function dbGetScore($players, $color): int {
-		foreach ($players as $player_id => $player) {
-			if ($player['player_color'] == $color) {
+	function dbGetScore($players, $primary): int {
+		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
+		foreach ($players as $player_id) {
+			if ($primary ^ $player_id != $primary_player_id) {
 				return $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
 			}
 		}
 
-		throw new BgaUserException(sprintf($this->userErrors['player color not found'], $color));
+		throw new BgaUserException($this->userErrors['player not found in db']);
 	}
 
-	function dbIncrementScore($players, $color): int {
-		foreach ($players as $player_id => $player) {
-			if ($player['player_color'] == $color) {
+	function dbIncrementScore($players, $primary): int {
+		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
+		foreach ($players as $player_id) {
+			if ($primary ^ $player_id != $primary_player_id) {
 				$value = $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
 				$value++;
 				$this->DbQuery("UPDATE player SET player_score='$value' WHERE player_id='$player_id'");
-				return $value;
+				return $player_id;
 			}
 		}
 
-		throw new BgaUserException(sprintf($this->userErrors['player color not found'], $color));
+		throw new BgaUserException($this->userErrors['player not found in db']);
 	}
 
-	function addStateArgs(array &$args, int $battlefield, int $cards, string $player_color)
+	function addStateArgs(array &$args, int $player_id, int|null $primary_state = null, int|null $secondary_state = null)
 	{
-		// Battlefield is public information, but we need to hide if not set up yet.
-		if (!self::get_battlefieldValid($battlefield))
+		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
+		$primary_state = $primary_state ?? self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
+		$secondary_state = $secondary_state ?? self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
+
+		$player_state = $player_id == $primary_player_id ? $primary_state : $secondary_state;
+		$opponent_state = $player_id == $primary_player_id ? $secondary_state : $primary_state;
+
+		$args['player_state'] = $player_state;
+
+		// If both players have not set there battlefield position, keep all opponent information hidden.
+		if (self::getState_position($player_state) + self::getState_position($opponent_state) > 0)
 		{
-			if ($player_color != self::RED_COLOR)
-				$battlefield &= ~(0b11111 << 0);
-			if ($player_color != self::BLUE_COLOR)
-				$battlefield &= ~(0b11111 << 5);
+			$args['opponent_state'] = 0;
+			return;
 		}
-		$args['battlefield'] = $battlefield;
 
 		// Hide special card if they are not played (and not this player)
-		if (!self::get_redSpecialPlayed($cards) && $player_color != self::RED_COLOR)
-			self::set_redSpecial($cards, SpecialCard::HIDDEN);
-		if (!self::get_blueSpecialPlayed($cards) && $player_color != self::BLUE_COLOR)
-			self::set_blueSpecial($cards, SpecialCard::HIDDEN);
+		if (!self::getState_SpecialPlayed($opponent_state))
+			self::setState_Special($opponent_state, SpecialCard::HIDDEN);
 
-		if (self::get_hidePlayedCards($cards))
+		// If we are picking cards, hide the played cards (and not this player)
+		if ($this->gamestate->state()['name'] == 'pickCards')
 		{
-			if ($player_color != self::RED_COLOR)
-			{
-				if (self::get_redPlayed0($cards) != PlayedCard::NOT_PLAYED)
-					self::set_redPlayed0($cards, PlayedCard::HIDDEN);
-				if (self::get_redPlayed1($cards) != PlayedCard::NOT_PLAYED)
-					self::set_redPlayed1($cards, PlayedCard::HIDDEN);
-			}
-			if ($player_color != self::BLUE_COLOR) {
-				if (self::get_bluePlayed0($cards) != PlayedCard::NOT_PLAYED)
-					self::set_bluePlayed0($cards, PlayedCard::HIDDEN);
-				if (self::get_bluePlayed1($cards) != PlayedCard::NOT_PLAYED)
-					self::set_bluePlayed1($cards, PlayedCard::HIDDEN);
-			}
+			if (self::getState_Played0($opponent_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played0($opponent_state, PlayedCard::HIDDEN);
+			if (self::getState_Played1($opponent_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played1($opponent_state, PlayedCard::HIDDEN);
 		}
-		$args['cards'] = $cards;
+
+		$args['opponent_state'] = $opponent_state;
 	}
 
-	function notifyAllGameState(array &$players, string $type, array $args, $battlefield, $cards)
+	function notifyAllWithGameState(array &$players, string $type, array $args, int|null $primary_state = null, int|null $secondary_state = null)
 	{
 		foreach ($players as $player)
-			self::notifyGameState($player, $type, $args, $battlefield, $cards);
+			self::notifyGameState($player, $type, $args, $primary_state, $secondary_state);
 	}
 
-	function notifyGameState(array $player, string $type, array $args, $battlefield, $cards)
+	function notifyGameState(array $player, string $type, array $args, int|null $primary_state = null, int|null $secondary_state = null)
 	{
-		self::addStateArgs($args, $battlefield, $cards, $player['player_color']);
+		self::addStateArgs($args, $player['player_id'], $primary_state, $secondary_state);
 		self::notifyPlayer(
 			$player['player_id'],
 			$type,
@@ -260,145 +257,66 @@ class KiriaiTheDuel extends Table
 			$args );
 	}
 
-	protected function currentMultiPlayerIsRed() {
-		return self::getCurrentPlayerColor() == 'e54025';
+	public function getCurrentPlayerStateName(): string {
+		return self::getCurrentPlayerId() == self::getGameStateValue( self::PRIMARY_PLAYER_ID ) ? self::PRIMARY_PLAYER_STATE : self::SECONDARY_PLAYER_STATE;
 	}
 
-	protected function get_redPosition($battlefield): int {
-		return ($battlefield >> 0) & 0b1111;
+	public function getState_position($state): int {
+		return ($state >> 0) & 0b1111;
 	}
-	protected function get_redStance($battlefield): int {
-		return ($battlefield >> 4) & 0b1;
+	public function getState_stance($state): int {
+		return ($state >> 4) & 0b1;
 	}
-	protected function get_bluePosition($battlefield): int {
-		return ($battlefield >> 5) & 0b1111;
+	public function getState_hit($state): bool {
+		return (($state >> 5) & 0b1) == 1;
 	}
-	protected function get_blueStance($battlefield): int {
-		return ($battlefield >> 9) & 0b1;
+	public function getState_Played0($state): int {
+		return ($state >> 6) & 0b1111;
 	}
-	protected function get_battlefieldValid($battlefield): bool {
-		return (($battlefield >> 13) & 0b1) == 1;
+	public function getState_Played1($state): int {
+		return ($state >> 10) & 0b1111;
 	}
-	protected function get_redHit($battlefield): bool {
-		return (($battlefield >> 14) & 0b1) == 1;
+	public function getState_Discard($state): int {
+		return ($state >> 14) & 0b111;
 	}
-	protected function get_blueHit($battlefield): bool {
-		return (($battlefield >> 15) & 0b1) == 1;
+	public function getState_Special($state): int {
+		return ($state >> 17) & 0b11;
 	}
-	protected function get_battlefieldType($battlefield): int {
-		return ($battlefield >> 16) & 0b111;
-	}
-
-	protected function set_redPosition(&$battlefield, $position) {
-		$battlefield &= ~(0b1111 << 0);
-		$battlefield |= ($position & 0b1111) << 0;
-	}
-	protected function set_redStance(&$battlefield, int $stance) {
-		$battlefield &= ~(0b1 << 4);
-		$battlefield |= ($stance & 0b1) << 4;
-	}
-	protected function set_bluePosition(&$battlefield, $position) {
-		$battlefield &= ~(0b1111 << 5);
-		$battlefield |= ($position & 0b1111) << 5;
-	}
-	protected function set_blueStance(&$battlefield, int $stance) {
-		$battlefield &= ~(0b1 << 9);
-		$battlefield |= ($stance & 0b1) << 9;
-	}
-	protected function set_battlefieldValid(&$battlefield, bool $valid) {
-		$battlefield &= ~(0b1 << 13);
-		$battlefield |= $valid ? 1 << 13 : 0;
-	}
-	protected function set_redHit(&$battlefield, bool $valid) {
-		$battlefield &= ~(0b1 << 14);
-		$battlefield |= $valid ? 1 << 14 : 0;
-	}
-	protected function set_blueHit(&$battlefield, bool $valid) {
-		$battlefield &= ~(0b1 << 15);
-		$battlefield |= $valid ? 1 << 15 : 0;
-	}
-	protected function set_battlefieldType(&$battlefield, int $type) {
-		$battlefield &= ~(0b111 << 16);
-		$battlefield |= ($type & 0b111) << 16;
+	public function getState_SpecialPlayed($state): bool {
+		return (($state >> 19) & 0b1) == 1;
 	}
 
-	protected function get_redPlayed0($cards): int {
-		return ($cards >> 0)  & 0b1111;
+	protected function setState_position(&$state, int $position) {
+		$state &= ~(0b1111 << 0);
+		$state |= ($position & 0b1111) << 0;
 	}
-	protected function get_redPlayed1($cards): int {
-		return ($cards >> 4)  & 0b1111;
+	protected function setState_stance(&$state, int $stance) {
+		$state &= ~(0b1 << 4);
+		$state |= ($stance & 0b1) << 4;
 	}
-	protected function get_bluePlayed0($cards): int {
-		return ($cards >> 8)  & 0b1111;
+	protected function setState_hit(&$state, bool $hit) {
+		$state &= ~(0b1 << 5);
+		if ($hit) $state |= 1 << 5;
 	}
-	protected function get_bluePlayed1($cards): int {
-		return ($cards >> 12) & 0b1111;
+	protected function setState_Played0(&$state, int $card) {
+		$state &= ~(0b1111 << 6);
+		$state |= ($card & 0b1111) << 6;
 	}
-	protected function get_redDiscard($cards): int {
-		return ($cards >> 16) & 0b111;
+	protected function setState_Played1(&$state, int $card) {
+		$state &= ~(0b1111 << 10);
+		$state |= ($card & 0b1111) << 10;
 	}
-	protected function get_blueDiscard($cards): int {
-		return ($cards >> 19) & 0b111;
+	protected function setState_Discard(&$state, int $card) {
+		$state &= ~(0b111 << 14);
+		$state |= ($card & 0b111) << 14;
 	}
-	protected function get_redSpecial($cards): int {
-		return ($cards >> 22) & 0b11;
+	protected function setState_Special(&$state, int $card) {
+		$state &= ~(0b11 << 17);
+		$state |= ($card & 0b11) << 17;
 	}
-	protected function get_blueSpecial($cards): int {
-		return ($cards >> 24) & 0b11;
-	}
-	protected function get_redSpecialPlayed($cards): bool {
-		return (($cards >> 26) & 0b1) == 1;
-	}
-	protected function get_blueSpecialPlayed($cards): bool {
-		return (($cards >> 27) & 0b1) == 1;
-	}
-	protected function get_hidePlayedCards($cards): bool {
-		return (($cards >> 28) & 0b1) == 1;
-	}
-
-	protected function set_redPlayed0(&$cards, int $card) {
-		$cards &= ~(0b1111 << 0);
-		$cards |= ($card & 0b1111) << 0;
-	}
-	protected function set_redPlayed1(&$cards, int $card) {
-		$cards &= ~(0b1111 << 4);
-		$cards |= ($card & 0b1111) << 4;
-	}
-	protected function set_bluePlayed0(&$cards, int $card) {
-		$cards &= ~(0b1111 << 8);
-		$cards |= ($card & 0b1111) << 8;
-	}
-	protected function set_bluePlayed1(&$cards, int $card) {
-		$cards &= ~(0b1111 << 12);
-		$cards |= ($card & 0b1111) << 12;
-	}
-	protected function set_redDiscard(&$cards, int $card) {
-		$cards &= ~(0b111 << 16);
-		$cards |= ($card & 0b111) << 16;
-	}
-	protected function set_blueDiscard(&$cards, int $card) {
-		$cards &= ~(0b111 << 19);
-		$cards |= ($card & 0b111) << 19;
-	}
-	protected function set_redSpecial(&$cards, int $card) {
-		$cards &= ~(0b11 << 22);
-		$cards |= ($card & 0b11) << 22;
-	}
-	protected function set_blueSpecial(&$cards, int $card) {
-		$cards &= ~(0b11 << 24);
-		$cards |= ($card & 0b11) << 24;
-	}
-	protected function set_redSpecialPlayed(&$cards, bool $played) {
-		$cards &= ~(0b1 << 26);
-		$cards |= $played ? 1 << 26 : 0;
-	}
-	protected function set_blueSpecialPlayed(&$cards, bool $played) {
-		$cards &= ~(0b1 << 27);
-		$cards |= $played ? 1 << 27 : 0;
-	}
-	protected function set_hidePlayedCards(&$cards, bool $hide) {
-		$cards &= ~(0b1 << 28);
-		$cards |= $hide ? 1 << 28 : 0;
+	protected function setState_SpecialPlayed(&$state, bool $played) {
+		$state &= ~(0b1 << 19);
+		if ($played) $state |= 1 << 19;
 	}
 
 	protected function playedCardToDiscard(int $played)
@@ -425,126 +343,95 @@ class KiriaiTheDuel extends Table
 		(note: each method below must match an input method in kiriaitheduel.action.php)
 	*/
 
-	function confirmedStanceAndPosition(bool $isHeavenStance, int $position )
+	function confirmedStanceAndPosition(bool $isHeavenStance, int $position)
 	{
 		self::checkAction( 'confirmedStanceAndPosition' );
-
-		$player_id = self::getCurrentPlayerId();
-		$isRedPlayer = self::currentMultiPlayerIsRed();
-		self::_confirmedStanceAndPosition($player_id, $isRedPlayer, $isHeavenStance, $position);
+		self::_confirmedStanceAndPosition(self::getCurrentPlayerStateName(), $isHeavenStance, $position);
 	}
 
-	function _confirmedStanceAndPosition($player_id, $isRedPlayer, bool $isHeavenStance, int $position )
+	function _confirmedStanceAndPosition($player_state_name, bool $isHeavenStance, int $position)
 	{
-		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
-
-		// The player is validated by using "checkAction"
-		self::validatePosition($position, $isRedPlayer, $battlefield);
-
-		if ($isRedPlayer)
+		// Validate the position based on the battlefield type.
+		switch (self::getGameStateValue( self::BATTLEFIELD_TYPE ))
 		{
-			self::set_redStance($battlefield, $isHeavenStance ? Stance::HEAVEN : Stance::EARTH);
-			self::set_redPosition($battlefield, $position);
+			case 2:
+				if ($position < 2 || $position > 4)
+					throw new BgaUserException("Invalid position for red player. Must be 4-6 inclusive.");
+				break;
+			case 1: throw new BgaUserException("The standard battle field should be automatically set up.");
+			default: throw new BgaVisibleSystemException("Invalid battlefield type");
 		}
-		else
-		{
-			self::set_blueStance($battlefield, $isHeavenStance ? Stance::HEAVEN : Stance::EARTH);
-			self::set_bluePosition($battlefield, $position);
-		}
+		
+		// Update the player's state.
+		$player_state = self::getGameStateValue( $player_state_name );
+		self::setState_position($player_state, $position);
+		self::setState_stance($player_state, $isHeavenStance ? Stance::HEAVEN : Stance::EARTH);
+		self::setGameStateValue( $player_state_name, $player_state);
 
-		if ($this->gamestate->setPlayerNonMultiactive( $player_id, ''))
+		// End the player's multiactive turn.
+		// If both players have confirmed, also notify the players of the battlefield setup.
+		if ($this->gamestate->setPlayerNonMultiactive( self::getCurrentPlayerId(), ''))
 		{
-			// If both players have confirmed.
-			self::set_battlefieldValid($battlefield, true);
-			$cards = self::getGameStateValue( self::CARDS );
 			$players = self::loadPlayersBasicInfos();
-			$this->notifyAllGameState($players, 'battlefield setup', array(), $battlefield, $cards);
+			$this->notifyAllWithGameState($players, 'battlefield setup', array());
 		}
-
-		self::setGameStateValue( self::BATTLEFIELD, $battlefield );
+		
 	}
 
 	function pickedFirst(int $card_id)
 	{
 		self::checkAction( 'pickedFirst' );
-
-		$isRedPlayer = self::currentMultiPlayerIsRed();
-		$cards =  self::getGameStateValue( self::CARDS );
-		self::_picked($cards, $isRedPlayer, $card_id, true);
-
+		self::pickedCard(self::getCurrentPlayerStateName(), $card_id, true);
 		$this->gamestate->updateMultiactiveOrNextState( '' );
 	}
 
 	function pickedSecond(int $card_id)
 	{
 		self::checkAction( 'pickedSecond' );
-
-		$isRedPlayer = self::currentMultiPlayerIsRed();
-		$cards =  self::getGameStateValue( self::CARDS );
-		self::_picked($cards, $isRedPlayer, $card_id, false);
-
+		self::pickedCard(self::getCurrentPlayerStateName(), $card_id, false);
 		$this->gamestate->updateMultiactiveOrNextState( '' );
 	}
 
-	function _picked($cards, $isRedPlayer, int $card_id, bool $first)
+	function pickedCard(string $player_state_name, int $card_id, bool $first)
 	{
-		$this->validateCardPlay($card_id, $cards, $isRedPlayer, $first);
+		$player_state = self::getGameStateValue( $player_state_name );
+	
+		$this->validateCardPlay($player_state, $card_id, $first); // Throws an exception if the card is invalid.
 
-		if ($first) {
-			if ($isRedPlayer) self::set_redPlayed0($cards, $card_id);
-			else self::set_bluePlayed0($cards, $card_id);
-		} else {
-			if ($isRedPlayer) self::set_redPlayed1($cards, $card_id);
-			else self::set_bluePlayed1($cards, $card_id);
-		}
+		if ($first) self::setState_Played0($player_state, $card_id);
+		else self::setState_Played1($player_state, $card_id);
 
-		self::setGameStateValue( self::CARDS, $cards );
+		self::setGameStateValue( $player_state_name, $player_state);
 
 		$players = self::loadPlayersBasicInfos();
-		self::notifyAllGameState($players, 'played card', array(
-		), self::getGameStateValue( self::BATTLEFIELD ), $cards);
+		self::notifyAllWithGameState($players, 'played card', array());
 	}
 
 	function undoFirst()
 	{
 		self::checkAction( 'undoFirst' );
-		self::_undo(true);
+		self::_undo(self::getCurrentPlayerStateName(), true);
 	}
 
 	function undoSecond()
 	{
 		self::checkAction( 'undoSecond' );
-		self::_undo(false);
+		self::_undo(self::getCurrentPlayerStateName(), false);
 	}
 
-	function _undo($first)
+	function _undo(string $player_state_name, bool $first)
 	{
-		$cards =  self::getGameStateValue( self::CARDS );
-		$isRedPlayer = self::currentMultiPlayerIsRed();
-
 		// We don't need to validate this (if card is already not played) because the end result is the same.
 		// There is little point for throwing an error here.
+		$player_state = self::getGameStateValue( $player_state_name );
+		if ($first) self::setState_Played0($player_state, PlayedCard::NOT_PLAYED);
+		else self::setState_Played1($player_state, PlayedCard::NOT_PLAYED);
+		self::setGameStateValue( $player_state_name, $player_state);
 
-		if ($first) {
-			if ($isRedPlayer) {
-				self::set_redPlayed0($cards, PlayedCard::NOT_PLAYED);
-			} else {
-				self::set_bluePlayed0($cards, PlayedCard::NOT_PLAYED);
-			}
-		} else {
-			if ($isRedPlayer) {
-				self::set_redPlayed1($cards, PlayedCard::NOT_PLAYED);
-			} else {
-				self::set_bluePlayed1($cards, PlayedCard::NOT_PLAYED);
-			}
-		}
-
-		self::setGameStateValue( self::CARDS, $cards );
 		$players = self::loadPlayersBasicInfos();
-		self::notifyAllGameState($players, 'undo card', array(), self::getGameStateValue( self::BATTLEFIELD ), $cards);
+		self::notifyAllWithGameState($players, 'undo card', array());
 
 		$this->gamestate->updateMultiactiveOrNextState( '' );
-		
 	}
 
 	/** All this does is deactivates the player and moved to the next state if both are deactivated. */
@@ -552,17 +439,9 @@ class KiriaiTheDuel extends Table
 	{
 		self::checkAction( 'confirmedCards' );
 
-		$cards =  self::getGameStateValue( self::CARDS );
-		if(self::currentMultiPlayerIsRed())
-		{
-			if (self::get_redPlayed0($cards) == PlayedCard::NOT_PLAYED || self::get_redPlayed1($cards) == PlayedCard::NOT_PLAYED)
-				throw new BgaUserException($this->userErrors['not all cards played']);
-		}
-		else
-		{
-			if (self::get_bluePlayed0($cards) == PlayedCard::NOT_PLAYED || self::get_bluePlayed1($cards) == PlayedCard::NOT_PLAYED)
-				throw new BgaUserException($this->userErrors['not all cards played']);
-		}
+		$player_state = self::getGameStateValue( self::getCurrentPlayerStateName() );
+		if (self::getState_Played0($player_state) == PlayedCard::NOT_PLAYED || self::getState_Played1($player_state) == PlayedCard::NOT_PLAYED)
+			throw new BgaUserException($this->userErrors['not all cards played']);
 
 		$player_id = self::getCurrentPlayerId();
 		$this->gamestate->setPlayerNonMultiactive( $player_id, '');
@@ -573,26 +452,13 @@ class KiriaiTheDuel extends Table
 //////////// Player Action Validation
 ////////////
 
-	protected function validateCardPlay(int $card, int $cards, bool $isRedPlayer, bool $isFirstCard)
+	protected function validateCardPlay(int $player_state, int $card, bool $isFirstCard)
 	{
-		if ($isRedPlayer) {
-			$discard = self::get_redDiscard($cards);
-			$special = self::get_redSpecial($cards);
-			$played0 = self::get_redPlayed0($cards);
-			$played1 = self::get_redPlayed1($cards);
-			$specialPlayed = self::get_redSpecialPlayed($cards);
-		} else {
-			$discard = self::get_blueDiscard($cards);
-			$special = self::get_blueSpecial($cards);
-			$played0 = self::get_bluePlayed0($cards);
-			$played1 = self::get_bluePlayed1($cards);
-			$specialPlayed = self::get_blueSpecialPlayed($cards);
-		}
-
-		self::notifyAllPlayers('log', '', array(
-			"card" => $card,
-			"discard" => $discard
-		));
+		$discard = self::getState_Discard($player_state);
+		$special = self::getState_Special($player_state);
+		$played0 = self::getState_Played0($player_state);
+		$played1 = self::getState_Played1($player_state);
+		$specialPlayed = self::getState_SpecialPlayed($player_state);
 
 		// Make sure the card being played is not discarded...
 		if ($card == PlayedCard::SPECIAL && $specialPlayed) {
@@ -635,29 +501,6 @@ class KiriaiTheDuel extends Table
 		}
 	}
 
-	protected function validatePosition(int $position, bool $isRedPlayer, int $battlefield)
-	{
-		$battlefieldType = self::get_battlefieldType($battlefield);
-
-		if ($battlefieldType == 1)
-			throw new BgaUserException("The standard battle field should be automatically set up.");
-		else if ($battlefieldType == 2)
-		{
-			if ($isRedPlayer)
-			{
-				if ($position < 4 || $position > 6)
-					throw new BgaUserException("Invalid position for red player. Must be 4-6 inclusive.");
-			}
-			else
-			{
-				if ($position < 2 || $position > 4)
-					throw new BgaUserException("Invalid position for blue player. Must be 2-4 inclusive.");
-			}
-		}
-		else
-			throw new BgaVisibleSystemException("Invalid battlefield type");
-	}
-
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state arguments
 ////////////
@@ -674,102 +517,100 @@ class KiriaiTheDuel extends Table
 
 	function stSetupBattlefield()
 	{
-		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
-		// This is the default, which is always the case when the game starts.
-		$cards = 0;
+		// These are the default, which is always the case when the game starts.
+		$primary_state = 0;
+		$secondary_state = 0;
 
 		$first_card = bga_rand(0, 2);
-		$redSpecial = $first_card + 1;
-		$blueSpecial = ($first_card + bga_rand(1, 2)) % 3 + 1;
+		$primarySpecial = $first_card + 1;
+		$secondarySpecial = ($first_card + bga_rand(1, 2)) % 3 + 1;
 
-		self::set_redSpecial($cards, $redSpecial);
-		self::set_blueSpecial($cards, $blueSpecial);
+		self::setState_Special($primary_state, $primarySpecial);
+		self::setState_Special($secondary_state, $secondarySpecial);
 
 		$players = self::loadPlayersBasicInfos();
 
+		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
 		foreach ($players as $player)
 		{
 			$message_args = array();
-			if ($player['player_color'] == self::RED_COLOR) {
-				$message_args['card_name'] = $this->specialCardNames[$redSpecial];
-			}
-			else if ($player['player_color'] == self::BLUE_COLOR) {
-				$message_args['card_name'] = $this->specialCardNames[$blueSpecial];
-			}
-			else continue; // Spectators don't need to see a message with no new game information.
+			$message_args['card_name'] = $this->specialCardNames[
+				$player['player_id'] == $primary_player_id ? $primarySpecial : $secondarySpecial
+			];
 
-			self::notifyGameState($player, 'starting special card', $message_args, $battlefield, $cards);
+			self::notifyGameState($player, 'starting special card', $message_args);
 		}
 
-		self::setGameStateValue( self::CARDS, $cards );
-
-		$battlefieldType = self::get_battlefieldType($battlefield);
-
-		if ($battlefieldType == 1)
+		switch (self::getGameStateValue( self::BATTLEFIELD_TYPE ))
 		{
-			self::set_redPosition($battlefield, 5);
-			self::set_bluePosition($battlefield, 1);
-			self::set_redStance($battlefield, Stance::HEAVEN);
-			self::set_blueStance($battlefield, Stance::HEAVEN);
-			self::set_battlefieldValid($battlefield, true);
+			case 1:
+				self::setState_Position($primary_state, 1);
+				self::setState_Position($secondary_state, 1);
+				self::setState_Stance($primary_state, Stance::HEAVEN);
+				self::setState_Stance($secondary_state, Stance::HEAVEN);
 
-			self::setGameStateValue( self::BATTLEFIELD, $battlefield );
+				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 
-			$this->notifyAllGameState($players, 'battlefield setup', array(), $battlefield, $cards);
-			$this->gamestate->nextState( "" );
+				$this->notifyAllWithGameState($players, 'battlefield setup', array(), $primary_state, $secondary_state);
+				$this->gamestate->nextState( "" );
+				break;
+
+			case 2:
+				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
+
+				$this->gamestate->setAllPlayersMultiactive();
+				break;
+
+			default:
+				throw new BgaVisibleSystemException("Invalid battlefield type");
 		}
-		else if ($battlefieldType == 2)
-		{
-			$this->gamestate->setAllPlayersMultiactive();
-		}
-		else
-			throw new BgaVisibleSystemException("Invalid battlefield type");
 	}
 
 	function stPickCardsInit()
 	{
-		$cards = self::getGameStateValue( self::CARDS );
-		self::set_hidePlayedCards($cards, true);
-		self::setGameStateValue( self::CARDS, $cards );
-
 		$this->gamestate->setAllPlayersMultiactive();
 	}
 
 	function stResolveCards()
 	{
 		$players = self::loadPlayersBasicInfos();
-		$cards = self::getGameStateValue( self::CARDS );
-		$battlefield = self::getGameStateValue( self::BATTLEFIELD );
 
-		self::set_hidePlayedCards($cards, false);
+		$primary_state = self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
+		$secondary_state = self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
 
-		if (self::get_redPlayed0($cards) == PlayedCard::SPECIAL || self::get_redPlayed1($cards) == PlayedCard::SPECIAL)
-			self::set_redSpecialPlayed($cards, true);
-		if (self::get_bluePlayed0($cards) == PlayedCard::SPECIAL || self::get_bluePlayed1($cards) == PlayedCard::SPECIAL)
-			self::set_blueSpecialPlayed($cards, true);
+		// Setup cards and flip first one over.
+		if (self::getState_Played0($primary_state) == PlayedCard::SPECIAL || self::getState_Played1($primary_state) == PlayedCard::SPECIAL)
+			self::setState_SpecialPlayed($primary_state, true);
+		if (self::getState_Played0($secondary_state) == PlayedCard::SPECIAL || self::getState_Played1($secondary_state) == PlayedCard::SPECIAL)
+			self::setState_SpecialPlayed($secondary_state, true);
 
-		self::notifyAllGameState($players, 'before first resolve', array(), $battlefield, $cards); // Setup cards and flip first one over
+		self::notifyAllWithGameState($players, 'before first resolve', array(), $primary_state, $secondary_state); 
 
-		if (self::DoCards($players, $battlefield, $cards, true))
+		// Do the first cards...
+		if (self::DoCards($players, $primary_state, $secondary_state, true))
 			return; // game over
 
-		self::notifyAllGameState($players, 'before second resolve', array(), $battlefield, $cards); // Return first card and flip second one over
+		// Remove the first played card and flip second one over (presentation que).
+		self::setState_Played0($primary_state, PlayedCard::NOT_PLAYED);
+		self::setState_Played0($secondary_state, PlayedCard::NOT_PLAYED);
+		self::notifyAllWithGameState($players, 'before second resolve', array(), $primary_state, $secondary_state); 
 
-		// Save the discard before playing the cards
-		$redDiscard = self::playedCardToDiscard(self::get_redPlayed1($cards));
-		$blueDiscard = self::playedCardToDiscard(self::get_bluePlayed1($cards));
-
-		if (self::DoCards($players, $battlefield, $cards, false))
+		// Do the second cards...
+		if (self::DoCards($players, $primary_state, $secondary_state, false))
 			return; // game over
 
-		self::set_redDiscard ($cards, $redDiscard);
-		self::set_blueDiscard($cards, $blueDiscard);
+		// Return second card as discarded.
+		self::setState_Discard($primary_state, self::playedCardToDiscard(self::getState_Played0($primary_state)));
+		self::setState_Discard($secondary_state, self::playedCardToDiscard(self::getState_Played0($secondary_state)));
+		self::setState_Played1($primary_state, PlayedCard::NOT_PLAYED);
+		self::setState_Played1($secondary_state, PlayedCard::NOT_PLAYED);
+		self::notifyAllWithGameState($players, 'after resolve', array(), $primary_state, $secondary_state); 
 
-		self::setGameStateValue( self::BATTLEFIELD, $battlefield );
-		self::setGameStateValue( self::CARDS, $cards );
-
-		self::notifyAllGameState($players, 'after resolve', array(), $battlefield, $cards); // Return second card as discarded.
-
+		// Save the new states and move to the next state.
+		self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+		self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 		$this->gamestate->nextState( "pickCards" );
 
 		// give player some more time
@@ -778,21 +619,38 @@ class KiriaiTheDuel extends Table
 		}
 	}
 
-	function DoCards(&$players, &$battlefield, &$cards, bool $first): bool
+	function DoCards(&$players, int &$primary_state, int &$secondary_state,  bool $first): bool
 	{
-		$red_card = $first ? self::get_redPlayed0($cards) : self::get_redPlayed1($cards);
-		$blue_card = $first ? self::get_bluePlayed0($cards) : self::get_bluePlayed1($cards);
+		$primary_card = $first ? self::getState_Played0($primary_state) : self::getState_Played1($primary_state);
+		$secondary_card = $first ? self::getState_Played0($secondary_state) : self::getState_Played1($secondary_state);
+
+		$primary_special_played = $primary_card == PlayedCard::SPECIAL ? self::getState_Special($primary_state) : SpecialCard::HIDDEN;
+		$secondary_special_played = $secondary_card == PlayedCard::SPECIAL ? self::getState_Special($secondary_state) : SpecialCard::HIDDEN;
 
 		// Validate
-		if ($red_card == PlayedCard::NOT_PLAYED || $blue_card == PlayedCard::NOT_PLAYED)
+		if ($primary_card == PlayedCard::NOT_PLAYED || $secondary_card == PlayedCard::NOT_PLAYED)
 			throw new BgaVisibleSystemException($this->userErrors['not all cards played']);
 
-		$redStance = self::get_redStance($battlefield);
-		$blueStance = self::get_blueStance($battlefield);
-		$redPosition = self::get_redPosition($battlefield);
-		$bluePosition = self::get_bluePosition($battlefield);
+		switch (self::getGameStateValue( self::BATTLEFIELD_TYPE ))
+		{
+			case 1:
+				$battlefieldSize = 5;
+				break;
+			case 2:
+				$battlefieldSize = 7;
+				break;
+			default:
+				throw new BgaVisibleSystemException("Invalid battlefield type");
+		}
 
-		$battlefieldSize = self::get_battlefieldType( $battlefield ) == 1 ? 5 : 7;
+		$primary_stance = self::getState_Stance($primary_state);
+		$secondary_stance = self::getState_Stance($secondary_state);
+		$primary_position = self::getState_Position($primary_state);
+		$secondary_position = self::getState_Position($secondary_state);
+
+		// All math is done from bottom-up positions,
+		// but the position is stored based on the distance from their end.
+		$secondary_position = $battlefieldSize - $secondary_position + 1;
 
 		//
 		// MOVEMENT
@@ -800,248 +658,243 @@ class KiriaiTheDuel extends Table
 
 		// Charge: Move two spaces forward (-2 for red, +2 for blue)
 
-		if ($red_card == PlayedCard::CHARGE && $blue_card == PlayedCard::CHARGE)
+		if ($primary_card == PlayedCard::CHARGE && $secondary_card == PlayedCard::CHARGE)
 		{
-			if ($redStance == $blueStance) // Both move at the same time.
+			if ($primary_stance == $secondary_stance) // Both move at the same time.
 			{
-				if ($redPosition - $bluePosition <= 1) {} // There is not enough room to move
-				else if ($redPosition - $bluePosition <= 3) // Both can move only once.
+				if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
+				else if ($primary_position - $secondary_position <= 3) // Both can move only once.
 				{
-					$redPosition -= 1;
-					$bluePosition += 1;
+					$primary_position -= 1;
+					$secondary_position += 1;
 				}
 				else { // Move full amount
-					$redPosition -= 2;
-					$bluePosition += 2;
+					$primary_position -= 2;
+					$secondary_position += 2;
 				}
 			}
 
-			else if ($redStance == 0) // Red Player moves first
+			else if ($primary_stance == 0) // Red Player moves first
 			{
-				$redPosition = max($redPosition - 2, $bluePosition);
-				$bluePosition = min($bluePosition + 2, $redPosition);
+				$primary_position = max($primary_position - 2, $secondary_position);
+				$secondary_position = min($secondary_position + 2, $primary_position);
 			}
 
 			else // Blue Player moves first
 			{
-				$bluePosition = min($bluePosition + 2, $redPosition);
-				$redPosition = max($redPosition - 2, $bluePosition);
+				$secondary_position = min($secondary_position + 2, $primary_position);
+				$primary_position = max($primary_position - 2, $secondary_position);
 			}
 		}
 
-		else if ($red_card == PlayedCard::CHARGE)
+		else if ($primary_card == PlayedCard::CHARGE)
 		{
-			$redPosition = max($redPosition - 2, $bluePosition);
+			$primary_position = max($primary_position - 2, $secondary_position);
 		}
 
-		else if ($blue_card == PlayedCard::CHARGE)
+		else if ($secondary_card == PlayedCard::CHARGE)
 		{
-			$bluePosition = min($bluePosition + 2, $redPosition);
+			$secondary_position = min($secondary_position + 2, $primary_position);
 		}
 
-		if ($red_card == PlayedCard::CHARGE || $blue_card == PlayedCard::CHARGE)
+		if ($primary_card == PlayedCard::CHARGE || $secondary_card == PlayedCard::CHARGE)
 		{
-			self::set_redPosition($battlefield, $redPosition);
-			self::set_bluePosition($battlefield, $bluePosition);
-			self::notifyAllGameState($players, 'player(s) charged', array(), $battlefield, $cards);
+			self::setState_position($primary_state, $primary_position);
+			self::setState_position($secondary_state, $battlefieldSize - $secondary_position + 1);// see note near $secondary_position init
+			self::notifyAllWithGameState($players, 'player(s) charged', array(), $primary_state, $secondary_state);
 		}
 
 		// Approach/Retreat: Move one space forward/backward (-1 for red, +1 for blue)
 
-		$redMove =
-			$red_card == PlayedCard::APPROACH ? -1 :
-			($red_card == PlayedCard::RETREAT ? 1 : 0);
-		$blueMove =
-			$blue_card == PlayedCard::APPROACH ? 1 :
-			($blue_card == PlayedCard::RETREAT ? -1 : 0);
+		$primary_move =
+			$primary_card == PlayedCard::APPROACH ? -1 :
+			($primary_card == PlayedCard::RETREAT ? 1 : 0);
+		$secondary_move =
+			$secondary_card == PlayedCard::APPROACH ? 1 :
+			($secondary_card == PlayedCard::RETREAT ? -1 : 0);
 
-		if ($redMove != 0 && $blueMove != 0)
+		if ($primary_move != 0 && $secondary_move != 0)
 		{
-			if ($redStance == $blueStance) // Both move at the same time.
+			if ($primary_stance == $secondary_stance) // Both move at the same time.
 			{
-				if ($red_card == PlayedCard::APPROACH && $blue_card == PlayedCard::APPROACH)
+				if ($primary_card == PlayedCard::APPROACH && $secondary_card == PlayedCard::APPROACH)
 				{
-					if ($redPosition - $bluePosition <= 1) {} // There is not enough room to move
+					if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
 					else {
-						$redPosition -= 1;
-						$bluePosition += 1;
+						$primary_position -= 1;
+						$secondary_position += 1;
 					}
 				}
 				else { // Otherwise, both players can move according to card without interference
-					$redPosition = max(min($redPosition + $redMove, $battlefieldSize), 1);
-					$bluePosition = max(min($bluePosition + $blueMove, $battlefieldSize), 1);
+					$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), 1);
+					$secondary_position = max(min($secondary_position + $secondary_move, $battlefieldSize), 1);
 				}
 			}
 
-			else if ($redStance == 0) // Red Player moves first
+			else if ($primary_stance == 0) // Red Player moves first
 			{
-				$redPosition = max(min($redPosition + $redMove, $battlefieldSize), $bluePosition);
-				$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 1);
+				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
+				$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
 			}
 
 			else // Blue Player moves first
 			{
-				$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 1);
-				$redPosition = max(min($redPosition + $redMove, $battlefieldSize), $bluePosition);
+				$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
+				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
 			}
 		}
 		// Only one or the other is trying to move...
-		else if ($redMove != 0 || $blueMove != 0)
+		else if ($primary_move != 0 || $secondary_move != 0)
 		{
-			$redPosition = max(min($redPosition + $redMove, $battlefieldSize), $bluePosition);
-			$bluePosition = max(min($bluePosition + $blueMove, $redPosition), 1);
+			$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
+			$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
 		}
 
-		if ($redMove != 0 || $blueMove != 0)
+		if ($primary_move != 0 || $secondary_move != 0)
 		{
-			self::set_redPosition($battlefield, $redPosition);
-			self::set_bluePosition($battlefield, $bluePosition);
-			self::notifyAllGameState($players, 'player(s) moved', array(), $battlefield, $cards);
+			self::setState_position($primary_state, $primary_position);
+			self::setState_position($secondary_state, $battlefieldSize - $secondary_position + 1);// see note near $secondary_position init
+			self::notifyAllWithGameState($players, 'player(s) moved', array(), $primary_state, $secondary_state);
 		}
 
 		// Change stance: Invert the current stance
 
-		if ($red_card == PlayedCard::CHANGE_STANCE)
-			$redStance = $redStance == Stance::HEAVEN ? Stance::EARTH : Stance::HEAVEN;
-		if ($blue_card == PlayedCard::CHANGE_STANCE)
-			$blueStance = $blueStance == Stance::HEAVEN ? Stance::EARTH : Stance::HEAVEN;
-
-		if ($red_card == PlayedCard::CHANGE_STANCE || $blue_card == PlayedCard::CHANGE_STANCE)
-		{
-			self::set_redStance($battlefield, $redStance);
-			self::set_blueStance($battlefield, $blueStance);
-			self::notifyAllGameState($players, 'player(s) changed stance', array(), $battlefield, $cards);
+		if ($primary_card == PlayedCard::CHANGE_STANCE) {
+			$primary_stance = $primary_stance == Stance::HEAVEN ? Stance::EARTH : Stance::HEAVEN;
+			self::setState_stance($primary_state, $primary_stance);
 		}
+		if ($secondary_card == PlayedCard::CHANGE_STANCE) {
+			$secondary_stance = $secondary_stance == Stance::HEAVEN ? Stance::EARTH : Stance::HEAVEN;
+			self::setState_stance($secondary_state, $secondary_stance);
+		}
+
+		if ($primary_card == PlayedCard::CHANGE_STANCE || $secondary_card == PlayedCard::CHANGE_STANCE)
+			self::notifyAllWithGameState($players, 'player(s) changed stance', array(), $primary_state, $secondary_state);
 
 		//
 		// ATTACKS
 		//
 
-		$redScored = false;
-		$blueScored = false;
-		$distance = $redPosition - $bluePosition;
+		$primary_landed_hit = false;
+		$secondary_landed_hit = false;
+		$distance = $primary_position - $secondary_position;
 
 		// High Strike: If the opponent is two spaces away and in heaven stance, deal 1 damage
 
-		if ($red_card == PlayedCard::HIGH_STRIKE && $redStance == Stance::HEAVEN && $distance == 2)
-			$redScored = true;
-		if ($blue_card == PlayedCard::HIGH_STRIKE && $blueStance == Stance::HEAVEN && $distance == 2)
-			$blueScored = true;
+		if ($primary_card == PlayedCard::HIGH_STRIKE && $primary_stance == Stance::HEAVEN && $distance == 2)
+			$primary_landed_hit = true;
+		if ($secondary_card == PlayedCard::HIGH_STRIKE && $secondary_stance == Stance::HEAVEN && $distance == 2)
+			$secondary_landed_hit = true;
 
 		// Low Strike: If the opponent is one space away and in earth stance, deal 1 damage
 
-		if ($red_card == PlayedCard::LOW_STRIKE && $redStance == Stance::EARTH && $distance == 1)
-			$redScored = true;
-		if ($blue_card == PlayedCard::LOW_STRIKE && $blueStance == Stance::EARTH && $distance == 1)
-			$blueScored = true;
+		if ($primary_card == PlayedCard::LOW_STRIKE && $primary_stance == Stance::EARTH && $distance == 1)
+			$primary_landed_hit = true;
+		if ($secondary_card == PlayedCard::LOW_STRIKE && $secondary_stance == Stance::EARTH && $distance == 1)
+			$secondary_landed_hit = true;
 
 		// Balanced Strike: If the opponent is on the same space, deal 1 damage
 
-		if ($red_card == PlayedCard::BALANCED_STRIKE && $distance == 0)
-			$redScored = true;
-		if ($blue_card == PlayedCard::BALANCED_STRIKE && $distance == 0)
-			$blueScored = true;
+		if ($primary_card == PlayedCard::BALANCED_STRIKE && $distance == 0)
+			$primary_landed_hit = true;
+		if ($secondary_card == PlayedCard::BALANCED_STRIKE && $distance == 0)
+			$secondary_landed_hit = true;
 
 		// Kesa Strike: If the opponent is zero or one space away and in heaven stance, deal 1 damage. Switch to earth stance.
 
-		$red_special = $red_card == PlayedCard::SPECIAL ? self::get_redSpecial($cards) : SpecialCard::HIDDEN;
-		$blue_special = $blue_card == PlayedCard::SPECIAL ? self::get_blueSpecial($cards) : SpecialCard::HIDDEN;
-
-		if ($red_special == SpecialCard::KESA_STRIKE)
+		if ($primary_special_played == SpecialCard::KESA_STRIKE)
 		{
-			if ($redStance == 0 && $distance <= 1)
-				$redScored = true;
-			$redStance = Stance::EARTH;
+			if ($primary_stance == 0 && $distance <= 1)
+				$primary_landed_hit = true;
+			$primary_stance = Stance::EARTH;
 		}
 
-		if ($blue_special == SpecialCard::KESA_STRIKE)
+		if ($secondary_special_played == SpecialCard::KESA_STRIKE)
 		{
-			if ($blueStance == 0 && $distance <= 1)
-				$blueScored = true;
-			$blueStance = Stance::EARTH;
+			if ($secondary_stance == 0 && $distance <= 1)
+				$secondary_landed_hit = true;
+			$secondary_stance = Stance::EARTH;
 		}
 
 		// Zan-Tetsu Strike: If the opponent is two or three spaces away and in earth stance, deal 1 damage. Switch to heaven stance.
 
-		if ($red_special == SpecialCard::ZAN_TETSU_STRIKE)
+		if ($primary_special_played == SpecialCard::ZAN_TETSU_STRIKE)
 		{
-			if ($redStance == 1 && ($distance == 2 || $distance == 3))
-				$redScored = true;
-			$redStance = Stance::HEAVEN;
+			if ($primary_stance == 1 && ($distance == 2 || $distance == 3))
+				$primary_landed_hit = true;
+			$primary_stance = Stance::HEAVEN;
 		}
 
-		if ($blue_special == SpecialCard::ZAN_TETSU_STRIKE)
+		if ($secondary_special_played == SpecialCard::ZAN_TETSU_STRIKE)
 		{
-			if ($blueStance == 1 && ($distance == 2 || $distance == 3))
-				$blueScored = true;
-			$blueStance = Stance::HEAVEN;
+			if ($secondary_stance == 1 && ($distance == 2 || $distance == 3))
+				$secondary_landed_hit = true;
+			$secondary_stance = Stance::HEAVEN;
 		}
 
 		// Counterattack: If the opponent played a card that would hit you, deal 1 damage and negate the opponent's card
 
-		if ($red_special == SpecialCard::COUNTERATTACK && $blueScored)
+		if ($primary_special_played == SpecialCard::COUNTERATTACK && $secondary_landed_hit)
 		{
-			$redScored = true;
-			$blueScored = false;
+			$primary_landed_hit = true;
+			$secondary_landed_hit = false;
 		}
 
-		if ($blue_special == SpecialCard::COUNTERATTACK && $redScored)
+		if ($secondary_special_played == SpecialCard::COUNTERATTACK && $primary_landed_hit)
 		{
-			$blueScored = true;
-			$redScored = false;
+			$secondary_landed_hit = true;
+			$primary_landed_hit = false;
 		}
 
-		if ($red_card == PlayedCard::HIGH_STRIKE || $red_card == PlayedCard::LOW_STRIKE || $red_card == PlayedCard::BALANCED_STRIKE || $red_card == PlayedCard::SPECIAL || $blue_card == PlayedCard::HIGH_STRIKE || $blue_card == PlayedCard::LOW_STRIKE || $blue_card == PlayedCard::BALANCED_STRIKE || $blue_card == PlayedCard::SPECIAL
+		if ($primary_card == PlayedCard::HIGH_STRIKE || $primary_card == PlayedCard::LOW_STRIKE || $primary_card == PlayedCard::BALANCED_STRIKE || $primary_card == PlayedCard::SPECIAL || $secondary_card == PlayedCard::HIGH_STRIKE || $secondary_card == PlayedCard::LOW_STRIKE || $secondary_card == PlayedCard::BALANCED_STRIKE || $secondary_card == PlayedCard::SPECIAL
 		) {
-			self::notifyAllGameState($players, 'player(s) attacked', array(), $battlefield, $cards);
+			self::notifyAllWithGameState($players, 'player(s) attacked', array(), $primary_state, $secondary_state);
 
-			if ($red_card == PlayedCard::SPECIAL && $red_special != SpecialCard::COUNTERATTACK || $blue_card == PlayedCard::SPECIAL && $blue_special != SpecialCard::COUNTERATTACK)
+			if ($primary_card == PlayedCard::SPECIAL && $primary_special_played != SpecialCard::COUNTERATTACK || $secondary_card == PlayedCard::SPECIAL && $secondary_special_played != SpecialCard::COUNTERATTACK)
 			{
-				self::set_redStance($battlefield, $redStance);
-				self::set_blueStance($battlefield, $blueStance);
-				self::notifyAllGameState($players, 'player(s) changed stance', array(), $battlefield, $cards);
+				self::setState_stance($primary_state, $primary_stance);
+				self::setState_stance($secondary_state, $secondary_stance);
+				self::notifyAllWithGameState($players, 'player(s) changed stance', array(), $primary_state, $secondary_state);
 			}
 		}
 
-		if ($redScored && !$blueScored) {
-			$redScore = self::dbIncrementScore($players, self::RED_COLOR);
-			self::set_blueHit($battlefield, true);
-			self::notifyAllGameState($players, 'player(s) hit', array(
-				"redScore" => $redScore
-			), $battlefield, $cards);
+		if ($primary_landed_hit && !$secondary_landed_hit)
+		{
+			$wasHit = self::getState_hit($secondary_state);
+			self::setState_hit($secondary_state, true);
 
-			if ($redScore >= 2)
-			{
-				$this->gamestate->nextState( "endGame" );
-				return true;
-			}
-		}
+			$primary_id = self::dbIncrementScore($players, true);
+			self::notifyAllWithGameState($players, 'player(s) hit', array(
+				"winner" => $primary_id
+			), $primary_state, $secondary_state);
 
-		else if ($blueScored && !$redScored) {
-			$blueScore = self::dbIncrementScore($players, self::BLUE_COLOR);
-			self::set_redHit($battlefield, true);
-			self::notifyAllGameState($players, 'player(s) hit', array(
-				"blueScore" => $blueScore
-			), $battlefield, $cards);
-
-			if ($blueScore >= 2)
+			if ($wasHit)
 			{
 				$this->gamestate->nextState( "endGame" );
 				return true;
 			}
 		}
 
-		else if ($redScored && $blueScored) {
-			self::notifyAllGameState($players, 'player(s) hit', array(), $battlefield, $cards);
+		else if ($secondary_landed_hit && !$primary_landed_hit)
+		{
+			$wasHit = self::getState_hit($primary_state);
+			self::setState_hit($primary_state, true);
+
+			$secondary_id = self::dbIncrementScore($players, false);
+			self::notifyAllWithGameState($players, 'player(s) hit', array(
+				"winner" => $secondary_id
+			), $primary_state, $secondary_state);
+
+			if ($wasHit)
+			{
+				$this->gamestate->nextState( "endGame" );
+				return true;
+			}
 		}
 
-		if ($first)
-			self::set_redPlayed0($cards, PlayedCard::NOT_PLAYED);
-		else self::set_redPlayed1($cards, PlayedCard::NOT_PLAYED);
-
-		if ($first)
-			self::set_bluePlayed0($cards, PlayedCard::NOT_PLAYED);
-		else self::set_bluePlayed1($cards, PlayedCard::NOT_PLAYED);
+		else if ($primary_landed_hit && $secondary_landed_hit) {
+			self::notifyAllWithGameState($players, 'player(s) hit', array(), $primary_state, $secondary_state);
+		}
 
 		return false;
 	}
@@ -1080,30 +933,30 @@ class KiriaiTheDuel extends Table
 	{
 		$statename = $state['name'];
 
-		$players = self::loadPlayersBasicInfos();
-		$isRedPlayer = $players[$active_player]['player_color'] == self::RED_COLOR;
+		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
+		$player_state_name = $active_player == $primary_player_id ? self::PRIMARY_PLAYER_STATE : self::SECONDARY_PLAYER_STATE;
 
 
 		// Check if it's a player's turn
 		if ($statename === "setupBattlefield")
 		{
 			// TODO
-			$position = ($isRedPlayer) ? bga_rand(6, 9) : bga_rand(2, 5);
+			$position = bga_rand(2, 5);
 			$isHeavenStance = bga_rand(0, 1) == 0;
-			self::_confirmedStanceAndPosition($active_player, $isRedPlayer, $isHeavenStance, $position);
+			self::_confirmedStanceAndPosition($player_state_name, $isHeavenStance, $position);
 			return;
 		}
 		else if ($statename === "pickCards")
 		{
-			$cards = self::getGameStateValue( self::CARDS );
+			$cards = self::getGameStateValue( $player_state_name );
 
-			if (self::get_redPlayed0($cards) == PlayedCard::NOT_PLAYED)
+			if (self::getState_Played0($cards) == PlayedCard::NOT_PLAYED)
 			{
 				while (true)
 				{
 					try {
 						$card_id = bga_rand(1, 8);
-						self::_picked($cards, $isRedPlayer, $card_id, true);
+						self::pickedCard($player_state_name, $card_id, true);
 						break;
 					}
 					catch (BgaUserException $e) {}
@@ -1111,13 +964,13 @@ class KiriaiTheDuel extends Table
 				return;
 			}
 
-			if (self::get_redPlayed1($cards) == PlayedCard::NOT_PLAYED)
+			if (self::getState_Played1($cards) == PlayedCard::NOT_PLAYED)
 			{
 				while (true)
 				{
 					try {
 						$card_id = bga_rand(1, 8);
-						self::_picked($cards, $isRedPlayer, $card_id, false);
+						self::pickedCard($player_state_name, $card_id, false);
 						break;
 					}
 					catch (BgaUserException $e) {}
