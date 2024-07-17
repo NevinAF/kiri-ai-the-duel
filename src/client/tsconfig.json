@@ -15,6 +15,7 @@
 		"../../node_modules/bga-ts-template/typescript/cookbook/common.ts",
 		"../../node_modules/bga-ts-template/typescript/cookbook/nevinaf/playeractionqueue.ts",
 		"../../node_modules/bga-ts-template/typescript/cookbook/nevinaf/titlelocking.ts",
+		"../../node_modules/bga-ts-template/typescript/cookbook/nevinaf/confirmationtimeout.ts",
 	],
 	"include": [
 		"build/**/*.ts", // Extra auto generated type files based on shared files

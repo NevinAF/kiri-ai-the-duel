@@ -347,6 +347,14 @@ class KiriaiTheDuel extends Table
 	{
 		self::checkAction( 'confirmedStanceAndPosition' );
 		self::_confirmedStanceAndPosition(self::getCurrentPlayerStateName(), $isHeavenStance, $position);
+		
+		// End the player's multiactive turn.
+		// If both players have confirmed, also notify the players of the battlefield setup.
+		if ($this->gamestate->setPlayerNonMultiactive( self::getCurrentPlayerId(), ''))
+		{
+			$players = self::loadPlayersBasicInfos();
+			$this->notifyAllWithGameState($players, 'battlefield setup', array());
+		}
 	}
 
 	function _confirmedStanceAndPosition($player_state_name, bool $isHeavenStance, int $position)
@@ -356,7 +364,7 @@ class KiriaiTheDuel extends Table
 		{
 			case 2:
 				if ($position < 2 || $position > 4)
-					throw new BgaUserException("Invalid position for red player. Must be 4-6 inclusive.");
+					throw new BgaUserException("Invalid position for red player. Must be 2-4 inclusive.");
 				break;
 			case 1: throw new BgaUserException("The standard battle field should be automatically set up.");
 			default: throw new BgaVisibleSystemException("Invalid battlefield type");
@@ -367,15 +375,6 @@ class KiriaiTheDuel extends Table
 		self::setState_position($player_state, $position);
 		self::setState_stance($player_state, $isHeavenStance ? Stance::HEAVEN : Stance::EARTH);
 		self::setGameStateValue( $player_state_name, $player_state);
-
-		// End the player's multiactive turn.
-		// If both players have confirmed, also notify the players of the battlefield setup.
-		if ($this->gamestate->setPlayerNonMultiactive( self::getCurrentPlayerId(), ''))
-		{
-			$players = self::loadPlayersBasicInfos();
-			$this->notifyAllWithGameState($players, 'battlefield setup', array());
-		}
-		
 	}
 
 	function pickedFirst(int $card_id)
@@ -945,9 +944,11 @@ class KiriaiTheDuel extends Table
 		if ($statename === "setupBattlefield")
 		{
 			// TODO
-			$position = bga_rand(2, 5);
+			$position = bga_rand(2, 4);
 			$isHeavenStance = bga_rand(0, 1) == 0;
 			self::_confirmedStanceAndPosition($player_state_name, $isHeavenStance, $position);
+			$players = self::loadPlayersBasicInfos();
+			$this->notifyAllWithGameState($players, 'battlefield setup', array());
 			return;
 		}
 		else if ($statename === "pickCards")
@@ -982,10 +983,10 @@ class KiriaiTheDuel extends Table
 				return;
 			}
 
-			$this->gamestate->setPlayerNonMultiactive( $active_player, '');
+			// $this->gamestate->setPlayerNonMultiactive( $active_player, '');
 		}
 
-		throw new feException( "Zombie mode not supported at this game state: ".$statename );
+		else throw new feException( "Zombie mode not supported at this game state: ".$statename );
 	}
 	
 ///////////////////////////////////////////////////////////////////////////////////:

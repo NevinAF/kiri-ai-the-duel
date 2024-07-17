@@ -10,6 +10,7 @@
  * -----
  */
 
+/** @var (string|int|null|bool|string[]|int[])[] $gameinfos */
 $gameinfos = array(
 	'game_name' => 'Kiri-ai: The Duel',
 	'publisher' => 'Mugen Gaming',
