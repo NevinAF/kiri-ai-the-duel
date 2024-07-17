@@ -14,6 +14,23 @@
 
 	<div id="play-area">
 
+		<div class="cardslot" id="player_played_0">
+			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
+			<div class="selection-border"></div>
+		</div>
+		<div class="cardslot" id="player_played_1">
+			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
+			<div class="selection-border"></div>
+		</div>
+		<div class="cardslot" id="opponent_played_0">
+			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
+			<div class="selection-border"></div>
+		</div>
+		<div class="cardslot" id="opponent_played_1">
+			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
+			<div class="selection-border"></div>
+		</div>
+
 		<div id="battlefield" class="{BATTLEFIELD_TYPE} cardslot" class="cardslot">
 			<img src="{GAME_THEME_URL}{BATTLEFIELD_TYPE}.svg" draggable="false"/>
 			<div class="battlefield_position" id="battlefield_position_1"></div>
@@ -23,6 +40,8 @@
 			<div class="battlefield_position" id="battlefield_position_5"></div>
 			<div class="battlefield_position" id="battlefield_position_6"></div>
 			<div class="battlefield_position" id="battlefield_position_7"></div>
+			<div class="battlefield_position" id="battlefield_position_0"></div>
+			<div class="battlefield_position" id="battlefield_position_8"></div>
 		</div>
 
 		<div id="player_samurai"  class="cardslot">
@@ -33,18 +52,6 @@
 			<img src="{GAME_THEME_URL}opponent-stance-healthy.svg" draggable="false"/>
 		</div>
 
-		<div class="cardslot" id="player_played_0">
-			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
-		</div>
-		<div class="cardslot" id="player_played_1">
-			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
-		</div>
-		<div class="cardslot" id="opponent_played_0">
-			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
-		</div>
-		<div class="cardslot" id="opponent_played_1">
-			<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
-		</div>
 	</div>
 
 	<div id="hands">

@@ -21,7 +21,7 @@
   user-select: none;
 
   aspect-ratio: 1110/810;
-  max-height: calc(100vh - 150px);
+  max-height: calc(100vh - 160px);
   margin: 10px auto;
   overflow: hidden;
 }
@@ -174,30 +174,62 @@
 	left: 0;
 }
 
-.battlefield_position, #battlefield {
+#battlefield {
 	position: absolute;
 	inset: 0;
 	margin: auto;
 }
 
-.standard-battlefield #battlefield_position_1 { top: 75.632%; }
-.standard-battlefield #battlefield_position_2 { top: 62.827%; }
-.standard-battlefield #battlefield_position_3 { top: 50.000%; }
-.standard-battlefield #battlefield_position_4 { top: 37.216%; }
-.standard-battlefield #battlefield_position_5 { top: 24.418%; }
+#battlefield.cardslot::after {
+	display: none;
+}
 
-.advanced-battlefield #battlefield_position_1 { top: 88.372%; }
-.advanced-battlefield #battlefield_position_2 { top: 75.557%; }
-.advanced-battlefield #battlefield_position_3 { top: 62.773%; }
-.advanced-battlefield #battlefield_position_4 { top: 50.000%; }
-.advanced-battlefield #battlefield_position_5 { top: 37.175%; }
-.advanced-battlefield #battlefield_position_6 { top: 24.376%; }
-.advanced-battlefield #battlefield_position_7 { top: 11.577%; }
+.battlefield_position {
+	position: absolute;
+	width: 14.6%;
+	height: 10%;
+	left: 0;
+	right: 0;
+	margin: auto;
+	rotate: 45deg;
+	z-index: 1;
+}
 
-.player-heaven #player_samurai { transform: translate(83%, -39%) rotate(315deg) };
-.player-earth #player_samurai { transform: translate(83%, -39%) rotate(135deg) };
-.opponent-heaven #opponent_samurai { transform: translate(-82%, -61%) rotate(135deg) };
-.opponent-earth #opponent_samurai { transform: translate(-82%, -61%) rotate(315deg) };
+.battlefield_position.highlight {
+	background-color: rgba(255, 255, 255, 0.3);
+	pointer-events: all;
+}
+
+.battlefield_position.highlight:hover {
+	background-color: rgba(255, 255, 255, 0.5);
+}
+
+.standard-battlefield #battlefield_position_1 { top: 70.632%; }
+.standard-battlefield #battlefield_position_2 { top: 57.827%; }
+.standard-battlefield #battlefield_position_3 { top: 45.000%; }
+.standard-battlefield #battlefield_position_4 { top: 32.216%; }
+.standard-battlefield #battlefield_position_5 { top: 19.418%; }
+
+.advanced-battlefield #battlefield_position_1 { top: 83.372%; }
+.advanced-battlefield #battlefield_position_2 { top: 70.557%; }
+.advanced-battlefield #battlefield_position_3 { top: 57.773%; }
+.advanced-battlefield #battlefield_position_4 { top: 45.000%; }
+.advanced-battlefield #battlefield_position_5 { top: 32.175%; }
+.advanced-battlefield #battlefield_position_6 { top: 19.376%; }
+.advanced-battlefield #battlefield_position_7 { top: 06.577%; }
+.advanced-battlefield #battlefield_position_0 {
+	right: -135%;
+	top: 57.773%;
+}
+.advanced-battlefield #battlefield_position_8 {
+	left: -135%;
+	top: 32.175%;
+}
+
+.player-heaven #player_samurai { transform: translate(43%, -32%) rotate(315deg) };
+.player-earth #player_samurai { transform: translate(43%, -32%) rotate(135deg) };
+.opponent-heaven #opponent_samurai { transform: translate(-122%, -54%) rotate(135deg) };
+.opponent-earth #opponent_samurai { transform: translate(-122%, -54%) rotate(315deg) };
 
 #discard_icon, #special_icon {
 	width: 30%;
@@ -223,7 +255,9 @@
 .charge-opponent-discarded #opponent-hand_1::after,
 .high-strike-opponent-discarded #opponent-hand_2::after,
 .low-strike-opponent-discarded #opponent-hand_3::after,
-.balance-strike-opponent-discarded #opponent-hand_4::after {
+.balance-strike-opponent-discarded #opponent-hand_4::after,
+.player-played-special #player-hand_5::after,
+.opponent-played-special #opponent-hand_5::after {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -239,7 +273,7 @@
 	--borderWidth: 3px;
 	--borderRadius: 15px;
 	--duration: 5s;
-	--gradient: radial-gradient(circle, rgba(87, 181, 36, 0.417) 0%, rgb(172, 255, 127) 100%);
+	--gradient: radial-gradient(circle, rgba(67, 149, 23, 0.417) 0%, rgb(118, 255, 44) 100%);
 	width: 100%;
 	height: 100%;
 	border-radius: var(--borderRadius);
@@ -288,11 +322,55 @@
 	}
 }
 
-.approach-played #player-hand_0 .selection-border { display: block; height: 50%; }
-.charge-played #player-hand_1 .selection-border { display: block; height: 50%; }
-.high-strike-played #player-hand_2 .selection-border { display: block; }
-.low-strike-played #player-hand_3 .selection-border { display: block; }
-.balance-strike-played #player-hand_4 .selection-border { display: block; }
-.special-played #player-hand_5 .selection-border { display: block; }
-.retreat-played #player-hand_0 .selection-border { display: block; height: 50%; top: 50%; }
-.change-stance-played #player-hand_1 .selection-border { display: block; height: 50%; top: 50%; }
+.approach-player-played-first #player-hand_0 .selection-border,
+.approach-player-played-second #player-hand_0 .selection-border,
+.approach-player-played-first #player_played_0 .selection-border,
+.approach-player-played-second #player_played_1 .selection-border,
+.approach-opponent-played-first #opponent_played_0 .selection-border,
+.approach-opponent-played-second #opponent_played_1 .selection-border {
+	display: block; height: 50%;
+}
+
+.charge-player-played-first #player-hand_1 .selection-border,
+.charge-player-played-second #player-hand_1 .selection-border,
+.charge-player-played-first #player_played_0 .selection-border,
+.charge-player-played-second #player_played_1 .selection-border,
+.charge-opponent-played-first #opponent_played_0 .selection-border,
+.charge-opponent-played-second #opponent_played_1 .selection-border {
+	display: block; height: 50%;
+}
+
+.high-strike-player-played-first #player-hand_2 .selection-border,
+.high-strike-player-played-second #player-hand_2 .selection-border {
+	display: block;
+}
+.low-strike-player-played-first #player-hand_3 .selection-border,
+.low-strike-player-played-second #player-hand_3 .selection-border {
+	display: block;
+}
+.balance-strike-player-played-first #player-hand_4 .selection-border,
+.balance-strike-player-played-second #player-hand_4 .selection-border {
+	display: block;
+}
+.special-player-played-first #player-hand_5 .selection-border,
+.special-player-played-second #player-hand_5 .selection-border {
+	display: block;
+}
+
+.retreat-player-played-first #player-hand_0 .selection-border,
+.retreat-player-played-second #player-hand_0 .selection-border,
+.retreat-player-played-first #player_played_0 .selection-border,
+.retreat-player-played-second #player_played_1 .selection-border,
+.retreat-opponent-played-first #opponent_played_0 .selection-border,
+.retreat-opponent-played-second #opponent_played_1 .selection-border {
+	display: block; height: 50%; top: 50%;
+}
+
+.change-stance-player-played-first #player-hand_1 .selection-border,
+.change-stance-player-played-second #player-hand_1 .selection-border,
+.change-stance-player-played-first #player_played_0 .selection-border,
+.change-stance-player-played-second #player_played_1 .selection-border,
+.change-stance-opponent-played-first #opponent_played_0 .selection-border,
+.change-stance-opponent-played-second #opponent_played_1 .selection-border {
+	display: block; height: 50%; top: 50%;
+}

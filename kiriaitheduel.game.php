@@ -219,7 +219,7 @@ class KiriaiTheDuel extends Table
 		$args['player_state'] = $player_state;
 
 		// If both players have not set there battlefield position, keep all opponent information hidden.
-		if (self::getState_position($player_state) + self::getState_position($opponent_state) == 0)
+		if (self::getState_position($player_state) == 0 || self::getState_position($opponent_state) == 0)
 		{
 			$args['opponent_state'] = 0;
 			return;
@@ -650,7 +650,7 @@ class KiriaiTheDuel extends Table
 
 		// All math is done from bottom-up positions,
 		// but the position is stored based on the distance from their end.
-		$secondary_position = $battlefieldSize - $secondary_position + 1;
+		$primary_position = $battlefieldSize - $primary_position + 1;
 
 		//
 		// MOVEMENT
@@ -699,8 +699,8 @@ class KiriaiTheDuel extends Table
 
 		if ($primary_card == PlayedCard::CHARGE || $secondary_card == PlayedCard::CHARGE)
 		{
-			self::setState_position($primary_state, $primary_position);
-			self::setState_position($secondary_state, $battlefieldSize - $secondary_position + 1);// see note near $secondary_position init
+			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
+			self::setState_position($secondary_state, $secondary_position);
 			self::notifyAllWithGameState($players, 'player(s) charged', array(), $primary_state, $secondary_state);
 		}
 
@@ -752,8 +752,8 @@ class KiriaiTheDuel extends Table
 
 		if ($primary_move != 0 || $secondary_move != 0)
 		{
-			self::setState_position($primary_state, $primary_position);
-			self::setState_position($secondary_state, $battlefieldSize - $secondary_position + 1);// see note near $secondary_position init
+			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
+			self::setState_position($secondary_state, $secondary_position);
 			self::notifyAllWithGameState($players, 'player(s) moved', array(), $primary_state, $secondary_state);
 		}
 

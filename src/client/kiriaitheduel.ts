@@ -467,6 +467,22 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	actionQueue = new PlayerActionQueue(this);
 	confirmationTimeout = new ConfirmationTimeout('leftright_page_wrapper');
 
+	special_translations: string[] = [
+		_('There are three Special Attack Cards, one dealt to each player at the start of the game. Special Attack Cards are used once per game and discarded after use.'),
+		_('<b>Kesa Strike</b> - An attack empowered by inner peace that hits two spaces. Hits the space the attacker is in and also one space in front. Successful only while in the Heaven Stance. After attacking, the samurai automatically switches stances into the Earth Stance.'),
+		_('<b>Zan-Tetsu Strike</b> - An iron-splitting attack that hits two spaces. Hits the spaces two and three spaces in front of the attacker. Successful only while in the Earth Stance. After attacking, the samurai automatically switches stances into the Heaven Stance.'),
+		_('<b>Counterattack</b> - This card cancels a successful attack or special attack from the opponent and then deals damage. If the opponent does not hit with an attack or special attack during the same action when Counterattack is played, then Counterattack does nothing and is discarded as normal.')
+	];
+
+	card_translations: [string,string][] = [
+		[_('<b>Approach</b> (top) - Player moves their samurai one battlefield space toward their opponent. <b>Retreat</b> (bottom) - Player moves their samurai one battlefield space away from their opponent.'), _('Click the top or bottom play/return this card.')],
+		[_('<b>Charge</b> (top) - Player moves their samurai two battlefield spaces toward their opponent. <b>Change Stance</b> (bottom) - There are two stances: Heaven and Earth. Player changes the stance of the samurai by rotating the Samurai Card on the same space. The samurai\'s current stance must match the stance on an Attack Card for it to be successful'), _('Click the top or bottom play/return this card.')],
+		[_('<b>High Strike</b> - A long-distance slash from above to slice through the opponent like bamboo. Successful only while in the Heaven Stance. Hits the space located two spaces in front of the attacker.'), _('Click to play/return this card.')],
+		[_('<b>Low Strike</b> - A rising slash delivered from a low sword position. Successful only while in the Earth Stance. Hits the space immediately in front of the attacker.'), _('Click to play/return this card.')],
+		[_('<b>Balanced Strike</b> - A sideways slash that is successful from both stances. Hits if both the attacker and opponent are in the same space'), _('Click to play/return this card.')],
+		[_('Waiting to draw starting cards...'), _('Click to play/return this card.')]
+	];
+
 	//
 	// #region Gamedata Wrappers
 	//
@@ -549,17 +565,22 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		this.server_player_state = gamedatas.player_state;
 
+
 		// Setup game notifications to handle (see "setupNotifications" method below)
 		this.setupNotifications();
 
 		// Add tooltips to the cards
-		for (let i = 0; i < 5; i++)
-		{
-			this.addTooltipHtml('player-hand_' + i,  this.createTooltip(i, true));
-			this.addTooltipHtml('opponent-hand_' + i, this.createTooltip(i, false));
-		}
-		this.addTooltipHtml('player-hand_5', `<div id="redSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
-		this.addTooltipHtml('opponent-hand_5', `<div id="blueSpecialTooltip">${_('Waiting to draw starting cards...')}</div>`);
+		this.addTooltip('battlefield', _('Each white square on the battlefield card represents a space for the Samurai Cards. Each Samurai Card will always be located on one of the spaces and can share a space. Samurai Cards cannot pass each other.'), '');
+		this.addTooltip('player_samurai', _(`This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged.`), '');
+		this.addTooltip('opponent_samurai', _(`This Samurai Card shows your opponents samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged.`), '');
+		this.addTooltip('player_played_0', _(`This spot show's your first action for the turn.`), _('Click to return the card to your hand.'));
+		this.addTooltip('player_played_1', _(`This spot show's your second action for the turn. You will not be able to play the card in this slot next round.`), _('Click to return the card to your hand.'));
+		this.addTooltip('opponent_played_0', _(`This spot show's your opponent's first action for the turn.`), '');
+		this.addTooltip('opponent_played_1', _(`This spot show's your opponent's second action for the turn. They will not be able to play the card in this slot next round.`), '');
+
+		this.addTooltip('discard_icon', _('This icon shows the last card that was discarded by the opponent.'), _('Hover to show opponent\'s hand.'));
+		this.addTooltip('special_icon', _('This icon shows if your opponent still has a hidden special card.'), _('Hover to show opponent\'s hand.'));
+		
 
 		this.instantMatch();
 
@@ -636,11 +657,13 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		let index = 1;
 		while (true) {
-			const element = $('samurai_field_position_' + index);
+			const element = $('battlefield_position_' + index);
 			if (element) element.classList.remove('highlight');
 			else break;
 			index++;
 		}
+
+		this.addTooltip('player_samurai', _(`This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged.`), '');
 	}
 
 	onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
@@ -663,7 +686,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 						this.gamedatas.player_state = (this.gamedatas.player_state & ~(0b1111 << 0)) | (index << 0);
 						this.instantMatch();
 					}));
+					this.addTooltip(element.id, _('Select a starting position'), _('Click to set this as your starting position.'));
 				}
+
+				this.addTooltip('player_samurai', _(`This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged.`), _('Click to switch your stance'));
 
 				// Add an onclick event to the samurai to flip the stance:
 				this.setupHandles.push(dojo.connect($('player_samurai'), 'onclick', this, e => {
@@ -690,12 +716,14 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 			case "pickCards":
 
-				this.addActionButton('confirmSelectionButton', _('Confirm'), (e: any) => {
+				this.addActionButton('confirmSelectionButton', _('Confirm'), async (e: any) => {
 					console.log('Confirming selection', e);
 					
 					if (this.playerPlayed0() == 0 && this.playerPlayed1() == 0) {
 						return;
 					}
+
+					await this.confirmationTimeout.promise(e);
 
 					// This makes sure that this action button is removed.
 					this.lockTitleWithStatus(_('Sending moves to server...')); 
@@ -717,79 +745,21 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// #region Utility methods
 	//
 
-	resizeTimeout: number | null = null;
-	onScreenWidthChange = () => {
-		if (this.isInitialized) {
-			if (this.resizeTimeout !== null) {
-				clearTimeout(this.resizeTimeout);
-			}
+	// resizeTimeout: number | null = null;
+	// onScreenWidthChange = () => {
+	// 	if (this.isInitialized) {
+	// 		if (this.resizeTimeout !== null) {
+	// 			clearTimeout(this.resizeTimeout);
+	// 		}
 
-			this.resizeTimeout = setTimeout(() => {
-				this.instantMatch();
-				this.resizeTimeout = null;
-			}, 10); // delay in milliseconds
+	// 		this.resizeTimeout = setTimeout(() => {
+	// 			this.instantMatch();
+	// 			this.resizeTimeout = null;
+	// 		}, 10); // delay in milliseconds
 
-			this.instantMatch();
-		}
-	}
-
-	card_tooltips: { title: string, type: 'move' | 'attack' | 'special', desc: string, src: string }[] =
-	[{
-		title: 'Approach/Retreat',
-		type: 'move',
-		desc: 'Move 1 space forward (top) or backward (bottom).',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Charge/Change Stance',
-		type: 'move',
-		desc: 'Move 2 spaces forward (top) or change stance (bottom).',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'High Strike',
-		type: 'attack',
-		desc: 'When in Heaven stance, attack the second space in front.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Low Strike',
-		type: 'attack',
-		desc: 'When in Earth stance, attack the space in front.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Balanced Strike',
-		type: 'attack',
-		desc: 'Attack the space currently occupied.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Kesa Strike',
-		type: 'special',
-		desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Zan-Tetsu Strike',
-		type: 'special',
-		desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}, {
-		title: 'Counterattack',
-		type: 'special',
-		desc: 'If the opponent lands an attack, they take damage instead.',
-		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-	}]
-
-	createTooltip(x: number, play_flavor: boolean)
-	{
-		const tooltip = this.card_tooltips[x];
-		if (!tooltip) return '';
-
-		return this.format_block('jstpl_tooltip', {
-			title: _(tooltip.title),
-			type: tooltip.type,
-			typeName: _(tooltip.type == 'move' ? 'Movement' : tooltip.type == 'attack' ? 'Attack' : 'Special'),
-			desc: _(tooltip.desc),
-			src: tooltip.src,
-			flavor: play_flavor ? _('Click when playing cards to add/remove from the play area.') : ''
-		});
-	}
+	// 		this.instantMatch();
+	// 	}
+	// }
 
 	instantMatch() {
 		// print all fields
@@ -826,14 +796,19 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		
 		player_area.className = '';
 
-		const updatePlayed = (target: Element, card: number, player: boolean) => {
+		const updatePlayed = (target: Element, first: boolean, player: boolean) => {
 			if (!(target instanceof HTMLElement))
 				return;
 
+			let card: number = player ?
+				(first ? this.playerPlayed0() : this.playerPlayed1()) :
+				(first ? this.opponentPlayed0() : this.opponentPlayed1());
+
 			let src: string | null = null;
 
-			if (player && card != 0)
-				player_area.classList.add(card_names[card - 1] + "-played");
+			if (card != 0 && card != 9)
+				player_area.classList.add(
+					card_names[card - 1] + (player ? '-player' : '-opponent') + "-played" + (first ? '-first' : '-second'));
 
 			target.classList.remove('bottomPicked');
 
@@ -870,10 +845,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			this.setCardSlot(target, src);
 		};
 
-		updatePlayed($('player_played_0'), this.playerPlayed0(), true);
-		updatePlayed($('player_played_1'), this.playerPlayed1(), true);
-		updatePlayed($('opponent_played_0'), this.opponentPlayed0(), false);
-		updatePlayed($('opponent_played_1'), this.opponentPlayed1(), false);
+		updatePlayed($('player_played_0'), true, true);
+		updatePlayed($('player_played_1'), false, true);
+		updatePlayed($('opponent_played_0'), true, false);
+		updatePlayed($('opponent_played_1'), false, false);
 
 		// Add class to the discarded card:
 
@@ -928,10 +903,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		let target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
 		let target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
 
-		player_samurai.style.left = target_bounds_player.left - play_area_bounds.left + 'px';
-		player_samurai.style.top = target_bounds_player.top - play_area_bounds.top + 'px';
-		opponent_samurai.style.left = target_bounds_opponent.left - play_area_bounds.left + 'px';
-		opponent_samurai.style.top = target_bounds_opponent.top - play_area_bounds.top + 'px';
+		player_samurai.style.left = (target_bounds_player.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
+		player_samurai.style.top = (target_bounds_player.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
+		opponent_samurai.style.left = (target_bounds_opponent.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
+		opponent_samurai.style.top = (target_bounds_opponent.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
 
 
 		this.setCardSlot('player_samurai', this.stanceURL(true));
@@ -939,6 +914,36 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		player_area.classList.add('player-' + (this.playerStance() == 0 ? 'heaven' : 'earth'));
 		player_area.classList.add('opponent-' + (this.opponentStance() == 0 ? 'heaven' : 'earth'));
+
+		const specialCardName = (index: number) => {
+			switch (index) {
+				case 1: return _('Kesa Strike');
+				case 2: return _('Zan-Tetsu Strike');
+				case 3: return _('Counterattack');
+				default: return _('Hidden');
+			}
+		}
+
+		let special_tip: string = this.special_translations[0] + '<br/><b>' +
+			_('Your special card') + "</b>: " + specialCardName(this.playerSpecialCard()) + '<br/><b>' +
+			_('Opponent\'s special card') + "</b>: " + specialCardName(this.opponentSpecialCard()) + '<br/>' +
+			this.special_translations[1] + '<br/>' +
+			this.special_translations[2] + '<br/>' +
+			this.special_translations[3];
+
+		this.card_translations[5]![0] = special_tip;
+
+		for (let i = 0; i < 6; i++)
+		{
+			let card = this.card_translations[i]!;
+			let text = card[0];
+			let action = card[1];
+			if (i + 1 == this.playerDiscarded() || (i == 5 && this.playerSpecialPlayed())) {
+				text += '<br/><i>' + _('Discarded') + '</i>';
+				action = '';
+			}
+			this.addTooltip('player-hand_' + i, text, action);
+		}
 	}
 
 	//

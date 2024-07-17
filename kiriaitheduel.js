@@ -1014,66 +1014,20 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             _this.color_path = 'Red';
             _this.actionQueue = new PlayerActionQueue(_this);
             _this.confirmationTimeout = new ConfirmationTimeout('leftright_page_wrapper');
-            //
-            // #endregion
-            //
-            //
-            // #region Utility methods
-            //
-            _this.resizeTimeout = null;
-            _this.onScreenWidthChange = function () {
-                if (_this.isInitialized) {
-                    if (_this.resizeTimeout !== null) {
-                        clearTimeout(_this.resizeTimeout);
-                    }
-                    _this.resizeTimeout = setTimeout(function () {
-                        _this.instantMatch();
-                        _this.resizeTimeout = null;
-                    }, 10); // delay in milliseconds
-                    _this.instantMatch();
-                }
-            };
-            _this.card_tooltips = [{
-                    title: 'Approach/Retreat',
-                    type: 'move',
-                    desc: 'Move 1 space forward (top) or backward (bottom).',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Charge/Change Stance',
-                    type: 'move',
-                    desc: 'Move 2 spaces forward (top) or change stance (bottom).',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'High Strike',
-                    type: 'attack',
-                    desc: 'When in Heaven stance, attack the second space in front.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Low Strike',
-                    type: 'attack',
-                    desc: 'When in Earth stance, attack the space in front.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Balanced Strike',
-                    type: 'attack',
-                    desc: 'Attack the space currently occupied.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Kesa Strike',
-                    type: 'special',
-                    desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Zan-Tetsu Strike',
-                    type: 'special',
-                    desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }, {
-                    title: 'Counterattack',
-                    type: 'special',
-                    desc: 'If the opponent lands an attack, they take damage instead.',
-                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
-                }];
+            _this.special_translations = [
+                _('There are three Special Attack Cards, one dealt to each player at the start of the game. Special Attack Cards are used once per game and discarded after use.'),
+                _('<b>Kesa Strike</b> - An attack empowered by inner peace that hits two spaces. Hits the space the attacker is in and also one space in front. Successful only while in the Heaven Stance. After attacking, the samurai automatically switches stances into the Earth Stance.'),
+                _('<b>Zan-Tetsu Strike</b> - An iron-splitting attack that hits two spaces. Hits the spaces two and three spaces in front of the attacker. Successful only while in the Earth Stance. After attacking, the samurai automatically switches stances into the Heaven Stance.'),
+                _('<b>Counterattack</b> - This card cancels a successful attack or special attack from the opponent and then deals damage. If the opponent does not hit with an attack or special attack during the same action when Counterattack is played, then Counterattack does nothing and is discarded as normal.')
+            ];
+            _this.card_translations = [
+                [_('<b>Approach</b> (top) - Player moves their samurai one battlefield space toward their opponent. <b>Retreat</b> (bottom) - Player moves their samurai one battlefield space away from their opponent.'), _('Click the top or bottom play/return this card.')],
+                [_('<b>Charge</b> (top) - Player moves their samurai two battlefield spaces toward their opponent. <b>Change Stance</b> (bottom) - There are two stances: Heaven and Earth. Player changes the stance of the samurai by rotating the Samurai Card on the same space. The samurai\'s current stance must match the stance on an Attack Card for it to be successful'), _('Click the top or bottom play/return this card.')],
+                [_('<b>High Strike</b> - A long-distance slash from above to slice through the opponent like bamboo. Successful only while in the Heaven Stance. Hits the space located two spaces in front of the attacker.'), _('Click to play/return this card.')],
+                [_('<b>Low Strike</b> - A rising slash delivered from a low sword position. Successful only while in the Earth Stance. Hits the space immediately in front of the attacker.'), _('Click to play/return this card.')],
+                [_('<b>Balanced Strike</b> - A sideways slash that is successful from both stances. Hits if both the attacker and opponent are in the same space'), _('Click to play/return this card.')],
+                [_('Waiting to draw starting cards...'), _('Click to play/return this card.')]
+            ];
             //
             // #endregion
             //
@@ -1283,12 +1237,15 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
             // Add tooltips to the cards
-            for (var i = 0; i < 5; i++) {
-                this.addTooltipHtml('player-hand_' + i, this.createTooltip(i, true));
-                this.addTooltipHtml('opponent-hand_' + i, this.createTooltip(i, false));
-            }
-            this.addTooltipHtml('player-hand_5', "<div id=\"redSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
-            this.addTooltipHtml('opponent-hand_5', "<div id=\"blueSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
+            this.addTooltip('battlefield', _('Each white square on the battlefield card represents a space for the Samurai Cards. Each Samurai Card will always be located on one of the spaces and can share a space. Samurai Cards cannot pass each other.'), '');
+            this.addTooltip('player_samurai', _("This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged."), '');
+            this.addTooltip('opponent_samurai', _("This Samurai Card shows your opponents samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged."), '');
+            this.addTooltip('player_played_0', _("This spot show's your first action for the turn."), _('Click to return the card to your hand.'));
+            this.addTooltip('player_played_1', _("This spot show's your second action for the turn. You will not be able to play the card in this slot next round."), _('Click to return the card to your hand.'));
+            this.addTooltip('opponent_played_0', _("This spot show's your opponent's first action for the turn."), '');
+            this.addTooltip('opponent_played_1', _("This spot show's your opponent's second action for the turn. They will not be able to play the card in this slot next round."), '');
+            this.addTooltip('discard_icon', _('This icon shows the last card that was discarded by the opponent.'), _('Hover to show opponent\'s hand.'));
+            this.addTooltip('special_icon', _('This icon shows if your opponent still has a hidden special card.'), _('Hover to show opponent\'s hand.'));
             this.instantMatch();
             var _loop_3 = function (i) {
                 var index = i + 1;
@@ -1350,13 +1307,14 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             delete this.setupHandles;
             var index = 1;
             while (true) {
-                var element = $('samurai_field_position_' + index);
+                var element = $('battlefield_position_' + index);
                 if (element)
                     element.classList.remove('highlight');
                 else
                     break;
                 index++;
             }
+            this.addTooltip('player_samurai', _("This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged."), '');
         };
         KiriaiTheDuel.prototype.onUpdateActionButtons = function (stateName, args) {
             var _this = this;
@@ -1375,12 +1333,14 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                                 _this.gamedatas.player_state = (_this.gamedatas.player_state & ~(15 << 0)) | (index << 0);
                                 _this.instantMatch();
                             }));
+                            this_4.addTooltip(element.id, _('Select a starting position'), _('Click to set this as your starting position.'));
                         };
                         var this_4 = this;
                         for (var _i = 0, _b = [2, 3, 4]; _i < _b.length; _i++) {
                             var index = _b[_i];
                             _loop_5(index);
                         }
+                        this.addTooltip('player_samurai', _("This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged."), _('Click to switch your stance'));
                         // Add an onclick event to the samurai to flip the stance:
                         this.setupHandles.push(dojo.connect($('player_samurai'), 'onclick', this, function (e) {
                             _this.gamedatas.player_state = _this.gamedatas.player_state ^ (1 << 4);
@@ -1407,35 +1367,50 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                         }); });
                         break;
                     case "pickCards":
-                        this.addActionButton('confirmSelectionButton', _('Confirm'), function (e) {
-                            console.log('Confirming selection', e);
-                            if (_this.playerPlayed0() == 0 && _this.playerPlayed1() == 0) {
-                                return;
-                            }
-                            // This makes sure that this action button is removed.
-                            _this.lockTitleWithStatus(_('Sending moves to server...'));
-                            _this.actionQueue.enqueueAjaxAction({
-                                action: 'confirmedCards',
-                                args: {}
+                        this.addActionButton('confirmSelectionButton', _('Confirm'), function (e) { return __awaiter(_this, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        console.log('Confirming selection', e);
+                                        if (this.playerPlayed0() == 0 && this.playerPlayed1() == 0) {
+                                            return [2 /*return*/];
+                                        }
+                                        return [4 /*yield*/, this.confirmationTimeout.promise(e)];
+                                    case 1:
+                                        _a.sent();
+                                        // This makes sure that this action button is removed.
+                                        this.lockTitleWithStatus(_('Sending moves to server...'));
+                                        this.actionQueue.enqueueAjaxAction({
+                                            action: 'confirmedCards',
+                                            args: {}
+                                        });
+                                        return [2 /*return*/];
+                                }
                             });
-                        });
+                        }); });
                         break;
                 }
             }
         };
-        KiriaiTheDuel.prototype.createTooltip = function (x, play_flavor) {
-            var tooltip = this.card_tooltips[x];
-            if (!tooltip)
-                return '';
-            return this.format_block('jstpl_tooltip', {
-                title: _(tooltip.title),
-                type: tooltip.type,
-                typeName: _(tooltip.type == 'move' ? 'Movement' : tooltip.type == 'attack' ? 'Attack' : 'Special'),
-                desc: _(tooltip.desc),
-                src: tooltip.src,
-                flavor: play_flavor ? _('Click when playing cards to add/remove from the play area.') : ''
-            });
-        };
+        //
+        // #endregion
+        //
+        //
+        // #region Utility methods
+        //
+        // resizeTimeout: number | null = null;
+        // onScreenWidthChange = () => {
+        // 	if (this.isInitialized) {
+        // 		if (this.resizeTimeout !== null) {
+        // 			clearTimeout(this.resizeTimeout);
+        // 		}
+        // 		this.resizeTimeout = setTimeout(() => {
+        // 			this.instantMatch();
+        // 			this.resizeTimeout = null;
+        // 		}, 10); // delay in milliseconds
+        // 		this.instantMatch();
+        // 	}
+        // }
         KiriaiTheDuel.prototype.instantMatch = function () {
             var _this = this;
             // print all fields
@@ -1468,12 +1443,15 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 'special'
             ];
             player_area.className = '';
-            var updatePlayed = function (target, card, player) {
+            var updatePlayed = function (target, first, player) {
                 if (!(target instanceof HTMLElement))
                     return;
+                var card = player ?
+                    (first ? _this.playerPlayed0() : _this.playerPlayed1()) :
+                    (first ? _this.opponentPlayed0() : _this.opponentPlayed1());
                 var src = null;
-                if (player && card != 0)
-                    player_area.classList.add(card_names[card - 1] + "-played");
+                if (card != 0 && card != 9)
+                    player_area.classList.add(card_names[card - 1] + (player ? '-player' : '-opponent') + "-played" + (first ? '-first' : '-second'));
                 target.classList.remove('bottomPicked');
                 var prefix = player ? 'player-card-' : 'opponent-card-';
                 switch (card) {
@@ -1523,10 +1501,10 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 }
                 _this.setCardSlot(target, src);
             };
-            updatePlayed($('player_played_0'), this.playerPlayed0(), true);
-            updatePlayed($('player_played_1'), this.playerPlayed1(), true);
-            updatePlayed($('opponent_played_0'), this.opponentPlayed0(), false);
-            updatePlayed($('opponent_played_1'), this.opponentPlayed1(), false);
+            updatePlayed($('player_played_0'), true, true);
+            updatePlayed($('player_played_1'), false, true);
+            updatePlayed($('opponent_played_0'), true, false);
+            updatePlayed($('opponent_played_1'), false, false);
             // Add class to the discarded card:
             // Discards
             if (this.playerDiscarded() != 0)
@@ -1568,14 +1546,39 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             var play_area_bounds = $('play-area').getBoundingClientRect();
             var target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
             var target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
-            player_samurai.style.left = target_bounds_player.left - play_area_bounds.left + 'px';
-            player_samurai.style.top = target_bounds_player.top - play_area_bounds.top + 'px';
-            opponent_samurai.style.left = target_bounds_opponent.left - play_area_bounds.left + 'px';
-            opponent_samurai.style.top = target_bounds_opponent.top - play_area_bounds.top + 'px';
+            player_samurai.style.left = (target_bounds_player.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
+            player_samurai.style.top = (target_bounds_player.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
+            opponent_samurai.style.left = (target_bounds_opponent.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
+            opponent_samurai.style.top = (target_bounds_opponent.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
             this.setCardSlot('player_samurai', this.stanceURL(true));
             this.setCardSlot('opponent_samurai', this.stanceURL(false));
             player_area.classList.add('player-' + (this.playerStance() == 0 ? 'heaven' : 'earth'));
             player_area.classList.add('opponent-' + (this.opponentStance() == 0 ? 'heaven' : 'earth'));
+            var specialCardName = function (index) {
+                switch (index) {
+                    case 1: return _('Kesa Strike');
+                    case 2: return _('Zan-Tetsu Strike');
+                    case 3: return _('Counterattack');
+                    default: return _('Hidden');
+                }
+            };
+            var special_tip = this.special_translations[0] + '<br/><b>' +
+                _('Your special card') + "</b>: " + specialCardName(this.playerSpecialCard()) + '<br/><b>' +
+                _('Opponent\'s special card') + "</b>: " + specialCardName(this.opponentSpecialCard()) + '<br/>' +
+                this.special_translations[1] + '<br/>' +
+                this.special_translations[2] + '<br/>' +
+                this.special_translations[3];
+            this.card_translations[5][0] = special_tip;
+            for (var i = 0; i < 6; i++) {
+                var card = this.card_translations[i];
+                var text = card[0];
+                var action = card[1];
+                if (i + 1 == this.playerDiscarded() || (i == 5 && this.playerSpecialPlayed())) {
+                    text += '<br/><i>' + _('Discarded') + '</i>';
+                    action = '';
+                }
+                this.addTooltip('player-hand_' + i, text, action);
+            }
         };
         KiriaiTheDuel.prototype.addPredictionModifier = function (func) {
             var _this = this;
