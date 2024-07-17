@@ -1011,6 +1011,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             var _this = _super !== null && _super.apply(this, arguments) || this;
             /** @gameSpecific See {@link Gamegui.setup} for more information. */
             _this.isInitialized = false;
+            _this.color_path = 'Red';
             _this.actionQueue = new PlayerActionQueue(_this);
             _this.confirmationTimeout = new ConfirmationTimeout('leftright_page_wrapper');
             //
@@ -1035,35 +1036,43 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             _this.card_tooltips = [{
                     title: 'Approach/Retreat',
                     type: 'move',
-                    desc: 'Move 1 space forward (top) or backward (bottom).'
+                    desc: 'Move 1 space forward (top) or backward (bottom).',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Charge/Change Stance',
                     type: 'move',
-                    desc: 'Move 2 spaces forward (top) or change stance (bottom).'
+                    desc: 'Move 2 spaces forward (top) or change stance (bottom).',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'High Strike',
                     type: 'attack',
-                    desc: 'When in Heaven stance, attack the second space in front.'
+                    desc: 'When in Heaven stance, attack the second space in front.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Low Strike',
                     type: 'attack',
-                    desc: 'When in Earth stance, attack the space in front.'
+                    desc: 'When in Earth stance, attack the space in front.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Balanced Strike',
                     type: 'attack',
-                    desc: 'Attack the space currently occupied.'
+                    desc: 'Attack the space currently occupied.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Kesa Strike',
                     type: 'special',
-                    desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.'
+                    desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Zan-Tetsu Strike',
                     type: 'special',
-                    desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.'
+                    desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }, {
                     title: 'Counterattack',
                     type: 'special',
-                    desc: 'If the opponent lands an attack, they take damage instead.'
+                    desc: 'If the opponent lands an attack, they take damage instead.',
+                    src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
                 }];
             //
             // #endregion
@@ -1072,7 +1081,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             // #region Action Queue + Predictions
             // Predictions are used to simulate the state of the game before the action is acknowledged by the server.
             //
-            _this.serverCards = 0;
+            _this.server_player_state = 0;
             _this.predictionKey = 0;
             _this.predictionModifiers = [];
             //
@@ -1093,16 +1102,16 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                     console.log('Already confirmed cards! There is no backing out now!');
                     return;
                 }
-                if (index == (_this.isRedPlayer() ? _this.redDiscarded() : _this.blueDiscarded())) {
+                if (index == _this.playerDiscarded()) {
                     console.log('This card has already been discarded!');
                     return;
                 }
-                if (index == 6 && (_this.isRedPlayer() ? _this.redSpecialPlayed() : _this.blueSpecialPlayed())) {
+                if (index == 6 && _this.playerSpecialPlayed()) {
                     console.log('Thee special card has already been played!');
                     return;
                 }
-                var first = _this.isRedPlayer() ? _this.redPlayed0() : _this.bluePlayed0();
-                var second = _this.isRedPlayer() ? _this.redPlayed1() : _this.bluePlayed1();
+                var first = _this.playerPlayed0();
+                var second = _this.playerPlayed1();
                 var fixedIndex = index == 6 ? 8 : index;
                 if ((index == 1 && first == 6) ||
                     (index == 2 && first == 7) ||
@@ -1131,25 +1140,13 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                     index = 8;
                 var action = null;
                 var indexOffset;
-                if (_this.isRedPlayer()) {
-                    if (_this.redPlayed0() == 0) {
-                        action = 'pickedFirst';
-                        indexOffset = 0;
-                    }
-                    else if (_this.redPlayed1() == 0) {
-                        action = 'pickedSecond';
-                        indexOffset = 4;
-                    }
+                if (_this.playerPlayed0() == 0) {
+                    action = 'pickedFirst';
+                    indexOffset = 6;
                 }
-                else {
-                    if (_this.bluePlayed0() == 0) {
-                        action = 'pickedFirst';
-                        indexOffset = 8;
-                    }
-                    else if (_this.bluePlayed1() == 0) {
-                        action = 'pickedSecond';
-                        indexOffset = 12;
-                    }
+                else if (_this.playerPlayed1() == 0) {
+                    action = 'pickedSecond';
+                    indexOffset = 10;
                 }
                 if (!action) {
                     console.error('Both cards have already been picked! but not caught!');
@@ -1185,13 +1182,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                         return; // Removing the play action is the same as undoing it.
                     }
                 }
-                var indexOffset;
-                if (_this.isRedPlayer()) {
-                    indexOffset = first ? 0 : 4;
-                }
-                else {
-                    indexOffset = first ? 8 : 12;
-                }
+                var indexOffset = first ? 6 : 10;
                 var callback = _this.addPredictionModifier(function (cards) {
                     return cards & ~(15 << indexOffset);
                 });
@@ -1205,15 +1196,21 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             _this.notif_instantMatch = function (notif) {
                 var _a, _b;
                 console.log('notif_placeAllCards', notif);
-                if (_this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
-                    _this.gamedatas.battlefield = notif.args.battlefield;
-                _this.serverCards = notif.args.cards;
+                // if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
+                // 	this.gamedatas.battlefield = notif.args.battlefield;
+                _this.server_player_state = notif.args.player_state;
+                _this.gamedatas.opponent_state = notif.args.opponent_state;
                 _this.updateCardsWithPredictions();
                 _this.instantMatch();
-                if (notif.args.redScore !== undefined)
-                    (_a = _this.scoreCtrl[_this.redPlayerId()]) === null || _a === void 0 ? void 0 : _a.toValue(notif.args.redScore);
-                if (notif.args.blueScore !== undefined)
-                    (_b = _this.scoreCtrl[_this.bluePlayerId()]) === null || _b === void 0 ? void 0 : _b.toValue(notif.args.blueScore);
+                for (var player in _this.gamedatas.players) {
+                    var winner = notif.args.winner == player;
+                    if (player == _this.player_id.toString()) {
+                        (_a = _this.scoreCtrl[player]) === null || _a === void 0 ? void 0 : _a.toValue(_this.opponentHit() ? (winner ? 2 : 1) : 0);
+                    }
+                    else {
+                        (_b = _this.scoreCtrl[player]) === null || _b === void 0 ? void 0 : _b.toValue(_this.playerHit() ? (winner ? 2 : 1) : 0);
+                    }
+                }
             };
             return _this;
             //
@@ -1223,33 +1220,50 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
         //
         // #region Gamedata Wrappers
         //
-        KiriaiTheDuel.prototype.isRedPlayer = function () { return this.gamedatas.players[this.player_id].color == 'e54025'; };
-        KiriaiTheDuel.prototype.redPrefix = function () { return this.isRedPlayer() ? 'my' : 'opponent'; };
-        KiriaiTheDuel.prototype.bluePrefix = function () { return this.isRedPlayer() ? 'opponent' : 'my'; };
-        KiriaiTheDuel.prototype.redPosition = function () { return (this.gamedatas.battlefield >> 0) & 15; };
-        KiriaiTheDuel.prototype.redStance = function () { return (this.gamedatas.battlefield >> 4) & 1; };
-        KiriaiTheDuel.prototype.bluePosition = function () { return (this.gamedatas.battlefield >> 5) & 15; };
-        KiriaiTheDuel.prototype.blueStance = function () { return (this.gamedatas.battlefield >> 9) & 1; };
-        KiriaiTheDuel.prototype.redHit = function () { return ((this.gamedatas.battlefield >> 14) & 1) == 1; };
-        KiriaiTheDuel.prototype.blueHit = function () { return ((this.gamedatas.battlefield >> 15) & 1) == 1; };
-        KiriaiTheDuel.prototype.battlefieldType = function () { return (this.gamedatas.battlefield >> 16) & 7; };
-        KiriaiTheDuel.prototype.redPlayed0 = function () { return (this.gamedatas.cards >> 0) & 15; };
-        KiriaiTheDuel.prototype.redPlayed1 = function () { return (this.gamedatas.cards >> 4) & 15; };
-        KiriaiTheDuel.prototype.bluePlayed0 = function () { return (this.gamedatas.cards >> 8) & 15; };
-        KiriaiTheDuel.prototype.bluePlayed1 = function () { return (this.gamedatas.cards >> 12) & 15; };
-        KiriaiTheDuel.prototype.redDiscarded = function () { return (this.gamedatas.cards >> 16) & 7; };
-        KiriaiTheDuel.prototype.blueDiscarded = function () { return (this.gamedatas.cards >> 19) & 7; };
-        KiriaiTheDuel.prototype.redSpecialCard = function () { return (this.gamedatas.cards >> 22) & 3; };
-        KiriaiTheDuel.prototype.blueSpecialCard = function () { return (this.gamedatas.cards >> 24) & 3; };
-        KiriaiTheDuel.prototype.redSpecialPlayed = function () { return ((this.gamedatas.cards >> 26) & 1) == 1; };
-        KiriaiTheDuel.prototype.blueSpecialPlayed = function () { return ((this.gamedatas.cards >> 27) & 1) == 1; };
-        KiriaiTheDuel.prototype.redPlayerId = function () {
-            var _this = this;
-            return this.isRedPlayer() ? this.player_id : +Object.keys(this.gamedatas.players).find(function (i) { return i != _this.player_id; });
+        KiriaiTheDuel.prototype.playerPosition = function () { return (this.gamedatas.player_state >> 0) & 15; };
+        KiriaiTheDuel.prototype.playerStance = function () { return (this.gamedatas.player_state >> 4) & 1; };
+        KiriaiTheDuel.prototype.playerHit = function () { return ((this.gamedatas.player_state >> 5) & 1) == 1; };
+        KiriaiTheDuel.prototype.playerPlayed0 = function () { return (this.gamedatas.player_state >> 6) & 15; };
+        KiriaiTheDuel.prototype.playerPlayed1 = function () { return (this.gamedatas.player_state >> 10) & 15; };
+        KiriaiTheDuel.prototype.playerDiscarded = function () { return (this.gamedatas.player_state >> 14) & 7; };
+        KiriaiTheDuel.prototype.playerSpecialCard = function () { return (this.gamedatas.player_state >> 17) & 3; };
+        KiriaiTheDuel.prototype.playerSpecialPlayed = function () { return ((this.gamedatas.player_state >> 19) & 1) == 1; };
+        KiriaiTheDuel.prototype.opponentPosition = function () { return (this.gamedatas.opponent_state >> 0) & 15; };
+        KiriaiTheDuel.prototype.opponentStance = function () { return (this.gamedatas.opponent_state >> 4) & 1; };
+        KiriaiTheDuel.prototype.opponentHit = function () { return ((this.gamedatas.opponent_state >> 5) & 1) == 1; };
+        KiriaiTheDuel.prototype.opponentPlayed0 = function () { return (this.gamedatas.opponent_state >> 6) & 15; };
+        KiriaiTheDuel.prototype.opponentPlayed1 = function () { return (this.gamedatas.opponent_state >> 10) & 15; };
+        KiriaiTheDuel.prototype.opponentDiscarded = function () { return (this.gamedatas.opponent_state >> 14) & 7; };
+        KiriaiTheDuel.prototype.opponentSpecialCard = function () { return (this.gamedatas.opponent_state >> 17) & 3; };
+        KiriaiTheDuel.prototype.opponentSpecialPlayed = function () { return ((this.gamedatas.opponent_state >> 19) & 1) == 1; };
+        //
+        // #endregion
+        //
+        //
+        // #region Document/URL Utilities
+        //
+        KiriaiTheDuel.prototype.formatSVGURL = function (name) { return "".concat(g_gamethemeurl, "img/").concat(this.color_path, "/").concat(name, ".svg"); };
+        KiriaiTheDuel.prototype.stanceURL = function (player) {
+            return this.formatSVGURL("".concat(player ? 'player' : 'opponent', "-stance-").concat((player ? this.playerHit() : this.opponentHit()) ? 'damaged' : 'healthy'));
         };
-        KiriaiTheDuel.prototype.bluePlayerId = function () {
-            var _this = this;
-            return this.isRedPlayer() ? +Object.keys(this.gamedatas.players).find(function (i) { return i != _this.player_id; }) : this.player_id;
+        KiriaiTheDuel.prototype.specialCardURL = function (player) {
+            switch (player ? this.playerSpecialCard() : this.opponentSpecialCard()) {
+                case 1: return this.formatSVGURL('special-kesa');
+                case 2: return this.formatSVGURL('special-zantetsu');
+                case 3: return this.formatSVGURL('special-counter');
+                default: return this.formatSVGURL('card-back');
+            }
+        };
+        KiriaiTheDuel.prototype.setCardSlot = function (slot, src) {
+            if (typeof slot == 'string')
+                slot = $(slot);
+            if (slot instanceof HTMLElement && slot.children.length > 0 && slot.children[0] instanceof HTMLImageElement) {
+                slot.children[0].style.display = src ? 'block' : 'none';
+                if (src != null)
+                    slot.children[0].src = src;
+                return;
+            }
+            console.error('Invalid slot: ', slot);
         };
         //
         // #endregion
@@ -1262,62 +1276,23 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             var _this = this;
             console.log("Starting game setup", this.gamedatas);
             this.actionQueue.actionTitleLockingStrategy = 'actionbar';
-            console.log(this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id], this.gamedatas.players[this.player_id].color, this.gamedatas.players[this.player_id].color == 'e54025');
-            this.serverCards = gamedatas.cards;
+            console.log(this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id]);
+            if (this.gamedatas.players[this.player_id].color == '4e93a6')
+                this.color_path = 'Blue';
+            this.server_player_state = gamedatas.player_state;
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
-            var placeCard = function (id, target, offset) {
-                if ($(target) == null) {
-                    console.error('Div "' + target + '" does not exist.');
-                    // @ts-ignore
-                    return null;
-                }
-                var div = dojo.place(_this.format_block('jstpl_card', {
-                    src: g_gamethemeurl + 'img/placeholderCards.jpg',
-                    x: offset / 0.13,
-                    id: id
-                }), target);
-                return div;
-            };
-            for (var i = 0; i < 5; i++) {
-                var red = placeCard("redHand_" + i, this.redPrefix() + 'Hand_' + i, i);
-                var blue = placeCard("blueHand_" + i, this.bluePrefix() + 'Hand_' + i, i + 5);
-                this.addTooltipHtml(red.parentElement.id, this.createTooltip(i, this.isRedPlayer()));
-                this.addTooltipHtml(blue.parentElement.id, this.createTooltip(i, !this.isRedPlayer()));
-            }
-            var redSP = placeCard("redHand_" + 5, this.redPrefix() + 'Hand_' + 5, 13);
-            var blueSP = placeCard("blueHand_" + 5, this.bluePrefix() + 'Hand_' + 5, 13);
-            this.addTooltipHtml(redSP.parentElement.id, "<div id=\"redSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
-            this.addTooltipHtml(blueSP.parentElement.id, "<div id=\"blueSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
             // Add tooltips to the cards
-            for (var i = 0; i < 2; i++) {
-                var div = void 0;
-                div = placeCard("redPlayed_" + i, this.redPrefix() + 'Played_' + i, 13);
-                div = placeCard("bluePlayed_" + i, this.bluePrefix() + 'Played_' + i, 13);
-                $('redPlayed_' + i).style.display = 'none';
-                $('bluePlayed_' + i).style.display = 'none';
+            for (var i = 0; i < 5; i++) {
+                this.addTooltipHtml('player-hand_' + i, this.createTooltip(i, true));
+                this.addTooltipHtml('opponent-hand_' + i, this.createTooltip(i, false));
             }
-            for (var _i = 0, _a = ['red_samurai', 'blue_samurai']; _i < _a.length; _i++) {
-                var id = _a[_i];
-                dojo.place(this.format_block('jstpl_card', {
-                    src: g_gamethemeurl + 'img/placeholder_SamuraiCards.jpg',
-                    x: 0,
-                    id: id + '_card'
-                }), id);
-            }
-            var battlefieldType = this.battlefieldType();
-            var battlefieldSize = battlefieldType == 1 ? 5 : 7;
-            for (var i = 1; i <= battlefieldSize; i++) {
-                dojo.place(this.format_block('jstpl_field_position', {
-                    id: i,
-                }), $('battlefield'));
-            }
-            if (!this.isRedPlayer())
-                $('battlefield').style.flexDirection = 'column-reverse';
+            this.addTooltipHtml('player-hand_5', "<div id=\"redSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
+            this.addTooltipHtml('opponent-hand_5', "<div id=\"blueSpecialTooltip\">".concat(_('Waiting to draw starting cards...'), "</div>"));
             this.instantMatch();
             var _loop_3 = function (i) {
                 var index = i + 1;
-                dojo.connect($('myHand_' + i), 'onclick', this_2, function (e) { return _this.onHandCardClick(e, index); });
+                dojo.connect($('player-hand_' + i), 'onclick', this_2, function (e) { return _this.onHandCardClick(e, index); });
             };
             var this_2 = this;
             for (var i = 0; i < 6; i++) {
@@ -1325,12 +1300,21 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             }
             var _loop_4 = function (i) {
                 var first = i == 0;
-                dojo.connect($('myPlayed_' + i), 'onclick', this_3, function (e) { return _this.returnCardToHand(e, first); });
+                dojo.connect($('player_played_' + i), 'onclick', this_3, function (e) { return _this.returnCardToHand(e, first); });
             };
             var this_3 = this;
             for (var i = 0; i < 2; i++) {
                 _loop_4(i);
             }
+            // Add on hover events for adding show-opponent-area class to the play-area.
+            [$('discard_icon'), $('special_icon')].forEach(function (target) {
+                target === null || target === void 0 ? void 0 : target.addEventListener('mouseenter', function () {
+                    $('hands').classList.add('show-opponent-area');
+                });
+                target === null || target === void 0 ? void 0 : target.addEventListener('mouseleave', function () {
+                    $('hands').classList.remove('show-opponent-area');
+                });
+            });
             this.isInitialized = true;
             console.log("Ending game setup");
         };
@@ -1383,39 +1367,25 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                     case "setupBattlefield":
                         (_a = this.setupHandles) === null || _a === void 0 ? void 0 : _a.forEach(function (h) { return dojo.disconnect(h); });
                         this.setupHandles = [];
-                        var startingPositions = this.isRedPlayer() ? [4, 5, 6] : [2, 3, 4];
                         var _loop_5 = function (index) {
-                            var element = $('samurai_field_position_' + index);
+                            var element = $('battlefield_position_' + index);
                             element.classList.add('highlight');
                             // Add an onclick event to the ::after pseudo element
                             this_4.setupHandles.push(dojo.connect(element, 'onclick', this_4, function (e) {
-                                if (_this.isRedPlayer()) {
-                                    _this.gamedatas.battlefield = (_this.gamedatas.battlefield & ~(15 << 0)) | (index << 0);
-                                }
-                                else {
-                                    _this.gamedatas.battlefield = (_this.gamedatas.battlefield & ~(15 << 5)) | (index << 5);
-                                }
+                                _this.gamedatas.player_state = (_this.gamedatas.player_state & ~(15 << 0)) | (index << 0);
                                 _this.instantMatch();
                             }));
                         };
                         var this_4 = this;
-                        for (var _i = 0, startingPositions_1 = startingPositions; _i < startingPositions_1.length; _i++) {
-                            var index = startingPositions_1[_i];
+                        for (var _i = 0, _b = [2, 3, 4]; _i < _b.length; _i++) {
+                            var index = _b[_i];
                             _loop_5(index);
                         }
                         // Add an onclick event to the samurai to flip the stance:
-                        if (this.isRedPlayer()) {
-                            this.setupHandles.push(dojo.connect($('red_samurai'), 'onclick', this, function (e) {
-                                _this.gamedatas.battlefield = _this.gamedatas.battlefield ^ (1 << 4);
-                                _this.instantMatch();
-                            }));
-                        }
-                        else {
-                            this.setupHandles.push(dojo.connect($('blue_samurai'), 'onclick', this, function (e) {
-                                _this.gamedatas.battlefield = _this.gamedatas.battlefield ^ (1 << 9);
-                                _this.instantMatch();
-                            }));
-                        }
+                        this.setupHandles.push(dojo.connect($('player_samurai'), 'onclick', this, function (e) {
+                            _this.gamedatas.player_state = _this.gamedatas.player_state ^ (1 << 4);
+                            _this.instantMatch();
+                        }));
                         this.addActionButton('confirmBattlefieldButton', _('Confirm'), function (e) { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
@@ -1427,8 +1397,8 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                                     case 1:
                                         _a.sent();
                                         this.ajaxAction('confirmedStanceAndPosition', {
-                                            isHeavenStance: (this.isRedPlayer() ? this.redStance() : this.blueStance()) == 0,
-                                            position: (this.isRedPlayer() ? this.redPosition() : this.bluePosition())
+                                            isHeavenStance: this.playerStance() == 0,
+                                            position: this.playerPosition()
                                         });
                                         this.cleanupSetupBattlefield();
                                         return [2 /*return*/];
@@ -1439,15 +1409,8 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                     case "pickCards":
                         this.addActionButton('confirmSelectionButton', _('Confirm'), function (e) {
                             console.log('Confirming selection', e);
-                            if (_this.isRedPlayer()) {
-                                if (_this.redPlayed0() == 0 && _this.redPlayed1() == 0) {
-                                    return;
-                                }
-                            }
-                            else {
-                                if (_this.bluePlayed0() == 0 && _this.bluePlayed1() == 0) {
-                                    return;
-                                }
+                            if (_this.playerPlayed0() == 0 && _this.playerPlayed1() == 0) {
+                                return;
                             }
                             // This makes sure that this action button is removed.
                             _this.lockTitleWithStatus(_('Sending moves to server...'));
@@ -1469,8 +1432,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 type: tooltip.type,
                 typeName: _(tooltip.type == 'move' ? 'Movement' : tooltip.type == 'attack' ? 'Attack' : 'Special'),
                 desc: _(tooltip.desc),
-                src: g_gamethemeurl + 'img/tooltips.jpg',
-                x: x / 0.07,
+                src: tooltip.src,
                 flavor: play_flavor ? _('Click when playing cards to add/remove from the play area.') : ''
             });
         };
@@ -1478,150 +1440,135 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             var _this = this;
             // print all fields
             console.log('instantMatch: ', {
-                isRedPlayer: this.isRedPlayer(),
-                redPrefix: this.redPrefix(),
-                bluePrefix: this.bluePrefix(),
-                redPosition: this.redPosition(),
-                redStance: this.redStance(),
-                bluePosition: this.bluePosition(),
-                blueStance: this.blueStance(),
-                redPlayed0: this.redPlayed0(),
-                redPlayed1: this.redPlayed1(),
-                bluePlayed0: this.bluePlayed0(),
-                bluePlayed1: this.bluePlayed1(),
-                redDiscarded: this.redDiscarded(),
-                blueDiscarded: this.blueDiscarded(),
-                redSpecialCard: this.redSpecialCard(),
-                blueSpecialCard: this.blueSpecialCard(),
-                redSpecialPlayed: this.redSpecialPlayed(),
-                blueSpecialPlayed: this.blueSpecialPlayed()
+                playerPosition: this.playerPosition(),
+                playerStance: this.playerStance(),
+                playerHit: this.playerHit(),
+                playerPlayed0: this.playerPlayed0(),
+                playerPlayed1: this.playerPlayed1(),
+                playerDiscarded: this.playerDiscarded(),
+                playerSpecialCard: this.playerSpecialCard(),
+                playerSpecialPlayed: this.playerSpecialPlayed(),
+                opponentPosition: this.opponentPosition(),
+                opponentStance: this.opponentStance(),
+                opponentHit: this.opponentHit(),
+                opponentPlayed0: this.opponentPlayed0(),
+                opponentPlayed1: this.opponentPlayed1(),
+                opponentDiscarded: this.opponentDiscarded(),
+                opponentSpecialCard: this.opponentSpecialCard(),
             });
-            var updateCard = function (target, card, isRed) {
+            var player_area = $('play-area');
+            var card_names = [
+                'approach',
+                'charge',
+                'high-strike',
+                'low-strike',
+                'balanced-strike',
+                'retreat',
+                'change-stance',
+                'special'
+            ];
+            player_area.className = '';
+            var updatePlayed = function (target, card, player) {
                 if (!(target instanceof HTMLElement))
                     return;
-                if (card == 0) {
-                    target.style.display = 'none';
-                    return;
-                }
-                target.style.display = 'block';
+                var src = null;
+                if (player && card != 0)
+                    player_area.classList.add(card_names[card - 1] + "-played");
                 target.classList.remove('bottomPicked');
-                var offset;
-                if (card <= 5)
-                    offset = (isRed ? card : card + 5) - 1;
-                else if (card <= 7) {
-                    offset = (isRed ? card - 5 : card) - 1;
-                    target.classList.add('bottomPicked');
+                var prefix = player ? 'player-card-' : 'opponent-card-';
+                switch (card) {
+                    case 0: break;
+                    case 1:
+                        src = _this.formatSVGURL(prefix + 'approach');
+                        break;
+                    case 2:
+                        src = _this.formatSVGURL(prefix + 'charge');
+                        break;
+                    case 3:
+                        src = _this.formatSVGURL(prefix + 'high-strike');
+                        break;
+                    case 4:
+                        src = _this.formatSVGURL(prefix + 'low-strike');
+                        break;
+                    case 5:
+                        src = _this.formatSVGURL(prefix + 'balanced-strike');
+                        break;
+                    case 6:
+                        src = _this.formatSVGURL(prefix + 'approach');
+                        target.classList.add('bottomPicked');
+                        break;
+                    case 7:
+                        src = _this.formatSVGURL(prefix + 'charge');
+                        target.classList.add('bottomPicked');
+                        break;
+                    case 8:
+                        switch (player ? _this.playerSpecialCard() : _this.opponentSpecialCard()) {
+                            case 1:
+                                src = _this.formatSVGURL('special-kesa');
+                                break;
+                            case 2:
+                                src = _this.formatSVGURL('special-zantetsu');
+                                break;
+                            case 3:
+                                src = _this.formatSVGURL('special-counter');
+                                break;
+                                throw new Error('Invalid special card!');
+                        }
+                        break;
+                    case 9:
+                        src = _this.formatSVGURL('card-back');
+                        break;
+                    default:
+                        throw new Error('Invalid card: ' + card);
                 }
-                else if (card == 8)
-                    offset = isRed ? _this.redSpecialCard() + 9 : _this.blueSpecialCard() + 9;
-                else
-                    offset = 13;
-                target.style.objectPosition = (offset / 0.13) + '% 0px';
+                _this.setCardSlot(target, src);
             };
-            updateCard($('redPlayed_0'), this.redPlayed0(), true);
-            updateCard($('redPlayed_1'), this.redPlayed1(), true);
-            updateCard($('bluePlayed_0'), this.bluePlayed0(), false);
-            updateCard($('bluePlayed_1'), this.bluePlayed1(), false);
+            updatePlayed($('player_played_0'), this.playerPlayed0(), true);
+            updatePlayed($('player_played_1'), this.playerPlayed1(), true);
+            updatePlayed($('opponent_played_0'), this.opponentPlayed0(), false);
+            updatePlayed($('opponent_played_1'), this.opponentPlayed1(), false);
             // Add class to the discarded card:
-            var playedToHand = function (index) {
-                if (index == 0)
-                    return -1;
-                if (index <= 5)
-                    return index - 1;
-                if (index <= 7)
-                    return index - 6;
-                if (index == 8)
-                    return 5;
-                return -1;
-            };
-            var redPlayed = [];
-            var bluePlayed = [];
-            redPlayed.push(playedToHand(this.redPlayed0()));
-            redPlayed.push(playedToHand(this.redPlayed1()));
-            bluePlayed.push(playedToHand(this.bluePlayed0()));
-            bluePlayed.push(playedToHand(this.bluePlayed1()));
-            for (var i = 0; i < 6; i++) {
-                if (i < 5) {
-                    if (this.redDiscarded() - 1 == i)
-                        $('redHand_' + i).parentElement.classList.add('discarded');
-                    else
-                        $('redHand_' + i).parentElement.classList.remove('discarded');
-                    if (this.blueDiscarded() - 1 == i)
-                        $('blueHand_' + i).parentElement.classList.add('discarded');
-                    else
-                        $('blueHand_' + i).parentElement.classList.remove('discarded');
-                }
-                if (redPlayed.includes(i))
-                    $('redHand_' + i).parentElement.classList.add('played');
-                else
-                    $('redHand_' + i).parentElement.classList.remove('played');
-                if (bluePlayed.includes(i))
-                    $('blueHand_' + i).parentElement.classList.add('played');
-                else
-                    $('blueHand_' + i).parentElement.classList.remove('played');
-            }
-            if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
-                var redTarget = $('redHand_5').parentElement;
-                var blueTarget = $('blueHand_5').parentElement;
-                var notPlayedTooltip = function (cardVisible) {
-                    var pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
-                    return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + _this.createTooltip(pair[0], false) + _this.createTooltip(pair[1], false) + '</div>';
-                };
-                if (this.redSpecialCard() == 0) {
-                    // Add both tooltips to the red special card
-                    this.addTooltipHtml(redTarget.id, notPlayedTooltip(this.blueSpecialCard()));
-                }
-                else {
-                    this.addTooltipHtml(redTarget.id, this.createTooltip(4 + this.redSpecialCard(), this.isRedPlayer()));
-                }
-                if (this.blueSpecialCard() == 0) {
-                    // Add both tooltips to the blue special card
-                    this.addTooltipHtml(blueTarget.id, notPlayedTooltip(this.redSpecialCard()));
-                }
-                else {
-                    this.addTooltipHtml(blueTarget.id, this.createTooltip(4 + this.blueSpecialCard(), !this.isRedPlayer()));
-                }
-            }
-            $('redHand_5').style.objectPosition = ((this.redSpecialCard() == 0 ? 13 : this.redSpecialCard() + 9) / 0.13) + '% 0px';
-            if (this.redSpecialPlayed())
-                $('redHand_5').parentElement.classList.add('discarded');
-            else
-                $('redHand_5').parentElement.classList.remove('discarded');
-            $('blueHand_5').style.objectPosition = ((this.blueSpecialCard() == 0 ? 13 : this.blueSpecialCard() + 9) / 0.13) + '% 0px';
-            if (this.blueSpecialPlayed())
-                $('blueHand_5').parentElement.classList.add('discarded');
-            else
-                $('blueHand_5').parentElement.classList.remove('discarded');
+            // Discards
+            if (this.playerDiscarded() != 0)
+                player_area.classList.add(card_names[this.playerDiscarded() - 1] + "-player-discarded");
+            if (this.opponentDiscarded() != 0)
+                player_area.classList.add(card_names[this.opponentDiscarded() - 1] + "-opponent-discarded");
+            if (this.opponentSpecialPlayed())
+                player_area.classList.add("opponent-played-special");
+            if (this.playerSpecialPlayed())
+                player_area.classList.add("player-played-special");
+            this.setCardSlot('player-hand_5', this.specialCardURL(true));
+            this.setCardSlot('opponent-hand_5', this.specialCardURL(false));
+            // if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
+            // 	const redTarget = $('redHand_5').parentElement!;
+            // 	const blueTarget = $('blueHand_5').parentElement!;
+            // 	const notPlayedTooltip = (cardVisible: number) => {
+            // 		const pair = cardVisible == 1 ? [6, 7] : cardVisible == 2 ? [5, 7] : [5, 6];
+            // 		return '<div class="tooltip-desc">' + _('Opponent has not played their special card yet. It can be one of the following:') + '</div><div class="tooltip-two-column">' + this.createTooltip(pair[0]!, false) + this.createTooltip(pair[1]!, false) + '</div>';
+            // 	};
+            // 	if (this.redSpecialCard() == 0) {
+            // 		// Add both tooltips to the red special card
+            // 		this.addTooltipHtml(redTarget.id, notPlayedTooltip(this.blueSpecialCard()));
+            // 	}
+            // 	else {
+            // 		this.addTooltipHtml(redTarget.id, this.createTooltip(4 + this.redSpecialCard(), this.isRedPlayer()));
+            // 	}
+            // 	if (this.blueSpecialCard() == 0) {
+            // 		// Add both tooltips to the blue special card
+            // 		this.addTooltipHtml(blueTarget.id, notPlayedTooltip(this.redSpecialCard()));
+            // 	}
+            // 	else {
+            // 		this.addTooltipHtml(blueTarget.id, this.createTooltip(4 + this.blueSpecialCard(), !this.isRedPlayer()));
+            // 	}
+            // }
             // Set the positions and stance
-            var placeSamurai = function (stance, position, isRed) {
-                var rot = stance == 0 ? -45 : 135;
-                var posElement = $('samurai_field_position_' + position);
-                var transform;
-                if (posElement) {
-                    _this.placeOnObject((isRed ? 'red' : 'blue') + '_samurai_offset', posElement);
-                    if (!_this.isRedPlayer())
-                        transform = isRed ? 'translate(-95%, -11.5%) ' : 'translate(95%, 11.5%) ';
-                    else
-                        transform = isRed ? 'translate(95%, 11.5%) scale(-1, -1) ' : 'translate(-95%, -11.5%) scale(-1, -1) ';
-                }
-                else {
-                    rot += 45;
-                    transform = 'translate(45%, ' + ((_this.isRedPlayer() ? isRed : !isRed) ? "" : "-") + '75%) ';
-                }
-                $((isRed ? 'red' : 'blue') + '_samurai').style.transform = transform + 'rotate(' + rot + 'deg)';
-            };
-            placeSamurai(this.redStance(), this.redPosition(), true);
-            placeSamurai(this.blueStance(), this.bluePosition(), false);
-            var redSprite = !this.redHit() ? 0 : 2;
-            var blueSprite = !this.blueHit() ? 1 : 3;
-            $('red_samurai_card').style.objectPosition = (redSprite / 0.03) + '% 0px';
-            $('blue_samurai_card').style.objectPosition = (blueSprite / 0.03) + '% 0px';
-            // Set the width of the samuira to 30% the width of the battlefield
-            var battlefield = $('battlefield');
-            var battlefieldWidth = battlefield.getBoundingClientRect().width;
-            var samuraiWidth = battlefieldWidth * 0.24;
-            dojo.style($('red_samurai'), 'width', samuraiWidth + 'px');
-            dojo.style($('blue_samurai'), 'width', samuraiWidth + 'px');
+            var battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
+            this.placeOnObject('player_samurai', 'battlefield_position_' + this.playerPosition());
+            this.placeOnObject('opponent_samurai', 'battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1));
+            this.setCardSlot('player_samurai', this.stanceURL(true));
+            this.setCardSlot('opponent_samurai', this.stanceURL(false));
+            player_area.classList.add('player-' + (this.playerStance() == 0 ? 'heaven' : 'earth'));
+            player_area.classList.add('opponent-' + (this.opponentStance() == 0 ? 'heaven' : 'earth'));
         };
         KiriaiTheDuel.prototype.addPredictionModifier = function (func) {
             var _this = this;
@@ -1635,7 +1582,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             };
         };
         KiriaiTheDuel.prototype.updateCardsWithPredictions = function () {
-            var cards = this.serverCards;
+            var cards = this.server_player_state;
             for (var _i = 0, _a = this.predictionModifiers; _i < _a.length; _i++) {
                 var mod = _a[_i];
                 // Print cards as binary
@@ -1643,7 +1590,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 cards = mod.func(cards);
             }
             console.log('cards:', cards.toString(2));
-            this.gamedatas.cards = cards;
+            this.gamedatas.player_state = cards;
             this.instantMatch();
         };
         //

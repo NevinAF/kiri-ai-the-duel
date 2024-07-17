@@ -119,7 +119,7 @@ class KiriaiTheDuel extends Table
 		self::reattributeColorsBasedOnPreferences( $players, $gameinfos['player_colors'] );
 		self::reloadPlayersBasicInfos();
 
-		self::setGameStateInitialValue( self::PRIMARY_PLAYER_ID, reset($players)['player_id'] );
+		self::setGameStateInitialValue( self::PRIMARY_PLAYER_ID, array_key_first($players) );
 	}
 
 	/*
@@ -219,7 +219,7 @@ class KiriaiTheDuel extends Table
 		$args['player_state'] = $player_state;
 
 		// If both players have not set there battlefield position, keep all opponent information hidden.
-		if (self::getState_position($player_state) + self::getState_position($opponent_state) > 0)
+		if (self::getState_position($player_state) + self::getState_position($opponent_state) == 0)
 		{
 			$args['opponent_state'] = 0;
 			return;

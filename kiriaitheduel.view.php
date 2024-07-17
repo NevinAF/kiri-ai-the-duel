@@ -36,10 +36,15 @@ class view_kiriaitheduel_kiriaitheduel extends game_view
 			if( $player_id != $current_player_id )
 				$opponent_player_id = $player_id;
 
+		if ($players[$current_player_id]['player_color'] == 'c93941')
+			$this->tpl['GAME_THEME_URL'] = 'https://studio.boardgamearena.com:8084/data/themereleases/current/games/kiriaitheduel/999999-9999/img/Red/';
+		else
+			$this->tpl['GAME_THEME_URL'] = 'https://studio.boardgamearena.com:8084/data/themereleases/current/games/kiriaitheduel/999999-9999/img/Blue/';
+
 		/*********** Place your code below:  ************/
 
-		$this->tpl['PLAYER_COLOR'] = $players[$current_player_id]['player_color'];
-		$this->tpl['OPPONENT_COLOR'] = $players[$opponent_player_id]['player_color'];
+		// $this->tpl['PLAYER_COLOR'] = $players[$current_player_id]['player_color'];
+		// $this->tpl['OPPONENT_COLOR'] = $players[$opponent_player_id]['player_color'];
 
 		switch ($game->gamestate->table_globals[100])
 		{

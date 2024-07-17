@@ -8,69 +8,62 @@
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  */
-/* #region Layout */
-/*
- - - - - - - - - - <Game Area> - - - - - - - - - 
- <My Hand Area>  |  <Battlefield>  |  <Play Area>
- - - - - - - - - - - - - - - - - - - - - - - - - 
-                <Opponent Hand Area>             
-*/
 #game-area {
   display: flex;
-  align-items: center;
-  width: calc(100% - 10px);
-  justify-content: center;
-  padding: 5px;
-  user-select: none;
-}
-
-#my-hand-area {
-  flex-grow: 3;
-  max-width: 270px;
-  display: grid;
-  grid-template-columns: 185fr 185fr;
-  grid-template-rows: 270fr 270fr 270fr;
-  gap: 0.5em;
-  margin-bottom: 10px;
-}
-
-#battlefield {
-  flex-grow: 6;
-  max-width: 450px;
-  display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
-  aspect-ratio: 1/1;
+  align-items: center;
+  justify-content: center;
+  margin: 5px;
+  user-select: none;
+  aspect-ratio: 1110/810;
+  object-fit: contain;
+  overflow: hidden;
 }
 
 #play-area {
-  flex-grow: 3;
-  max-width: 270px;
-  display: grid;
-  grid-template-columns: 185fr 185fr;
-  grid-template-rows: 270fr 270fr;
-  gap: 0.5em;
+  flex: 2;
+  width: 100%;
+  position: relative;
 }
 
-#opponent-hand-area {
-  display: flex;
-  align-content: stretch;
-  justify-content: center;
-}
-
-#opponent-hand-area > .cardslot {
-  max-width: 120px;
+#hands {
   flex: 1;
+  width: 100%;
+  position: relative;
+}
+
+.hand-area {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  height: 86%;
+}
+
+#opponent-area {
+  transform: translate(0, 110%);
+  transition: 500ms;
+}
+
+.show-opponent-area #opponent-area {
+  transform: translate(0%, 0%);
+}
+
+.hand-area > div {
+  position: relative;
 }
 
 /* #endregion */
 /* #region Cards */
 .cardslot {
-  position: relative;
+  position: absolute;
   overflow: hidden;
-  width: 100%;
   aspect-ratio: 185/270;
-  background-color: white;
   pointer-events: all;
 }
 
@@ -84,58 +77,15 @@
   transition: 100ms;
 }
 
-.cardImg {
+.cardslot > img, .cardslot > object, .tooltip-img > img {
   object-fit: cover;
   width: 100%;
   height: 100%;
   position: absolute;
 }
 
-.topPicked {
-  transform: rotate(0deg);
-}
-
-.bottomPicked {
-  transform: rotate(180deg);
-}
-
-.played::after {
-  background-color: rgba(60, 148, 191, 0.25);
-}
-
-.discarded::after {
-  background-color: rgba(0, 0, 0, 0.35);
-}
-
 .cardslot:hover::after {
   background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* #endregion */
-/* #region Battlefield */
-#standard_battlefield {
-  padding: 100px 50px;
-}
-
-.samurai_offset {
-  position: absolute;
-  user-select: none;
-  pointer-events: none;
-}
-
-.field_position {
-  position: relative;
-}
-
-.field_position::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 25px;
-  height: 25px;
-  background-color: black;
-  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .highlight::after {
@@ -185,4 +135,143 @@
   overflow: hidden;
   width: 75px;
   aspect-ratio: 0.6428571429;
+}
+
+.hand-icons, .hand-icons > img {
+  position: absolute;
+}
+
+#play-area .cardslot {
+  height: 50%;
+}
+
+#player_played_0 {
+  top: 0;
+  right: 0;
+}
+
+#player_played_1 {
+  bottom: 0;
+  right: 0;
+}
+
+#opponent_played_0 {
+  top: 0;
+  left: 0;
+}
+
+#opponent_played_1 {
+  bottom: 0;
+  left: 0;
+}
+
+.battlefield_position, #battlefield {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+.standard-battlefield #battlefield_position_1 {
+  top: 75.632%;
+}
+
+.standard-battlefield #battlefield_position_2 {
+  top: 62.827%;
+}
+
+.standard-battlefield #battlefield_position_3 {
+  top: 50%;
+}
+
+.standard-battlefield #battlefield_position_4 {
+  top: 37.216%;
+}
+
+.standard-battlefield #battlefield_position_5 {
+  top: 24.418%;
+}
+
+.advanced-battlefield #battlefield_position_1 {
+  top: 88.372%;
+}
+
+.advanced-battlefield #battlefield_position_2 {
+  top: 75.557%;
+}
+
+.advanced-battlefield #battlefield_position_3 {
+  top: 62.773%;
+}
+
+.advanced-battlefield #battlefield_position_4 {
+  top: 50%;
+}
+
+.advanced-battlefield #battlefield_position_5 {
+  top: 37.175%;
+}
+
+.advanced-battlefield #battlefield_position_6 {
+  top: 24.376%;
+}
+
+.advanced-battlefield #battlefield_position_7 {
+  top: 11.577%;
+}
+
+.player-heaven #player_samurai {
+  transform: translate(83%, 12%) rotate(135deg);
+}
+
+.player-earth #player_samurai {
+  transform: translate(83%, 12%) rotate(315deg);
+}
+
+.opponent-heaven #opponent_samurai {
+  transform: translate(-83%, -12%) rotate(135deg);
+}
+
+.opponent-earth #opponent_samurai {
+  transform: translate(-83%, -12%) rotate(315deg);
+}
+
+#discard_icon, #special_icon {
+  width: 30%;
+  position: absolute;
+  top: -40%;
+  left: -6.4%;
+}
+
+#discard_icon {
+  display: none;
+}
+
+.approach-opponent-discarded #discard_icon {
+  transform: translate(0%);
+  display: block;
+}
+
+.charge-opponent-discarded #discard_icon {
+  transform: translate(55%);
+  display: block;
+}
+
+.high-strike-player-discarded #discard_icon {
+  transform: translate(110%);
+  display: block;
+}
+
+.low-strike-player-discarded #discard_icon {
+  transform: translate(165%);
+  display: block;
+}
+
+.balanced-strike-player-discarded #discard_icon {
+  transform: translate(220%);
+  display: block;
+}
+
+#special_icon {
+  transform: translate(275%);
+  display: block;
 }

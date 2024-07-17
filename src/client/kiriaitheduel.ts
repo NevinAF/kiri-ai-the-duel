@@ -463,6 +463,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 {
 	/** @gameSpecific See {@link Gamegui.setup} for more information. */
 	isInitialized: boolean = false;
+	color_path: string = 'Red';
 	actionQueue = new PlayerActionQueue(this);
 	confirmationTimeout = new ConfirmationTimeout('leftright_page_wrapper');
 
@@ -496,10 +497,19 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// #region Document/URL Utilities
 	//
 
-	formatSVGURL(name: string) { return `${g_gamethemeurl}img/dynamic/${name}.svg` }
+	formatSVGURL(name: string) { return `${g_gamethemeurl}img/${this.color_path}/${name}.svg` }
 
 	stanceURL(player: boolean) {
-		return this.formatSVGURL(`${player ? 'player-' : 'opponent-'}-stance-${(player ? this.playerHit() : this.opponentHit()) ? 'damaged' : 'healthy'}`);
+		return this.formatSVGURL(`${player ? 'player' : 'opponent'}-stance-${(player ? this.playerHit() : this.opponentHit()) ? 'damaged' : 'healthy'}`);
+	}
+
+	specialCardURL(player: boolean) {
+		switch (player ? this.playerSpecialCard() : this.opponentSpecialCard()) {
+			case 1: return this.formatSVGURL('special-kesa');
+			case 2: return this.formatSVGURL('special-zantetsu');
+			case 3: return this.formatSVGURL('special-counter');
+			default: return this.formatSVGURL('card-back');
+		}
 	}
 
 	setCardSlot(slot: string | Element, src: string | null) {
@@ -511,6 +521,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			(slot.children[0] as HTMLImageElement).style.display = src ? 'block' : 'none';
 			if (src != null)
 				(slot.children[0] as HTMLImageElement).src = src;
+			return;
 		}
 
 		console.error('Invalid slot: ', slot);
@@ -533,6 +544,9 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id] );
 
+		if (this.gamedatas.players[this.player_id]!.color == '4e93a6')
+			this.color_path = 'Blue';
+
 		this.server_player_state = gamedatas.player_state;
 
 		// Setup game notifications to handle (see "setupNotifications" method below)
@@ -552,13 +566,25 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		for (let i = 0; i < 6; i++)
 		{
 			let index = i + 1;
-			dojo.connect($('myHand_' + i), 'onclick', this, e => this.onHandCardClick(e, index));
+			dojo.connect($('player-hand_' + i), 'onclick', this, e => this.onHandCardClick(e, index));
 		}
 
 		for (let i = 0; i < 2; i++) {
 			let first = i == 0;
-			dojo.connect($('myPlayed_' + i), 'onclick', this, e => this.returnCardToHand(e, first));
+			dojo.connect($('player_played_' + i), 'onclick', this, e => this.returnCardToHand(e, first));
 		}
+
+		// Add on hover events for adding show-opponent-area class to the play-area.
+		[$('discard_icon'), $('special_icon')].forEach(target =>
+		{
+			target?.addEventListener('mouseenter', () => {
+				$('hands').classList.add('show-opponent-area');
+			});
+			target?.addEventListener('mouseleave', () => {
+				$('hands').classList.remove('show-opponent-area');
+			});
+		});
+		
 
 		this.isInitialized = true;
 
@@ -707,39 +733,47 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		}
 	}
 
-	card_tooltips: { title: string, type: 'move' | 'attack' | 'special', desc: string }[] =
+	card_tooltips: { title: string, type: 'move' | 'attack' | 'special', desc: string, src: string }[] =
 	[{
 		title: 'Approach/Retreat',
 		type: 'move',
-		desc: 'Move 1 space forward (top) or backward (bottom).'
+		desc: 'Move 1 space forward (top) or backward (bottom).',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Charge/Change Stance',
 		type: 'move',
-		desc: 'Move 2 spaces forward (top) or change stance (bottom).'
+		desc: 'Move 2 spaces forward (top) or change stance (bottom).',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'High Strike',
 		type: 'attack',
-		desc: 'When in Heaven stance, attack the second space in front.'
+		desc: 'When in Heaven stance, attack the second space in front.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Low Strike',
 		type: 'attack',
-		desc: 'When in Earth stance, attack the space in front.'
+		desc: 'When in Earth stance, attack the space in front.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Balanced Strike',
 		type: 'attack',
-		desc: 'Attack the space currently occupied.'
+		desc: 'Attack the space currently occupied.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Kesa Strike',
 		type: 'special',
-		desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.'
+		desc: 'When in Heaven stance, attack the space in front and currently occupied. Switch to Earth stance.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Zan-Tetsu Strike',
 		type: 'special',
-		desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.'
+		desc: 'When in Earth stance, attack the second and third space in front. Switch to Heaven stance.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}, {
 		title: 'Counterattack',
 		type: 'special',
-		desc: 'If the opponent lands an attack, they take damage instead.'
+		desc: 'If the opponent lands an attack, they take damage instead.',
+		src: g_gamethemeurl + 'img/dynamic/player-card-approach.jpg'
 	}]
 
 	createTooltip(x: number, play_flavor: boolean)
@@ -752,8 +786,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			type: tooltip.type,
 			typeName: _(tooltip.type == 'move' ? 'Movement' : tooltip.type == 'attack' ? 'Attack' : 'Special'),
 			desc: _(tooltip.desc),
-			src: g_gamethemeurl + 'img/tooltips.jpg',
-			x: x / 0.07,
+			src: tooltip.src,
 			flavor: play_flavor ? _('Click when playing cards to add/remove from the play area.') : ''
 		});
 	}
@@ -778,7 +811,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			opponentSpecialCard: this.opponentSpecialCard(),
 		});
 
-		const player_area = $('hands');
+		const player_area = $('play-area');
 
 		const card_names: string[] = [
 			'approach',
@@ -855,6 +888,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		if (this.playerSpecialPlayed())
 			player_area.classList.add("player-played-special");
 
+		this.setCardSlot('player-hand_5', this.specialCardURL(true));
+		this.setCardSlot('opponent-hand_5', this.specialCardURL(false));
+
+
 		// if (this.redSpecialCard() != 0 || this.blueSpecialCard() != 0) {
 
 		// 	const redTarget = $('redHand_5').parentElement!;
@@ -888,7 +925,10 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		this.placeOnObject('opponent_samurai', 'battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1));
 
 		this.setCardSlot('player_samurai', this.stanceURL(true));
-		this.setCardSlot('player_samurai', this.stanceURL(false));
+		this.setCardSlot('opponent_samurai', this.stanceURL(false));
+
+		player_area.classList.add('player-' + (this.playerStance() == 0 ? 'heaven' : 'earth'));
+		player_area.classList.add('opponent-' + (this.opponentStance() == 0 ? 'heaven' : 'earth'));
 	}
 
 	//
@@ -1112,7 +1152,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		console.log('notif_placeAllCards', notif);
 		// if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
 		// 	this.gamedatas.battlefield = notif.args.battlefield;
-		this.gamedatas.player_state = notif.args.player_state;
+		this.server_player_state = notif.args.player_state;
 		this.gamedatas.opponent_state = notif.args.opponent_state;
 		this.updateCardsWithPredictions();
 		this.instantMatch();
