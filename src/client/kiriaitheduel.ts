@@ -811,14 +811,14 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			opponentSpecialCard: this.opponentSpecialCard(),
 		});
 
-		const player_area = $('play-area');
+		const player_area = $('game-area');
 
 		const card_names: string[] = [
 			'approach',
 			'charge',
 			'high-strike',
 			'low-strike',
-			'balanced-strike',
+			'balance-strike',
 			'retreat',
 			'change-stance',
 			'special'
@@ -844,7 +844,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 				case 2: src = this.formatSVGURL(prefix + 'charge'); break;
 				case 3: src = this.formatSVGURL(prefix + 'high-strike'); break;
 				case 4: src = this.formatSVGURL(prefix + 'low-strike'); break;
-				case 5: src = this.formatSVGURL(prefix + 'balanced-strike'); break;
+				case 5: src = this.formatSVGURL(prefix + 'balance-strike'); break;
 				case 6:
 					src = this.formatSVGURL(prefix + 'approach');
 					target.classList.add('bottomPicked');
@@ -921,8 +921,18 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		// Set the positions and stance
 		let battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
-		this.placeOnObject('player_samurai', 'battlefield_position_' + this.playerPosition());
-		this.placeOnObject('opponent_samurai', 'battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1));
+
+		let player_samurai = $('player_samurai') as HTMLElement;
+		let opponent_samurai = $('opponent_samurai') as HTMLElement;
+		let play_area_bounds = $('play-area').getBoundingClientRect();
+		let target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
+		let target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
+
+		player_samurai.style.left = target_bounds_player.left - play_area_bounds.left + 'px';
+		player_samurai.style.top = target_bounds_player.top - play_area_bounds.top + 'px';
+		opponent_samurai.style.left = target_bounds_opponent.left - play_area_bounds.left + 'px';
+		opponent_samurai.style.top = target_bounds_opponent.top - play_area_bounds.top + 'px';
+
 
 		this.setCardSlot('player_samurai', this.stanceURL(true));
 		this.setCardSlot('opponent_samurai', this.stanceURL(false));

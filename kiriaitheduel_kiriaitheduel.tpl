@@ -10,8 +10,6 @@
 
 
 <div id="game-area" style="
-	--opponent-color: #{OPPONENT_COLOR};
-	--player-color: #{PLAYER_COLOR};
 ">
 
 	<div id="play-area">
@@ -52,28 +50,34 @@
 	<div id="hands">
 
 		<div id="hand-icons">
-			<img id="discard_icon" src="{GAME_THEME_URL}opponent-icon-earth.svg" draggable="false"/>
+			<img id="discard_icon" src="{GAME_THEME_URL}opponent-icon-damaged-heaven.svg" draggable="false"/>
 			<img id="special_icon" src="{GAME_THEME_URL}opponent-icon-heaven.svg" draggable="false"/>
 		</div>
 
 		<div id="player-area" class="hand-area">
 			<div class="cardslot" id="player-hand_0">
 				<img src="{GAME_THEME_URL}player-card-approach.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 			<div class="cardslot" id="player-hand_1">
 				<img src="{GAME_THEME_URL}player-card-charge.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 			<div class="cardslot" id="player-hand_2">
 				<img src="{GAME_THEME_URL}player-card-high-strike.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 			<div class="cardslot" id="player-hand_3">
 				<img src="{GAME_THEME_URL}player-card-low-strike.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 			<div class="cardslot" id="player-hand_4">
 				<img src="{GAME_THEME_URL}player-card-balance-strike.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 			<div class="cardslot" id="player-hand_5">
 				<img src="{GAME_THEME_URL}card-back.svg" draggable="false"/>
+				<div class="selection-border"></div>
 			</div>
 		</div>
 

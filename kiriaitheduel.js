@@ -1456,13 +1456,13 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 opponentDiscarded: this.opponentDiscarded(),
                 opponentSpecialCard: this.opponentSpecialCard(),
             });
-            var player_area = $('play-area');
+            var player_area = $('game-area');
             var card_names = [
                 'approach',
                 'charge',
                 'high-strike',
                 'low-strike',
-                'balanced-strike',
+                'balance-strike',
                 'retreat',
                 'change-stance',
                 'special'
@@ -1491,7 +1491,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                         src = _this.formatSVGURL(prefix + 'low-strike');
                         break;
                     case 5:
-                        src = _this.formatSVGURL(prefix + 'balanced-strike');
+                        src = _this.formatSVGURL(prefix + 'balance-strike');
                         break;
                     case 6:
                         src = _this.formatSVGURL(prefix + 'approach');
@@ -1563,8 +1563,15 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             // }
             // Set the positions and stance
             var battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
-            this.placeOnObject('player_samurai', 'battlefield_position_' + this.playerPosition());
-            this.placeOnObject('opponent_samurai', 'battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1));
+            var player_samurai = $('player_samurai');
+            var opponent_samurai = $('opponent_samurai');
+            var play_area_bounds = $('play-area').getBoundingClientRect();
+            var target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
+            var target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
+            player_samurai.style.left = target_bounds_player.left - play_area_bounds.left + 'px';
+            player_samurai.style.top = target_bounds_player.top - play_area_bounds.top + 'px';
+            opponent_samurai.style.left = target_bounds_opponent.left - play_area_bounds.left + 'px';
+            opponent_samurai.style.top = target_bounds_opponent.top - play_area_bounds.top + 'px';
             this.setCardSlot('player_samurai', this.stanceURL(true));
             this.setCardSlot('opponent_samurai', this.stanceURL(false));
             player_area.classList.add('player-' + (this.playerStance() == 0 ? 'heaven' : 'earth'));

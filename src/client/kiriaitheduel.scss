@@ -8,6 +8,10 @@
  * -----
  */
 
+#overall-content {
+	background-color: #313433;
+}
+
 #game-area {
   display: flex;
   flex-direction: column;
@@ -17,7 +21,8 @@
   user-select: none;
 
   aspect-ratio: 1110/810;
-  object-fit: contain;
+  max-height: calc(100vh - 150px);
+  margin: 10px auto;
   overflow: hidden;
 }
 
@@ -45,7 +50,7 @@
   flex-direction: row;
   justify-content: space-between;
   width: 100%;
-  height: 86%;
+  height: 90%;
 }
 
 #opponent-area {
@@ -77,6 +82,7 @@
   left: 0;
   width: 100%;
   height: 100%;
+  border-radius: 5%;
   transition: 100ms;
 }
 
@@ -188,10 +194,10 @@
 .advanced-battlefield #battlefield_position_6 { top: 24.376%; }
 .advanced-battlefield #battlefield_position_7 { top: 11.577%; }
 
-.player-heaven #player_samurai { transform: translate(83%, 12%) rotate(135deg) };
-.player-earth #player_samurai { transform: translate(83%, 12%) rotate(315deg) };
-.opponent-heaven #opponent_samurai { transform: translate(-83%, -12%) rotate(135deg) };
-.opponent-earth #opponent_samurai { transform: translate(-83%, -12%) rotate(315deg) };
+.player-heaven #player_samurai { transform: translate(83%, -39%) rotate(315deg) };
+.player-earth #player_samurai { transform: translate(83%, -39%) rotate(135deg) };
+.opponent-heaven #opponent_samurai { transform: translate(-82%, -61%) rotate(135deg) };
+.opponent-earth #opponent_samurai { transform: translate(-82%, -61%) rotate(315deg) };
 
 #discard_icon, #special_icon {
 	width: 30%;
@@ -204,8 +210,89 @@
 
 .approach-opponent-discarded #discard_icon { transform: translate(0%); display: block; }
 .charge-opponent-discarded #discard_icon { transform: translate(55%); display: block; }
-.high-strike-player-discarded #discard_icon { transform: translate(110%); display: block; }
-.low-strike-player-discarded #discard_icon { transform: translate(165%); display: block; }
-.balanced-strike-player-discarded #discard_icon { transform: translate(220%); display: block; }
+.high-strike-opponent-discarded #discard_icon { transform: translate(110%); display: block; }
+.low-strike-opponent-discarded #discard_icon { transform: translate(165%); display: block; }
+.balance-strike-opponent-discarded #discard_icon { transform: translate(220%); display: block; }
+
+.approach-player-discarded #player-hand_0::after,
+.charge-player-discarded #player-hand_1::after,
+.high-strike-player-discarded #player-hand_2::after,
+.low-strike-player-discarded #player-hand_3::after,
+.balance-strike-player-discarded #player-hand_4::after,
+.approach-opponent-discarded #opponent-hand_0::after,
+.charge-opponent-discarded #opponent-hand_1::after,
+.high-strike-opponent-discarded #opponent-hand_2::after,
+.low-strike-opponent-discarded #opponent-hand_3::after,
+.balance-strike-opponent-discarded #opponent-hand_4::after {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+
+}
 
 #special_icon { transform: translate(275%); display: block; }
+
+.selection-border {
+	--borderWidth: 3px;
+	--borderRadius: 15px;
+	--duration: 5s;
+	--gradient: radial-gradient(circle, rgba(87, 181, 36, 0.417) 0%, rgb(172, 255, 127) 100%);
+	width: 100%;
+	height: 100%;
+	border-radius: var(--borderRadius);
+	mask:
+		linear-gradient(#fff, #fff) top,
+		linear-gradient(#fff, #fff) bottom,
+		linear-gradient(#fff, #fff) left,
+		linear-gradient(#fff, #fff) right;
+	mask-size: 100% var(--borderWidth), 100% var(--borderWidth),
+		var(--borderWidth) 100%, var(--borderWidth) 100%;
+	mask-repeat: no-repeat;
+	position: absolute;
+	left: 0;
+	top: 0;
+	display: none;
+}
+
+.selection-border:after {
+	content: "";
+	position: absolute;
+	top: calc(-1 * var(--borderWidth));
+	left: calc(-1 * var(--borderWidth));
+	height: calc(100% + var(--borderWidth) * 2);
+	width: calc(100% + var(--borderWidth) * 2);
+	background: var(--gradient);
+	border-radius: calc(2 * var(--borderRadius));
+	animation: selection-border-anim var(--duration) ease-in-out infinite;
+	background-size: 200% 200%;
+}
+
+@keyframes selection-border-anim {
+	0% {
+		background-position: 0% 0%;
+	}
+	25% {
+		background-position: 100% 0%;
+	}
+	50% {
+		background-position: 100% 100%;
+	}
+	75% {
+		background-position: 0% 100%;
+	}
+	100% {
+		background-position: 0% 0%;
+	}
+}
+
+.approach-played #player-hand_0 .selection-border { display: block; height: 50%; }
+.charge-played #player-hand_1 .selection-border { display: block; height: 50%; }
+.high-strike-played #player-hand_2 .selection-border { display: block; }
+.low-strike-played #player-hand_3 .selection-border { display: block; }
+.balance-strike-played #player-hand_4 .selection-border { display: block; }
+.special-played #player-hand_5 .selection-border { display: block; }
+.retreat-played #player-hand_0 .selection-border { display: block; height: 50%; top: 50%; }
+.change-stance-played #player-hand_1 .selection-border { display: block; height: 50%; top: 50%; }

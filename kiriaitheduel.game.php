@@ -184,7 +184,7 @@ class KiriaiTheDuel extends Table
 
 	function dbGetScore($players, $primary): int {
 		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
-		foreach ($players as $player_id) {
+		foreach ($players as $player_id => $player) {
 			if ($primary ^ $player_id != $primary_player_id) {
 				return $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
 			}
@@ -195,7 +195,7 @@ class KiriaiTheDuel extends Table
 
 	function dbIncrementScore($players, $primary): int {
 		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
-		foreach ($players as $player_id) {
+		foreach ($players as $player_id => $player) {
 			if ($primary ^ $player_id != $primary_player_id) {
 				$value = $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
 				$value++;
@@ -602,15 +602,15 @@ class KiriaiTheDuel extends Table
 			return; // game over
 
 		// Return second card as discarded.
-		self::setState_Discard($primary_state, self::playedCardToDiscard(self::getState_Played0($primary_state)));
-		self::setState_Discard($secondary_state, self::playedCardToDiscard(self::getState_Played0($secondary_state)));
+		self::setState_Discard($primary_state, self::playedCardToDiscard(self::getState_Played1($primary_state)));
+		self::setState_Discard($secondary_state, self::playedCardToDiscard(self::getState_Played1($secondary_state)));
 		self::setState_Played1($primary_state, PlayedCard::NOT_PLAYED);
 		self::setState_Played1($secondary_state, PlayedCard::NOT_PLAYED);
+		self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+		self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 		self::notifyAllWithGameState($players, 'after resolve', array(), $primary_state, $secondary_state); 
 
 		// Save the new states and move to the next state.
-		self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
-		self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 		$this->gamestate->nextState( "pickCards" );
 
 		// give player some more time
@@ -870,6 +870,8 @@ class KiriaiTheDuel extends Table
 
 			if ($wasHit)
 			{
+				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 				$this->gamestate->nextState( "endGame" );
 				return true;
 			}
@@ -887,6 +889,8 @@ class KiriaiTheDuel extends Table
 
 			if ($wasHit)
 			{
+				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
+				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 				$this->gamestate->nextState( "endGame" );
 				return true;
 			}
