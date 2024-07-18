@@ -6,10 +6,17 @@
 -- KiriaiTheDuel implementation : © Nevin Foster nevin.foster2@gamil.com
 -------
 -->
+<div id="background-area">
+	<img src="{GAME_THEME_URL}../background-bottom-right.svg" class="background-bottom-right" />
+	<img src="{GAME_THEME_URL}../background-top-left.svg" class="background-top-left" />
+	<img src="{GAME_THEME_URL}../background-top-right.svg" class="background-top-right" />
+</div>
 
-
+<div id="game-area-margin">
 
 <div id="game-area" style="
+	--player-color: #{PLAYER_COLOR};
+	--opponent-color: #{OPPONENT_COLOR};
 ">
 
 	<div id="play-area">
@@ -57,8 +64,8 @@
 	<div id="hands">
 
 		<div id="hand-icons">
-			<img id="discard_icon" src="{GAME_THEME_URL}opponent-icon-damaged-heaven.svg" draggable="false"/>
-			<img id="special_icon" src="{GAME_THEME_URL}opponent-icon-heaven.svg" draggable="false"/>
+			<img id="discard_icon" src="{GAME_THEME_URL}opponent-icon-discard.svg" draggable="false"/>
+			<img id="special_icon" src="{GAME_THEME_URL}opponent-icon-hand.svg" draggable="false"/>
 		</div>
 
 		<div id="player-area" class="hand-area">
@@ -113,6 +120,10 @@
 
 </div>
 
+</div>
+
+<div class='slash-effect' id='player-slash-effect'></div>
+<div class='slash-effect' id='opponent-slash-effect'></div>
 
 <script type="text/javascript">
 

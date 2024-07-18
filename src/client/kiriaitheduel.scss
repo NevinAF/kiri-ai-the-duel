@@ -8,9 +8,44 @@
  * -----
  */
 
-#overall-content {
-	background-color: #313433;
+html {
+	background: #313433;
 }
+
+#background-area {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100vh;
+	z-index: -1;
+}
+
+.background-bottom-right {
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	width: 75%;
+}
+
+.background-top-left {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 80%;
+}
+
+.background-top-right {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 100%;
+}
+
+#game-area-margin {
+	margin: 0px 1%;
+}
+
 
 #game-area {
   display: flex;
@@ -95,6 +130,10 @@
 
 .cardslot:hover::after {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+.cardslot.attack-stance-bad {
+	filter: brightness(0.8);
 }
 
 .highlight::after {
@@ -204,11 +243,29 @@
 	background-color: rgba(255, 255, 255, 0.5);
 }
 
+.battlefield_position.player_highlight {
+	background-color: var(--player-color);
+	filter: opacity(0.8);
+}
+
+.battlefield_position.opponent_highlight {
+	background-color: var(--opponent-color);
+	filter: opacity(0.8);
+}
+
+.battlefield_position.player_highlight.opponent_highlight {
+	background-color: #fff34080;
+}
+
 .standard-battlefield #battlefield_position_1 { top: 70.632%; }
 .standard-battlefield #battlefield_position_2 { top: 57.827%; }
 .standard-battlefield #battlefield_position_3 { top: 45.000%; }
 .standard-battlefield #battlefield_position_4 { top: 32.216%; }
 .standard-battlefield #battlefield_position_5 { top: 19.418%; }
+.standard-battlefield #battlefield_position_6 { display: hidden; }
+.standard-battlefield #battlefield_position_7 { display: hidden; }
+.standard-battlefield #battlefield_position_0 { display: hidden; }
+.standard-battlefield #battlefield_position_8 { display: hidden; }
 
 .advanced-battlefield #battlefield_position_1 { top: 83.372%; }
 .advanced-battlefield #battlefield_position_2 { top: 70.557%; }
@@ -220,31 +277,37 @@
 .advanced-battlefield #battlefield_position_0 {
 	right: -135%;
 	top: 57.773%;
+	display: hidden;
 }
 .advanced-battlefield #battlefield_position_8 {
 	left: -135%;
 	top: 32.175%;
+	display: hidden;
 }
 
-.player-heaven #player_samurai { transform: translate(43%, -32%) rotate(315deg) };
-.player-earth #player_samurai { transform: translate(43%, -32%) rotate(135deg) };
-.opponent-heaven #opponent_samurai { transform: translate(-122%, -54%) rotate(135deg) };
-.opponent-earth #opponent_samurai { transform: translate(-122%, -54%) rotate(315deg) };
+#player_samurai { translate: 43% -32%; }
+#opponent_samurai { translate: -122% -54%; }
+
+.player-heaven #player_samurai { rotate: 315deg };
+.player-earth #player_samurai { rotate: 135deg };
+.opponent-heaven #opponent_samurai { rotate: 135deg };
+.opponent-earth #opponent_samurai { rotate: 315deg };
 
 #discard_icon, #special_icon {
-	width: 30%;
+	width: 6%;
 	position: absolute;
-	top: -40%;
-	left: -6.4%;
+	top: -14.5%;
+	left: -4.5%;
 }
 
 #discard_icon { display: none; }
 
-.approach-opponent-discarded #discard_icon { transform: translate(0%); display: block; }
-.charge-opponent-discarded #discard_icon { transform: translate(55%); display: block; }
-.high-strike-opponent-discarded #discard_icon { transform: translate(110%); display: block; }
-.low-strike-opponent-discarded #discard_icon { transform: translate(165%); display: block; }
-.balance-strike-opponent-discarded #discard_icon { transform: translate(220%); display: block; }
+.approach-opponent-discarded #discard_icon { left: 4.3%; display: block; }
+.charge-opponent-discarded #discard_icon { left: 21.36%; display: block; }
+.high-strike-opponent-discarded #discard_icon { left: 38.42%; display: block; }
+.low-strike-opponent-discarded #discard_icon { left: 55.48%; display: block; }
+.balance-strike-opponent-discarded #discard_icon { left: 72.54%; display: block; }
+#special_icon { left: 89.6%; }
 
 .approach-player-discarded #player-hand_0::after,
 .charge-player-discarded #player-hand_1::after,
@@ -264,16 +327,13 @@
 	width: 100%;
 	height: 100%;
 	background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
-
 }
 
-#special_icon { transform: translate(275%); display: block; }
-
 .selection-border {
-	--borderWidth: 3px;
-	--borderRadius: 15px;
+	--borderWidth: 4px;
+	--borderRadius: 3.5%;
 	--duration: 5s;
-	--gradient: radial-gradient(circle, rgba(67, 149, 23, 0.417) 0%, rgb(118, 255, 44) 100%);
+	--gradient: radial-gradient(circle, #e49d00 0%, #fff340 100%);
 	width: 100%;
 	height: 100%;
 	border-radius: var(--borderRadius);
@@ -322,13 +382,37 @@
 	}
 }
 
+#player_played_0, #player_played_1 {
+	border-left-style: solid;
+	border-left-color: transparent;
+	border-left-width: 4%;
+	border-radius: 10px;
+}
+
+#player_played_0.evaluating, #player_played_1.evaluating {
+	border-left-color: #fff340;
+}
+
+#opponent_played_0, #opponent_played_1 {
+	border-right-style: solid;
+	border-right-color: transparent;
+	border-right-width: 4%;
+	border-radius: 10px;
+}
+
+#opponent_played_0.evaluating, #opponent_played_1.evaluating {
+	border-right-color: #fff340;
+}
+
 .approach-player-played-first #player-hand_0 .selection-border,
 .approach-player-played-second #player-hand_0 .selection-border,
 .approach-player-played-first #player_played_0 .selection-border,
 .approach-player-played-second #player_played_1 .selection-border,
 .approach-opponent-played-first #opponent_played_0 .selection-border,
 .approach-opponent-played-second #opponent_played_1 .selection-border {
-	display: block; height: 50%;
+	display: block;
+	height: 50%;
+	border-radius: var(--borderRadius) var(--borderRadius) 0 0;
 }
 
 .charge-player-played-first #player-hand_1 .selection-border,
@@ -337,7 +421,9 @@
 .charge-player-played-second #player_played_1 .selection-border,
 .charge-opponent-played-first #opponent_played_0 .selection-border,
 .charge-opponent-played-second #opponent_played_1 .selection-border {
-	display: block; height: 50%;
+	display: block;
+	height: 50%;
+	border-radius: var(--borderRadius) var(--borderRadius) 0 0;
 }
 
 .high-strike-player-played-first #player-hand_2 .selection-border,
@@ -363,7 +449,10 @@
 .retreat-player-played-second #player_played_1 .selection-border,
 .retreat-opponent-played-first #opponent_played_0 .selection-border,
 .retreat-opponent-played-second #opponent_played_1 .selection-border {
-	display: block; height: 50%; top: 50%;
+	display: block;
+	height: 50%;
+	top: 50%;
+	border-radius: 0 0 var(--borderRadius) var(--borderRadius);
 }
 
 .change-stance-player-played-first #player-hand_1 .selection-border,
@@ -372,5 +461,61 @@
 .change-stance-player-played-second #player_played_1 .selection-border,
 .change-stance-opponent-played-first #opponent_played_0 .selection-border,
 .change-stance-opponent-played-second #opponent_played_1 .selection-border {
-	display: block; height: 50%; top: 50%;
+	display: block;
+	height: 50%;
+	top: 50%;
+	border-radius: 0 0 var(--borderRadius) var(--borderRadius);
+}
+
+// A 6x5 sprite sheet of the card backs, where each row is a different effect
+.slash-effect {
+	background: url("img/Preview_270.png") no-repeat;
+	background-size: 600% 500%;
+	width: 100px;
+	height: 100px;
+	mix-blend-mode: plus-lighter;
+	position: absolute;
+	top: 160px;
+	left: 240px;
+	background-position-y: -25%;
+}
+
+.slash-effect.player_miss {
+	transform: translateX(100%);
+	transform: translateY(100%);
+}
+
+.slash-effect.opponent_miss {
+	transform: translateX(-100%);
+	transform: translateY(-100%);
+}
+
+.slash-effect-anim_0 {
+	animation: slash-effect-anim_0 1s steps(10);
+	background-position-y: 0%;
+}
+
+.slash-effect-anim_1 {
+	animation: slash-effect-anim_0 1s steps(10);
+	background-position-y: 25%;
+}
+
+.slash-effect-anim_2 {
+	animation: slash-effect-anim_0 1s steps(10);
+	background-position-y: 50%;
+}
+
+.slash-effect-anim_3 {
+	animation: slash-effect-anim_0 1s steps(10);
+	background-position-y: 75%;
+}
+
+.slash-effect-anim_4 {
+	animation: slash-effect-anim_0 1s steps(10);
+	background-position-y: 100%;
+}
+
+@keyframes slash-effect-anim_0 {
+	0% { background-position-x: 0%;  }
+	100% { background-position-x: 200%; }
 }

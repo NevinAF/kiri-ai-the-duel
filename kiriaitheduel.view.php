@@ -43,8 +43,8 @@ class view_kiriaitheduel_kiriaitheduel extends game_view
 
 		/*********** Place your code below:  ************/
 
-		// $this->tpl['PLAYER_COLOR'] = $players[$current_player_id]['player_color'];
-		// $this->tpl['OPPONENT_COLOR'] = $players[$opponent_player_id]['player_color'];
+		$this->tpl['PLAYER_COLOR'] = $players[$current_player_id]['player_color'];
+		$this->tpl['OPPONENT_COLOR'] = $players[$opponent_player_id]['player_color'];
 
 		switch ($game->gamestate->table_globals[100])
 		{

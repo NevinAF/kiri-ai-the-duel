@@ -579,6 +579,11 @@ class KiriaiTheDuel extends Table
 		$primary_state = self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
 		$secondary_state = self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
 
+		self::PlayZombieCards($primary_state, true);
+		self::PlayZombieCards($primary_state, false);
+		self::PlayZombieCards($secondary_state, true);
+		self::PlayZombieCards($secondary_state, false);
+
 		// Setup cards and flip first one over.
 		if (self::getState_Played0($primary_state) == PlayedCard::SPECIAL || self::getState_Played1($primary_state) == PlayedCard::SPECIAL)
 			self::setState_SpecialPlayed($primary_state, true);
@@ -847,7 +852,9 @@ class KiriaiTheDuel extends Table
 
 		if ($primary_card == PlayedCard::HIGH_STRIKE || $primary_card == PlayedCard::LOW_STRIKE || $primary_card == PlayedCard::BALANCED_STRIKE || $primary_card == PlayedCard::SPECIAL || $secondary_card == PlayedCard::HIGH_STRIKE || $secondary_card == PlayedCard::LOW_STRIKE || $secondary_card == PlayedCard::BALANCED_STRIKE || $secondary_card == PlayedCard::SPECIAL
 		) {
-			self::notifyAllWithGameState($players, 'player(s) attacked', array(), $primary_state, $secondary_state);
+			self::notifyAllWithGameState($players, 'player(s) attacked', array(
+				'first' => $first,
+			), $primary_state, $secondary_state);
 
 			if ($primary_card == PlayedCard::SPECIAL && $primary_special_played != SpecialCard::COUNTERATTACK || $secondary_card == PlayedCard::SPECIAL && $secondary_special_played != SpecialCard::COUNTERATTACK)
 			{
@@ -936,57 +943,40 @@ class KiriaiTheDuel extends Table
 	{
 		$statename = $state['name'];
 
-		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
-		$player_state_name = $active_player == $primary_player_id ? self::PRIMARY_PLAYER_STATE : self::SECONDARY_PLAYER_STATE;
-
-
 		// Check if it's a player's turn
-		if ($statename === "setupBattlefield")
+		if ($statename === "setupBattlefield" || $statename === "pickCards")
 		{
-			// TODO
-			$position = bga_rand(2, 4);
-			$isHeavenStance = bga_rand(0, 1) == 0;
-			self::_confirmedStanceAndPosition($player_state_name, $isHeavenStance, $position);
-			$players = self::loadPlayersBasicInfos();
-			$this->notifyAllWithGameState($players, 'battlefield setup', array());
-			return;
-		}
-		else if ($statename === "pickCards")
-		{
-			$cards = self::getGameStateValue( $player_state_name );
-
-			if (self::getState_Played0($cards) == PlayedCard::NOT_PLAYED)
-			{
-				while (true)
-				{
-					try {
-						$card_id = bga_rand(1, 8);
-						self::pickedCard($player_state_name, $card_id, true);
-						break;
-					}
-					catch (BgaUserException $e) {}
-				}
-				return;
-			}
-
-			if (self::getState_Played1($cards) == PlayedCard::NOT_PLAYED)
-			{
-				while (true)
-				{
-					try {
-						$card_id = bga_rand(1, 8);
-						self::pickedCard($player_state_name, $card_id, false);
-						break;
-					}
-					catch (BgaUserException $e) {}
-				}
-				return;
-			}
-
-			// $this->gamestate->setPlayerNonMultiactive( $active_player, '');
+			$this->gamestate->jumpToState(99);
 		}
 
 		else throw new feException( "Zombie mode not supported at this game state: ".$statename );
+	}
+
+	function PickZombiePositionAndStance(int &$cards)
+	{
+		$position = bga_rand(2, 4);
+		$isHeavenStance = bga_rand(0, 1) == 0;
+		self::setState_position($cards, $position);
+		self::setState_stance($cards, $isHeavenStance ? Stance::HEAVEN : Stance::EARTH);
+	}
+
+	function PlayZombieCards(int &$cards, bool $first)
+	{
+		$card_id = $first ? self::getState_Played0($cards) : self::getState_Played1($cards);
+
+		while ($card_id == PlayedCard::NOT_PLAYED)
+		{
+			try {
+				$card_id = bga_rand(1, 8);
+				$this->validateCardPlay($cards, $card_id, $first); // Throws an exception if the card is invalid.
+
+				if ($first) self::setState_Played0($cards, $card_id);
+				else self::setState_Played1($cards, $card_id);
+			}
+			catch (BgaUserException $e) {
+				$card_id = PlayedCard::NOT_PLAYED;
+			}
+		}
 	}
 	
 ///////////////////////////////////////////////////////////////////////////////////:

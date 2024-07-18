@@ -280,7 +280,8 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 				this.addActionButton('confirmSelectionButton', _('Confirm'), async (e: any) => {
 					console.log('Confirming selection', e);
 					
-					if (this.playerPlayed0() == 0 && this.playerPlayed1() == 0) {
+					if (this.playerPlayed0() == 0 || this.playerPlayed1() == 0) {
+						this.showMessage(_('You must play both cards before confirming!'), 'error');
 						return;
 					}
 
@@ -321,6 +322,20 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// 		this.instantMatch();
 	// 	}
 	// }
+
+	getSamuraiOffsets() {
+		let battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
+		let play_area_bounds = $('play-area').getBoundingClientRect();
+		let target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
+		let target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
+
+		return {
+			player_x: (target_bounds_player.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%',
+			player_y: (target_bounds_player.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%',
+			opponent_x: (target_bounds_opponent.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%',
+			opponent_y: (target_bounds_opponent.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%'
+		}
+	}
 
 	instantMatch() {
 		// print all fields
@@ -421,6 +436,9 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		if (this.opponentSpecialPlayed())
 			player_area.classList.add("opponent-played-special");
+		($('special_icon') as HTMLImageElement).src =
+			this.formatSVGURL(this.opponentSpecialPlayed() ? 'opponent-icon-discard': 'opponent-icon-hand');
+
 		if (this.playerSpecialPlayed())
 			player_area.classList.add("player-played-special");
 
@@ -456,18 +474,13 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		// }
 
 		// Set the positions and stance
-		let battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
-
 		let player_samurai = $('player_samurai') as HTMLElement;
 		let opponent_samurai = $('opponent_samurai') as HTMLElement;
-		let play_area_bounds = $('play-area').getBoundingClientRect();
-		let target_bounds_player = $('battlefield_position_' + this.playerPosition()).getBoundingClientRect();
-		let target_bounds_opponent = $('battlefield_position_' + (battlefieldSize - this.opponentPosition() + 1)).getBoundingClientRect();
-
-		player_samurai.style.left = (target_bounds_player.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
-		player_samurai.style.top = (target_bounds_player.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
-		opponent_samurai.style.left = (target_bounds_opponent.left - play_area_bounds.left) / play_area_bounds.width * 100 + '%';
-		opponent_samurai.style.top = (target_bounds_opponent.top - play_area_bounds.top) / play_area_bounds.height * 100 + '%';
+		const { player_x, player_y, opponent_x, opponent_y } = this.getSamuraiOffsets();
+		player_samurai.style.left = player_x;
+		player_samurai.style.top = player_y;
+		opponent_samurai.style.left = opponent_x;
+		opponent_samurai.style.top = opponent_y;
 
 
 		this.setCardSlot('player_samurai', this.stanceURL(true));
@@ -703,27 +716,27 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		this.subscribeNotif('before first resolve',  this.notif_instantMatch);
 		this.subscribeNotif('before second resolve',  this.notif_instantMatch);
 		this.subscribeNotif('after resolve',  this.notif_instantMatch);
-		this.subscribeNotif('player(s) charged',  this.notif_instantMatch);
-		this.subscribeNotif('player(s) moved',  this.notif_instantMatch);
-		this.subscribeNotif('player(s) changed stance',  this.notif_instantMatch);
-		this.subscribeNotif('player(s) attacked',  this.notif_instantMatch);
+		this.subscribeNotif('player(s) charged',  this.notif_playerMoved);
+		this.subscribeNotif('player(s) moved',  this.notif_playerMoved);
+		this.subscribeNotif('player(s) changed stance',  this.notif_playerStance);
+		this.subscribeNotif('player(s) attacked',  this.notif_playerAttacked);
 		this.subscribeNotif('player(s) hit',  this.notif_instantMatch);
 		this.subscribeNotif('log', a => console.log('log:', a));
 
 		this.notifqueue.setSynchronous( 'battlefield setup', 1000 );
 		// this.notifqueue.setSynchronous( 'played card', 1000 );
 		// this.notifqueue.setSynchronous( 'undo card', 1000 );
-		this.notifqueue.setSynchronous( 'before first resolve', 1000 );
-		this.notifqueue.setSynchronous( 'before second resolve', 1000 );
+		this.notifqueue.setSynchronous( 'before first resolve', 2000 );
+		this.notifqueue.setSynchronous( 'before second resolve', 2000 );
 		this.notifqueue.setSynchronous( 'after resolve', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) charged', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) moved', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) changed stance', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) attacked', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) hit', 1000 );
+		this.notifqueue.setSynchronous( 'player(s) charged', 1200 );
+		this.notifqueue.setSynchronous( 'player(s) moved', 1200 );
+		this.notifqueue.setSynchronous( 'player(s) changed stance', 1200 );
+		this.notifqueue.setSynchronous( 'player(s) attacked', 2200 );
+		this.notifqueue.setSynchronous( 'player(s) hit', 1200 );
 	}
 
-	notif_instantMatch = (notif: NotifFrom<GameStateData & { winner?: string }>) =>
+	notif_instantMatch = (notif: NotifFrom<GameStateData & { winner?: number }>) =>
 	{
 		console.log('notif_placeAllCards', notif);
 		// if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
@@ -735,7 +748,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		for (let player in this.gamedatas.players)
 		{
-			let winner = notif.args.winner == player;
+			let winner = notif.args.winner?.toString() == player;
 			if (player == this.player_id.toString())
 			{
 				this.scoreCtrl[player]?.toValue(
@@ -751,6 +764,207 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		}
 	}
 
+	async notif_playerStance(notif: NotifFrom<GameStateData>)
+	{
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions();
+
+		const first = this.playerPlayed0() != 0 && this.opponentPlayed0() != 0;
+		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
+		const opponent_card = first ? this.opponentPlayed0() : this.opponentPlayed1();
+		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
+		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
+
+		// Slide the samurai to the new positions:
+		let player_samurai = $('player_samurai') as HTMLElement;
+		let opponent_samurai = $('opponent_samurai') as HTMLElement;
+
+		if (player_card == 8 && this.playerSpecialCard() != 3 || player_card == 7)
+			player_card_div.classList.add('evaluating');
+		if (opponent_card == 8 && this.opponentSpecialCard() != 3 || opponent_card == 7)
+			opponent_card_div.classList.add('evaluating');
+
+		const player_area = $('game-area');
+
+		if (this.playerStance() == 0 && !player_area.classList.contains("player-heaven")) {
+			player_samurai.style.transition = '750ms rotate';
+			player_area.classList.replace("player-earth", "player-heaven");
+		}
+		else if (this.playerStance() == 1 && !player_area.classList.contains("player-earth")) {
+			player_samurai.style.transition = '750ms rotate';
+			player_area.classList.replace("player-heaven", "player-earth");
+		}
+
+		if (this.opponentStance() == 0 && !player_area.classList.contains("opponent-heaven")) {
+			opponent_samurai.style.transition = '750ms rotate';
+			player_area.classList.replace("opponent-earth", "opponent-heaven");
+		}
+		else if (this.opponentStance() == 1 && !player_area.classList.contains("opponent-earth")) {
+			opponent_samurai.style.transition = '750ms rotate';
+			player_area.classList.replace("opponent-heaven", "opponent-earth");
+		}
+
+		await new Promise(res => setTimeout(res, 1000));
+
+		player_samurai.style.transition = '';
+		opponent_samurai.style.transition = '';
+		player_card_div.classList.remove('evaluating');
+		opponent_card_div.classList.remove('evaluating');
+		this.instantMatch();
+	}
+
+	async notif_playerMoved(notif: NotifFrom<GameStateData>)
+	{
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions();
+
+		const first = this.playerPlayed0() != 0 && this.opponentPlayed0() != 0;
+		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
+		const opponent_card = first ? this.opponentPlayed0() : this.opponentPlayed1();
+		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
+		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
+
+		if (player_card == 1 || player_card == 2 || player_card == 6)
+			player_card_div.classList.add('evaluating');
+		if (opponent_card == 1 || opponent_card == 2 || opponent_card == 6)
+			opponent_card_div.classList.add('evaluating');
+
+		// Slide the samurai to the new positions:
+		let player_samurai = $('player_samurai') as HTMLElement;
+		let opponent_samurai = $('opponent_samurai') as HTMLElement;
+		player_samurai.style.transition = '750ms left, 750ms top';
+		opponent_samurai.style.transition = '750ms left, 750ms top';
+		this.instantMatch();
+
+		await new Promise(res => setTimeout(res, 1000));
+
+		player_samurai.style.transition = '';
+		opponent_samurai.style.transition = '';
+		player_card_div.classList.remove('evaluating');
+		opponent_card_div.classList.remove('evaluating');
+	}
+
+	async notif_playerAttacked(notif: NotifAs<'player(s) attacked'>)
+	{
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions();
+		this.instantMatch(); // there should be no updates here.
+
+		let first = notif.args.first;
+		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
+		const opponent_card = first ? this.opponentPlayed0() : this.opponentPlayed1();
+		const player_position = this.playerPosition() ;
+		const opponent_position = this.opponentPosition();
+		const battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
+
+		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
+		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
+
+		const effectAndPosition = (card: number, position: number, stance: number): [number, number[], boolean] => {
+			switch (card)
+			{
+				case 3: return [0, [position + 2], stance == 0];
+				case 4: return [1, [position + 1], stance == 1];
+				case 5: return [4, [position], true];
+				case 8: 
+					switch (this.playerSpecialCard())
+					{
+						case 1: return [3, [position, position + 1], stance == 0];
+						case 2: return [3, [position + 2, position + 3], stance == 0];
+						case 3: return [2, [], true];
+						default: throw new Error('Invalid special card: ' + this.playerSpecialCard());
+					}
+				default: return [-1, [], false];
+			}
+		}
+
+		let [player_effect, player_hit_positions, player_stance_good] = effectAndPosition(player_card, player_position, this.playerStance());
+		let [opponent_effect, opponent_hit_positions, opponent_stance_good] = effectAndPosition(opponent_card, opponent_position, this.opponentStance());
+
+		opponent_hit_positions = opponent_hit_positions.map(p => battlefieldSize - p + 1);
+
+		console.log('player_effect:', player_effect, 'player_hit_positions:', player_hit_positions);
+		console.log('opponent_effect:', opponent_effect, 'opponent_hit_positions:', opponent_hit_positions);
+
+		let player_hit = player_hit_positions.includes(battlefieldSize - opponent_position + 1);
+		let opponent_hit = opponent_hit_positions.includes(player_position);
+
+		let player_effect_div = $('player-slash-effect') as HTMLElement;
+		let opponent_effect_div = $('opponent-slash-effect') as HTMLElement;
+
+		// Check if this player played cards 3,4,5, or 8
+		
+		if (player_effect != -1)
+		{
+			player_card_div.classList.add('evaluating');
+
+			if (player_stance_good)
+			{
+				for (let pos of player_hit_positions) {
+					$('battlefield_position_' + pos)?.classList.add('player_highlight');
+				}
+			}
+			if (!player_stance_good) {
+				$('player_samurai')?.classList.add('attack-stance-bad');
+			}
+		}
+
+		if (opponent_effect != -1)
+		{
+			opponent_card_div.classList.add('evaluating');
+
+			if (opponent_stance_good)
+			{
+				for (let pos of opponent_hit_positions) {
+					$('battlefield_position_' + pos)?.classList.add('opponent_highlight');
+				}
+			}
+			if (!opponent_stance_good) {
+				$('opponent_samurai')?.classList.add('attack-stance-bad');
+			}
+		}
+
+		await new Promise(res => setTimeout(res, 1000));
+
+		if (player_effect != -1 && player_stance_good)
+		{
+			player_effect_div.classList.add('slash-effect-anim_' + player_effect);
+			this.placeOnObject('player-slash-effect', 'opponent_samurai');
+			if (!player_hit)
+				player_effect_div.classList.add('player_miss');
+		}
+
+		if (opponent_effect != -1 && opponent_stance_good)
+		{
+			opponent_effect_div.classList.add('slash-effect-anim_' + opponent_effect);
+			this.placeOnObject('opponent-slash-effect', 'player_samurai');
+			if (!opponent_hit)
+				opponent_effect_div.classList.add('opponent_miss');
+		}
+
+		await new Promise(res => setTimeout(res, 1000));
+
+		for (let pos of player_hit_positions) {
+			$('battlefield_position_' + pos)?.classList.remove('player_highlight');
+		}
+
+		for (let pos of opponent_hit_positions) {
+			$('battlefield_position_' + pos)?.classList.remove('opponent_highlight');
+		}
+
+		player_effect_div.classList.remove('slash-effect-anim_' + player_effect);
+		opponent_effect_div.classList.remove('slash-effect-anim_' + opponent_effect);
+		player_effect_div.classList.remove('player_miss');
+		opponent_effect_div.classList.remove('opponent_miss');
+		$('player_samurai')?.classList.remove('attack-stance-bad');
+		$('opponent_samurai')?.classList.remove('attack-stance-bad');
+		player_card_div.classList.remove('evaluating');
+		opponent_card_div.classList.remove('evaluating');
+	}
+
 	//
 	// #endregion
 	//
@@ -758,3 +972,8 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 dojo.setObject( "bgagame.kiriaitheduel", KiriaiTheDuel );
 (window.bgagame ??= {}).kiriaitheduel = KiriaiTheDuel;
+
+// #background-area should scroll with X% the speed of the page (if is a fixed element, so just change the top value)
+window.addEventListener('scroll', () => {
+	($('background-area') as HTMLElement).style.top = -(window.scrollY * 0.35) + 'px';
+});

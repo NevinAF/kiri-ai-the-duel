@@ -50,7 +50,7 @@ $this->userErrors = array (
 	'double play card' => clienttranslate("You cannot play the same card twice in a turn. Trying to play %s twice."),
 	'already played first' => clienttranslate("You have already played your first card for this turn."),
 	'already played second' => clienttranslate("You have already played your second card for this turn."),
-	'not all cards played' => clienttranslate("Trying to resolve cards by not all cards were played!"),
+	'not all cards played' => clienttranslate("You have not picked all of your cards for this turn!"),
 	'player not found in db' => clienttranslate("Player was somehow not found in database."),
 );
 

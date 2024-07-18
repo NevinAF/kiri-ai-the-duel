@@ -21,8 +21,8 @@ interface NotifTypes {
 	'player(s) charged': GameStateData;
 	'player(s) moved': GameStateData;
 	'player(s) changed stance': GameStateData;
-	'player(s) attacked': GameStateData;
-	'player(s) hit': GameStateData & { redScore?: number, blueScore?: number };
+	'player(s) attacked': GameStateData & { first: boolean };
+	'player(s) hit': GameStateData & { winner: Player['id'] };
 
 	'log': any;
 }
