@@ -141,16 +141,6 @@ const PLAYER_IMAGES = "{PLAYER_IMAGES}";
 const PLAYER_COLOR = "{PLAYER_COLOR}";
 const OPPONENT_COLOR = "{OPPONENT_COLOR}";
 
-
-// var jstpl_tooltip =
-// '<div class="tooltip-container">\
-// 	<h3>${title}</h3>\
-// 	<div class="tooltip-tag tooltip-type-${type}">${typeName}</div>\
-// 	<div class="tooltip-desc">${desc}</div>\
-// 	<div class="tooltip-img"><img src="{src}"/></div>\
-// 	<div class="tooltip-desc" style="font-style: italic;">${flavor}</div>\
-// </div>'
-
 </script>
 
 {OVERALL_GAME_FOOTER}
