@@ -11,5 +11,23 @@
  * This file is enforced by schema file located at 'bga-ts-template/template/schema'. If you are using VS Code, this schema file will be linked to this file automatically if 'generate-vscode-files' is set to true in 'template.config.jsonc. Hover over any fields for more information.
  */
 {
-	"$schema": "../../node_modules/bga-ts-template/schema/stats.schema.json"
+	"$schema": "../../node_modules/bga-ts-template/schema/stats.schema.json",
+	"player": {
+		"winning_attack": {
+			"id": 10,
+			"name": "Winning Attack",
+			"type": "int"
+		}
+	},
+	"value_labels": {
+		"10": [
+			"None (loss)",
+			"High Strike",
+			"Low Strike",
+			"Balanced Strike",
+			"Kesa Strike",
+			"Zan-Tetsu Strike",
+			"Counterattack"
+		]
+	}
 }

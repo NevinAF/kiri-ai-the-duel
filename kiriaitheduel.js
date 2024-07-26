@@ -850,27 +850,27 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                             _p.sent();
                             animateCard = function (card, special, prefix, positions, hit) {
                                 if (card != 8) {
-                                    if (player_hit_positions.length == 1) {
+                                    if (positions.length == 1) {
                                         $(prefix + '-slash-effect_0').classList.add('slash-effect-anim-' + prefix + '-' + _this.card_names[card - 1]);
                                         _this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
                                     }
                                 }
                                 else if (special == 1) {
-                                    if (player_hit_positions.length >= 1) {
+                                    if (positions.length >= 1) {
                                         $(prefix + '-slash-effect_0').classList.add('slash-effect-anim-' + prefix + '-kesa-0');
                                         _this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
                                     }
-                                    if (player_hit_positions.length >= 2) {
+                                    if (positions.length >= 2) {
                                         $(prefix + '-slash-effect_1').classList.add('slash-effect-anim-' + prefix + '-kesa-1');
                                         _this.placeOnObject(prefix + '-slash-effect_1', 'battlefield_position_' + positions[1]);
                                     }
                                 }
                                 else if (special == 2) {
-                                    if (player_hit_positions.length >= 1) {
+                                    if (positions.length >= 1) {
                                         $(prefix + '-slash-effect_0').classList.add('slash-effect-anim-' + prefix + '-zantetsu-0');
                                         _this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
                                     }
-                                    if (player_hit_positions.length >= 2) {
+                                    if (positions.length >= 2) {
                                         $(prefix + '-slash-effect_1').classList.add('slash-effect-anim-' + prefix + '-zantetsu-1');
                                         _this.placeOnObject(prefix + '-slash-effect_1', 'battlefield_position_' + positions[1]);
                                     }

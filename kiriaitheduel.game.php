@@ -113,6 +113,7 @@ class KiriaiTheDuel extends Table
 		{
 			$color = array_shift( $default_colors );
 			$values[] = "('".$player_id."','$color','".$player['player_canal']."','".addslashes( $player['player_name'] )."','".addslashes( $player['player_avatar'] )."')";
+			self::initStat('player', 'winning_attack', 0, $player_id);
 		}
 		$sql .= implode( ',', $values );
 		self::DbQuery( $sql );
@@ -120,6 +121,7 @@ class KiriaiTheDuel extends Table
 		self::reloadPlayersBasicInfos();
 
 		self::setGameStateInitialValue( self::PRIMARY_PLAYER_ID, array_key_first($players) );
+
 	}
 
 	/*
@@ -978,6 +980,16 @@ class KiriaiTheDuel extends Table
 
 			if ($wasHit)
 			{
+				switch ($primary_card)
+				{
+				case PlayedCard::HIGH_STRIKE: $winningCard = 1; break;
+				case PlayedCard::LOW_STRIKE: $winningCard = 2; break;
+				case PlayedCard::BALANCED_STRIKE: $winningCard = 3; break;
+				case PlayedCard::SPECIAL: $winningCard = 3 + $primary_special_played; break;
+				default: $winningCard = 0; break;
+				}
+
+				self::setStat($winningCard, 'winning_attack', $primary_id);
 				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
 				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 				$this->gamestate->nextState( "endGame" );
@@ -998,6 +1010,16 @@ class KiriaiTheDuel extends Table
 
 			if ($wasHit)
 			{
+				switch ($secondary_card)
+				{
+				case PlayedCard::HIGH_STRIKE: $winningCard = 1; break;
+				case PlayedCard::LOW_STRIKE: $winningCard = 2; break;
+				case PlayedCard::BALANCED_STRIKE: $winningCard = 3; break;
+				case PlayedCard::SPECIAL: $winningCard = 3 + $secondary_special_played; break;
+				default: $winningCard = 0; break;
+				}
+
+				self::setStat($winningCard, 'winning_attack', $secondary_id);
 				self::setGameStateValue( self::PRIMARY_PLAYER_STATE, $primary_state );
 				self::setGameStateValue( self::SECONDARY_PLAYER_STATE, $secondary_state );
 				$this->gamestate->nextState( "endGame" );

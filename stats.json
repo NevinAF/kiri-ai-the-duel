@@ -1,1 +1,1 @@
-{}
+{	"player": {		"winning_attack": {			"id": 10,			"name": "Winning Attack",			"type": "int"		}	},	"value_labels": {		"10": [			"None (loss)",			"High Strike",			"Low Strike",			"Balanced Strike",			"Kesa Strike",			"Zan-Tetsu Strike",			"Counterattack"		]	}}
