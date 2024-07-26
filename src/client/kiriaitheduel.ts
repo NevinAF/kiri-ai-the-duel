@@ -24,7 +24,6 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 {
 	/** @gameSpecific See {@link Gamegui.setup} for more information. */
 	isInitialized: boolean = false;
-	color_path: string = 'Red';
 	actionQueue = new PlayerActionQueue(this);
 	confirmationTimeout = new ConfirmationTimeout('leftright_page_wrapper');
 
@@ -44,6 +43,19 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		[_('Waiting to draw starting cards...'), _('Click to play/return this card.')]
 	];
 
+	card_names: string[] = [
+		'approach',
+		'charge',
+		'high-strike',
+		'low-strike',
+		'balance-strike',
+		'retreat',
+		'change-stance',
+		'special'
+	];
+
+	hide_second_for_animations: boolean = false;
+
 	//
 	// #region Gamedata Wrappers
 	//
@@ -52,7 +64,13 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	playerStance(): number { return (this.gamedatas.player_state >> 4) & 0b1; }
 	playerHit(): boolean { return ((this.gamedatas.player_state >> 5) & 0b1) == 1; }
 	playerPlayed0(): number { return (this.gamedatas.player_state >> 6) & 0b1111; }
-	playerPlayed1(): number { return (this.gamedatas.player_state >> 10) & 0b1111; }
+	playerPlayed1(): number {
+		let card = (this.gamedatas.player_state >> 10) & 0b1111;
+		// <-- THIS IS ONLY FOR DRAMATIC EFFECT. THIS IS NOT HIDDEN INFORMATION AFTER ANIMATIONS PLAY. --> //
+		if (this.hide_second_for_animations && card != 0 && this.isSpectator)
+			return 9;
+		return card;
+	}
 	playerDiscarded(): number { return (this.gamedatas.player_state >> 14) & 0b111; }
 	playerSpecialCard(): number { return (this.gamedatas.player_state >> 17) & 0b11; }
 	playerSpecialPlayed(): boolean { return ((this.gamedatas.player_state >> 19) & 0b1) == 1; }
@@ -61,7 +79,13 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	opponentStance(): number { return (this.gamedatas.opponent_state >> 4) & 0b1; }
 	opponentHit(): boolean { return ((this.gamedatas.opponent_state >> 5) & 0b1) == 1; }
 	opponentPlayed0(): number { return (this.gamedatas.opponent_state >> 6) & 0b1111; }
-	opponentPlayed1(): number { return (this.gamedatas.opponent_state >> 10) & 0b1111; }
+	opponentPlayed1(): number {
+		let card = (this.gamedatas.opponent_state >> 10) & 0b1111;
+		// <-- THIS IS ONLY FOR DRAMATIC EFFECT. THIS IS NOT HIDDEN INFORMATION AFTER ANIMATIONS PLAY. --> //
+		if (this.hide_second_for_animations && card != 0)
+			return 9;
+		return card;
+	}
 	opponentDiscarded(): number { return (this.gamedatas.opponent_state >> 14) & 0b111; }
 	opponentSpecialCard(): number { return (this.gamedatas.opponent_state >> 17) & 0b11; }
 	opponentSpecialPlayed(): boolean { return ((this.gamedatas.opponent_state >> 19) & 0b1) == 1; }
@@ -74,7 +98,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 	// #region Document/URL Utilities
 	//
 
-	formatSVGURL(name: string) { return `${g_gamethemeurl}img/${this.color_path}/${name}.svg` }
+	formatSVGURL(name: string) { return `${g_gamethemeurl}${PLAYER_IMAGES}/${name}.svg` }
 
 	stanceURL(player: boolean) {
 		return this.formatSVGURL(`${player ? 'player' : 'opponent'}-stance-${(player ? this.playerHit() : this.opponentHit()) ? 'damaged' : 'healthy'}`);
@@ -93,12 +117,14 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		if (typeof slot == 'string')
 			slot = $(slot) as Element;
 
-		if (slot instanceof HTMLElement && slot.children.length > 0 && slot.children[0] instanceof HTMLImageElement)
-		{
-			(slot.children[0] as HTMLImageElement).style.display = src ? 'block' : 'none';
-			if (src != null)
-				(slot.children[0] as HTMLImageElement).src = src;
-			return;
+		for (let i = 0; i < slot.children.length; i++) {
+			let child = slot.children[i];
+			if (child instanceof HTMLImageElement) {
+				child.style.display = src ? 'block' : 'none';
+				if (src != null)
+					child.src = src;
+				return;
+			}
 		}
 
 		console.error('Invalid slot: ', slot);
@@ -115,14 +141,11 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 	setup(gamedatas: Gamedatas)
 	{
-		console.log( "Starting game setup", this.gamedatas );
+		// console.log( "Starting game setup", this.gamedatas );
 
 		this.actionQueue.actionTitleLockingStrategy = 'actionbar';
 
-		console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id] );
-
-		if (this.gamedatas.players[this.player_id]!.color == '4e93a6')
-			this.color_path = 'Blue';
+		// console.log( this.gamedatas.players, this.player_id, this.gamedatas.players[this.player_id] );
 
 		this.server_player_state = gamedatas.player_state;
 
@@ -139,9 +162,9 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		this.addTooltip('opponent_played_0', _(`This spot show's your opponent's first action for the turn.`), '');
 		this.addTooltip('opponent_played_1', _(`This spot show's your opponent's second action for the turn. They will not be able to play the card in this slot next round.`), '');
 
+		// this.addTooltip('opponent_hand_icon', '', _('Hover to show opponent\'s hand.'));
 		this.addTooltip('discard_icon', _('This icon shows the last card that was discarded by the opponent.'), _('Hover to show opponent\'s hand.'));
 		this.addTooltip('special_icon', _('This icon shows if your opponent still has a hidden special card.'), _('Hover to show opponent\'s hand.'));
-		
 
 		this.instantMatch();
 
@@ -157,7 +180,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		}
 
 		// Add on hover events for adding show-opponent-area class to the play-area.
-		[$('discard_icon'), $('special_icon')].forEach(target =>
+		[$('discard_icon'), $('special_icon'), $('opponent_hand_icon')].forEach(target =>
 		{
 			target?.addEventListener('mouseenter', () => {
 				$('hands').classList.add('show-opponent-area');
@@ -170,35 +193,37 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		this.isInitialized = true;
 
-		console.log( "Ending game setup" );
+		// console.log( "Ending game setup" );
 	}
 
 	onEnteringState(stateName: GameStateName, args: CurrentStateArgs): void
 	{
-		console.log( 'Entering state: '+ stateName, args );
+		// console.log( 'Entering state: '+ stateName, args );
 		
 		switch( stateName )
 		{
-		
-		/* Example:
-		
-		case 'myGameState':
-		
-			// Show some HTML block at this game state
-			dojo.style( 'my_html_block_id', 'display', 'block' );
-			
-			break;
-		*/
-		
-		
-		default:
+		case "gameEnd":
+			for (let player in this.gamedatas.players)
+			{
+				if (player == this.player_id.toString())
+				{
+					if (this.scoreCtrl[player]?.getValue() == 2)
+						$('opponent_samurai')?.classList.add('loser');
+				}
+				else
+				{
+					if (this.scoreCtrl[player]?.getValue() == 2)
+						$('player_samurai')?.classList.add('loser');
+				}
+			}
+			this.hide_second_for_animations = false;
 			break;
 		}
 	}
 
 	onLeavingState(stateName: GameStateName): void
 	{
-		console.log( 'Leaving state: '+ stateName );
+		// console.log( 'Leaving state: '+ stateName );
 		
 		switch( stateName )
 		{
@@ -229,7 +254,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 	onUpdateActionButtons(stateName: GameStateName, args: AnyGameStateArgs | null): void
 	{
-		console.log( 'onUpdateActionButtons: '+stateName, args );
+		// console.log( 'onUpdateActionButtons: '+stateName, args );
 
 		if( this.isCurrentPlayerActive() )
 		{
@@ -259,7 +284,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 				}));
 
 				this.addActionButton('confirmBattlefieldButton', _('Confirm'), async (e: any) => {
-					console.log('Confirming selection', e);
+					// console.log('Confirming selection', e);
 
 					if (!this.checkAction('confirmedStanceAndPosition'))
 						return;
@@ -278,7 +303,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			case "pickCards":
 
 				this.addActionButton('confirmSelectionButton', _('Confirm'), async (e: any) => {
-					console.log('Confirming selection', e);
+					// console.log('Confirming selection', e);
 					
 					if (this.playerPlayed0() == 0 || this.playerPlayed1() == 0) {
 						this.showMessage(_('You must play both cards before confirming!'), 'error');
@@ -339,36 +364,25 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 	instantMatch() {
 		// print all fields
-		console.log('instantMatch: ', {
-			playerPosition: this.playerPosition(),
-			playerStance: this.playerStance(),
-			playerHit: this.playerHit(),
-			playerPlayed0: this.playerPlayed0(),
-			playerPlayed1: this.playerPlayed1(),
-			playerDiscarded: this.playerDiscarded(),
-			playerSpecialCard: this.playerSpecialCard(),
-			playerSpecialPlayed: this.playerSpecialPlayed(),
-			opponentPosition: this.opponentPosition(),
-			opponentStance: this.opponentStance(),
-			opponentHit: this.opponentHit(),
-			opponentPlayed0: this.opponentPlayed0(),
-			opponentPlayed1: this.opponentPlayed1(),
-			opponentDiscarded: this.opponentDiscarded(),
-			opponentSpecialCard: this.opponentSpecialCard(),
-		});
+		// console.log('instantMatch: ', {
+		// 	playerPosition: this.playerPosition(),
+		// 	playerStance: this.playerStance(),
+		// 	playerHit: this.playerHit(),
+		// 	playerPlayed0: this.playerPlayed0(),
+		// 	playerPlayed1: this.playerPlayed1(),
+		// 	playerDiscarded: this.playerDiscarded(),
+		// 	playerSpecialCard: this.playerSpecialCard(),
+		// 	playerSpecialPlayed: this.playerSpecialPlayed(),
+		// 	opponentPosition: this.opponentPosition(),
+		// 	opponentStance: this.opponentStance(),
+		// 	opponentHit: this.opponentHit(),
+		// 	opponentPlayed0: this.opponentPlayed0(),
+		// 	opponentPlayed1: this.opponentPlayed1(),
+		// 	opponentDiscarded: this.opponentDiscarded(),
+		// 	opponentSpecialCard: this.opponentSpecialCard(),
+		// });
 
 		const player_area = $('game-area');
-
-		const card_names: string[] = [
-			'approach',
-			'charge',
-			'high-strike',
-			'low-strike',
-			'balance-strike',
-			'retreat',
-			'change-stance',
-			'special'
-		];
 		
 		player_area.className = '';
 
@@ -384,7 +398,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 			if (card != 0 && card != 9)
 				player_area.classList.add(
-					card_names[card - 1] + (player ? '-player' : '-opponent') + "-played" + (first ? '-first' : '-second'));
+					this.card_names[card - 1] + (player ? '-player' : '-opponent') + "-played" + (first ? '-first' : '-second'));
 
 			target.classList.remove('bottomPicked');
 
@@ -430,9 +444,9 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		// Discards
 		if (this.playerDiscarded() != 0)
-			player_area.classList.add(card_names[this.playerDiscarded() - 1] + "-player-discarded");
+			player_area.classList.add(this.card_names[this.playerDiscarded() - 1] + "-player-discarded");
 		if (this.opponentDiscarded() != 0)
-			player_area.classList.add(card_names[this.opponentDiscarded() - 1] + "-opponent-discarded");
+			player_area.classList.add(this.card_names[this.opponentDiscarded() - 1] + "-opponent-discarded");
 
 		if (this.opponentSpecialPlayed())
 			player_area.classList.add("opponent-played-special");
@@ -547,17 +561,18 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		};
 	}
 
-	updateCardsWithPredictions()
+	updateCardsWithPredictions(match: boolean = true)
 	{
 		let cards = this.server_player_state;
 		for (let mod of this.predictionModifiers) {
 			// Print cards as binary
-			console.log('cards:', cards.toString(2));
+			// console.log('cards:', cards.toString(2));
 			cards = mod.func(cards);
 		}
-			console.log('cards:', cards.toString(2));
+			// console.log('cards:', cards.toString(2));
 			this.gamedatas.player_state = cards;
-		this.instantMatch();
+		if (match)
+			this.instantMatch();
 	}
 
 	//
@@ -574,24 +589,24 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		// This should be good enough to check all actions.
 		if (!this.checkAction('pickedFirst', true)) {
-			console.log('Not your turn!');
+			// console.log('Not your turn!');
 			return;
 		}
 
 		if (this.actionQueue.queue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
-			console.log('Already confirmed cards! There is no backing out now!');
+			// console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
 
 		if (index == this.playerDiscarded())
 		{
-			console.log('This card has already been discarded!');
+			// console.log('This card has already been discarded!');
 			return;
 		}
 		
 		if (index == 6 && this.playerSpecialPlayed())
 		{
-			console.log('Thee special card has already been played!');
+			// console.log('Thee special card has already been played!');
 			return;
 		}
 
@@ -616,7 +631,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		}
 
 		if (first != 0 && second != 0) {
-			console.log('Both cards have already been played!');
+			// console.log('Both cards have already been played!');
 			return;
 		}
 
@@ -666,7 +681,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		evt?.preventDefault();
 
 		if (this.actionQueue.queue?.some(a => a.action === 'confirmedCards' && a.state === 'inProgress')) {
-			console.log('Already confirmed cards! There is no backing out now!');
+			// console.log('Already confirmed cards! There is no backing out now!');
 			return;
 		}
 
@@ -708,43 +723,78 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 	setupNotifications()
 	{
-		console.log( 'notifications subscriptions setup' );
+		// console.log( 'notifications subscriptions setup' );
 
-		this.subscribeNotif('battlefield setup', this.notif_instantMatch);
-		this.subscribeNotif('played card',  this.notif_instantMatch);
-		this.subscribeNotif('undo card',  this.notif_instantMatch);
-		this.subscribeNotif('before first resolve',  this.notif_instantMatch);
-		this.subscribeNotif('before second resolve',  this.notif_instantMatch);
-		this.subscribeNotif('after resolve',  this.notif_instantMatch);
-		this.subscribeNotif('player(s) charged',  this.notif_playerMoved);
-		this.subscribeNotif('player(s) moved',  this.notif_playerMoved);
-		this.subscribeNotif('player(s) changed stance',  this.notif_playerStance);
-		this.subscribeNotif('player(s) attacked',  this.notif_playerAttacked);
-		this.subscribeNotif('player(s) hit',  this.notif_instantMatch);
-		this.subscribeNotif('log', a => console.log('log:', a));
+		if (this.isSpectator)
+		{
+			this.subscribeNotif('_spectator_ battlefield setup', this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ played card',  this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ undo card',  this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ before first resolve',  this.notif_beforeFirstResolve);
+			this.subscribeNotif('_spectator_ before second resolve',  this.notif_beforeSecondResolve);
+			this.subscribeNotif('_spectator_ after resolve',  this.notif_afterResolve);
+			this.subscribeNotif('_spectator_ player(s) charged',  this.notif_playerMoved);
+			this.subscribeNotif('_spectator_ player(s) moved',  this.notif_playerMoved);
+			this.subscribeNotif('_spectator_ player(s) changed stance',  this.notif_playerStance);
+			this.subscribeNotif('_spectator_ player(s) attacked',  this.notif_playerAttacked);
+			this.subscribeNotif('_spectator_ player(s) hit',  this.notif_instantMatch);
+			this.notifqueue.setSynchronous( '_spectator_ battlefield setup', 1000 );
+			this.notifqueue.setSynchronous( '_spectator_ before first resolve', 2000 );
+			this.notifqueue.setSynchronous( '_spectator_ before second resolve', 1800 );
+			this.notifqueue.setSynchronous( '_spectator_ after resolve', 1000 );
+			this.notifqueue.setSynchronous( '_spectator_ player(s) charged', 2000 );
+			this.notifqueue.setSynchronous( '_spectator_ player(s) moved', 2000 );
+			this.notifqueue.setSynchronous( '_spectator_ player(s) changed stance', 2000 );
+			this.notifqueue.setSynchronous( '_spectator_ player(s) attacked', 3000 );
+			this.notifqueue.setSynchronous( '_spectator_ player(s) hit', 2000 );
+		}
+		else {
+			this.subscribeNotif('battlefield setup', this.notif_instantMatch);
+			this.subscribeNotif('played card',  this.notif_instantMatch);
+			this.subscribeNotif('undo card',  this.notif_instantMatch);
+			this.subscribeNotif('before first resolve',  this.notif_beforeFirstResolve);
+			this.subscribeNotif('before second resolve',  this.notif_beforeSecondResolve);
+			this.subscribeNotif('after resolve',  this.notif_afterResolve);
+			this.subscribeNotif('player(s) charged',  this.notif_playerMoved);
+			this.subscribeNotif('player(s) moved',  this.notif_playerMoved);
+			this.subscribeNotif('player(s) changed stance',  this.notif_playerStance);
+			this.subscribeNotif('player(s) attacked',  this.notif_playerAttacked);
+			this.subscribeNotif('player(s) hit',  this.notif_instantMatch);
+			this.notifqueue.setSynchronous( 'battlefield setup', 1000 );
+			this.notifqueue.setSynchronous( 'before first resolve', 2000 );
+			this.notifqueue.setSynchronous( 'before second resolve', 1800 );
+			this.notifqueue.setSynchronous( 'after resolve', 1000 );
+			this.notifqueue.setSynchronous( 'player(s) charged', 2000 );
+			this.notifqueue.setSynchronous( 'player(s) moved', 2000 );
+			this.notifqueue.setSynchronous( 'player(s) changed stance', 2000 );
+			this.notifqueue.setSynchronous( 'player(s) attacked', 3000 );
+			this.notifqueue.setSynchronous( 'player(s) hit', 2000 );
 
-		this.notifqueue.setSynchronous( 'battlefield setup', 1000 );
-		// this.notifqueue.setSynchronous( 'played card', 1000 );
-		// this.notifqueue.setSynchronous( 'undo card', 1000 );
-		this.notifqueue.setSynchronous( 'before first resolve', 2000 );
-		this.notifqueue.setSynchronous( 'before second resolve', 2000 );
-		this.notifqueue.setSynchronous( 'after resolve', 1000 );
-		this.notifqueue.setSynchronous( 'player(s) charged', 1200 );
-		this.notifqueue.setSynchronous( 'player(s) moved', 1200 );
-		this.notifqueue.setSynchronous( 'player(s) changed stance', 1200 );
-		this.notifqueue.setSynchronous( 'player(s) attacked', 2200 );
-		this.notifqueue.setSynchronous( 'player(s) hit', 1200 );
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ battlefield setup', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ played card', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ undo card', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ before first resolve', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ before second resolve', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ after resolve', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ player(s) charged', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ player(s) moved', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ player(s) changed stance', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ player(s) attacked', () => true);
+			this.notifqueue.setIgnoreNotificationCheck('_spectator_ player(s) hit', () => true);
+		}
+
+		// this.subscribeNotif('log', a => console.log('log:', a));
 	}
 
 	notif_instantMatch = (notif: NotifFrom<GameStateData & { winner?: number }>) =>
 	{
-		console.log('notif_placeAllCards', notif);
+		// console.log('notif_placeAllCards', notif);
+
 		// if (this.gamedatas.gamestate.name !== 'setupBattlefield' || notif.type !== 'battlefield setup')
 		// 	this.gamedatas.battlefield = notif.args.battlefield;
 		this.server_player_state = notif.args.player_state;
 		this.gamedatas.opponent_state = notif.args.opponent_state;
-		this.updateCardsWithPredictions();
-		this.instantMatch();
+		this.updateCardsWithPredictions(true);
 
 		for (let player in this.gamedatas.players)
 		{
@@ -754,21 +804,59 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 				this.scoreCtrl[player]?.toValue(
 					this.opponentHit() ? (winner ? 2 : 1) : 0
 				);
+				if (winner)
+				{
+					$('opponent_samurai')?.classList.add('loser');
+				}
 			}
 			else
 			{
 				this.scoreCtrl[player]?.toValue(
 					this.playerHit() ? (winner ? 2 : 1) : 0
 				);
+				if (winner)
+				{
+					$('player_samurai')?.classList.add('loser');
+				}
 			}
 		}
 	}
 
-	async notif_playerStance(notif: NotifFrom<GameStateData>)
+	async notif_beforeFirstResolve(notif: NotifFrom<GameStateData>)
 	{
+		this.hide_second_for_animations = true;
+
 		this.server_player_state = notif.args.player_state;
 		this.gamedatas.opponent_state = notif.args.opponent_state;
-		this.updateCardsWithPredictions();
+		this.updateCardsWithPredictions(true);
+	}
+
+	async notif_beforeSecondResolve(notif: NotifFrom<GameStateData>)
+	{
+		await new Promise(res => setTimeout(res, 750));
+
+		this.hide_second_for_animations = false;
+
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions(true);
+	}
+
+	async notif_afterResolve(notif: NotifFrom<GameStateData>)
+	{
+		await new Promise(res => setTimeout(res, 750));
+
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions(true);
+	}
+
+	async notif_playerStance(notif: NotifAs<'player(s) changed stance'> | NotifAs<'_spectator_ player(s) changed stance'>)
+	{
+		// console.log('notif_playerStance', notif);
+		this.server_player_state = notif.args.player_state;
+		this.gamedatas.opponent_state = notif.args.opponent_state;
+		this.updateCardsWithPredictions(false);
 
 		const first = this.playerPlayed0() != 0 && this.opponentPlayed0() != 0;
 		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
@@ -780,45 +868,53 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		let player_samurai = $('player_samurai') as HTMLElement;
 		let opponent_samurai = $('opponent_samurai') as HTMLElement;
 
-		if (player_card == 8 && this.playerSpecialCard() != 3 || player_card == 7)
+		if ((player_card == 8 && this.playerSpecialCard() != 3 && notif.args.isSpecial) || (player_card == 7 && !notif.args.isSpecial))
 			player_card_div.classList.add('evaluating');
-		if (opponent_card == 8 && this.opponentSpecialCard() != 3 || opponent_card == 7)
+		if ((opponent_card == 8 && this.opponentSpecialCard() != 3 && notif.args.isSpecial) || ((opponent_card == 7 && !notif.args.isSpecial)))
 			opponent_card_div.classList.add('evaluating');
+
+		await new Promise(res => setTimeout(res, 500));
 
 		const player_area = $('game-area');
 
 		if (this.playerStance() == 0 && !player_area.classList.contains("player-heaven")) {
-			player_samurai.style.transition = '750ms rotate';
-			player_area.classList.replace("player-earth", "player-heaven");
+			player_samurai.classList.add('rotating');
+			player_area.classList.remove("player-earth");
+			player_area.classList.add("player-heaven");
 		}
 		else if (this.playerStance() == 1 && !player_area.classList.contains("player-earth")) {
-			player_samurai.style.transition = '750ms rotate';
-			player_area.classList.replace("player-heaven", "player-earth");
+			player_samurai.classList.add('rotating');
+			player_area.classList.remove("player-heaven");
+			player_area.classList.add("player-earth");
 		}
 
 		if (this.opponentStance() == 0 && !player_area.classList.contains("opponent-heaven")) {
-			opponent_samurai.style.transition = '750ms rotate';
-			player_area.classList.replace("opponent-earth", "opponent-heaven");
+			opponent_samurai.classList.add('rotating');
+			player_area.classList.remove("opponent-earth");
+			player_area.classList.add("opponent-heaven");
 		}
 		else if (this.opponentStance() == 1 && !player_area.classList.contains("opponent-earth")) {
-			opponent_samurai.style.transition = '750ms rotate';
-			player_area.classList.replace("opponent-heaven", "opponent-earth");
+			opponent_samurai.classList.add('rotating');
+			player_area.classList.remove("opponent-heaven");
+			player_area.classList.add("opponent-earth");
 		}
 
 		await new Promise(res => setTimeout(res, 1000));
 
-		player_samurai.style.transition = '';
-		opponent_samurai.style.transition = '';
+		player_samurai.classList.remove('rotating');
+		opponent_samurai.classList.remove('rotating');
 		player_card_div.classList.remove('evaluating');
 		opponent_card_div.classList.remove('evaluating');
 		this.instantMatch();
 	}
 
-	async notif_playerMoved(notif: NotifFrom<GameStateData>)
+	async notif_playerMoved(notif: NotifAs<'player(s) moved'> | NotifAs<'player(s) charged'> | NotifAs<'_spectator_ player(s) moved'> | NotifAs<'_spectator_ player(s) charged'>)
 	{
+		// console.log('notif_playerMoved', notif);
+
 		this.server_player_state = notif.args.player_state;
 		this.gamedatas.opponent_state = notif.args.opponent_state;
-		this.updateCardsWithPredictions();
+		this.updateCardsWithPredictions(false);
 
 		const first = this.playerPlayed0() != 0 && this.opponentPlayed0() != 0;
 		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
@@ -826,10 +922,12 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
 		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
 
-		if (player_card == 1 || player_card == 2 || player_card == 6)
+		if ((player_card == 1 || player_card == 2 || player_card == 6) && notif.args.isHeaven == (this.playerStance() == 0))
 			player_card_div.classList.add('evaluating');
-		if (opponent_card == 1 || opponent_card == 2 || opponent_card == 6)
+		if ((opponent_card == 1 || opponent_card == 2 || opponent_card == 6) && notif.args.isHeaven == (this.opponentStance() == 0))
 			opponent_card_div.classList.add('evaluating');
+
+		await new Promise(res => setTimeout(res, 500));
 
 		// Slide the samurai to the new positions:
 		let player_samurai = $('player_samurai') as HTMLElement;
@@ -846,12 +944,11 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		opponent_card_div.classList.remove('evaluating');
 	}
 
-	async notif_playerAttacked(notif: NotifAs<'player(s) attacked'>)
+	async notif_playerAttacked(notif: NotifAs<'player(s) attacked'> | NotifAs<'_spectator_ player(s) attacked'>)
 	{
 		this.server_player_state = notif.args.player_state;
 		this.gamedatas.opponent_state = notif.args.opponent_state;
-		this.updateCardsWithPredictions();
-		this.instantMatch(); // there should be no updates here.
+		this.updateCardsWithPredictions(true);
 
 		let first = notif.args.first;
 		const player_card = first ? this.playerPlayed0() : this.playerPlayed1();
@@ -860,47 +957,72 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		const opponent_position = this.opponentPosition();
 		const battlefieldSize = this.gamedatas.battlefield_type == 1 ? 5 : 7;
 
+
 		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
 		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
 
-		const effectAndPosition = (card: number, position: number, stance: number): [number, number[], boolean] => {
+		const effectAndPosition = (card: number, position: number, stance: number, special: number): [number[], boolean] => {
 			switch (card)
 			{
-				case 3: return [0, [position + 2], stance == 0];
-				case 4: return [1, [position + 1], stance == 1];
-				case 5: return [4, [position], true];
+				case 3: return [[position + 2], stance == 0];
+				case 4: return [[position + 1], stance == 1];
+				case 5: return [[position], true];
 				case 8: 
-					switch (this.playerSpecialCard())
+					switch (special)
 					{
-						case 1: return [3, [position, position + 1], stance == 0];
-						case 2: return [3, [position + 2, position + 3], stance == 0];
-						case 3: return [2, [], true];
-						default: throw new Error('Invalid special card: ' + this.playerSpecialCard());
+						case 1: return [[position, position + 1], stance == 0];
+						case 2: return [[position + 2, position + 3], stance == 1];
+						case 3: return [[], true];
+						default: throw new Error('Invalid special card: ' + special);
 					}
-				default: return [-1, [], false];
+				default: return [[], false];
 			}
 		}
 
-		let [player_effect, player_hit_positions, player_stance_good] = effectAndPosition(player_card, player_position, this.playerStance());
-		let [opponent_effect, opponent_hit_positions, opponent_stance_good] = effectAndPosition(opponent_card, opponent_position, this.opponentStance());
+		let [player_hit_positions, player_stance_good] = effectAndPosition(player_card, player_position, this.playerStance(), this.playerSpecialCard());
+		let player_card_valid = player_hit_positions.length > 0 || player_stance_good;
+		let [opponent_hit_positions, opponent_stance_good] = effectAndPosition(opponent_card, opponent_position, this.opponentStance(), this.opponentSpecialCard());
+		let opponent_card_valid = opponent_hit_positions.length > 0 || opponent_stance_good;
+
+		// filter out invalid positions
+		player_hit_positions = player_hit_positions.filter(p => p >= 1 && p <= battlefieldSize);
+		opponent_hit_positions = opponent_hit_positions.filter(p => p >= 1 && p <= battlefieldSize);
 
 		opponent_hit_positions = opponent_hit_positions.map(p => battlefieldSize - p + 1);
 
-		console.log('player_effect:', player_effect, 'player_hit_positions:', player_hit_positions);
-		console.log('opponent_effect:', opponent_effect, 'opponent_hit_positions:', opponent_hit_positions);
+		let player_hit = player_hit_positions.includes(battlefieldSize - opponent_position + 1) && player_stance_good;
+		let opponent_hit = opponent_hit_positions.includes(player_position) && opponent_stance_good;
 
-		let player_hit = player_hit_positions.includes(battlefieldSize - opponent_position + 1);
-		let opponent_hit = opponent_hit_positions.includes(player_position);
+		if (player_stance_good && player_hit_positions.length == 0 && opponent_hit)
+		{
+			player_hit = true;
+			opponent_hit = false;
+		}
+		else if (opponent_stance_good && opponent_hit_positions.length == 0 && player_hit)
+		{
+			player_hit = false;
+			opponent_hit = true;
+		}
 
-		let player_effect_div = $('player-slash-effect') as HTMLElement;
-		let opponent_effect_div = $('opponent-slash-effect') as HTMLElement;
+		// console.log('player_hit_positions:', player_hit_positions, 'opponent_hit_positions:', opponent_hit_positions, 'player_hit:', player_hit, 'opponent_hit:', opponent_hit, 'player_stance_good:', player_stance_good, 'opponent_stance_good:', opponent_stance_good, 'player_card_valid:', player_card_valid, 'opponent_card_valid:', opponent_card_valid, 'player_card:', player_card, 'opponent_card:', opponent_card);
+
+		let source_player_0_className = $('player' + '-slash-effect_0').className;
+		let source_player_1_className = $('player' + '-slash-effect_1').className;
+		let source_opponent_0_className = $('opponent' + '-slash-effect_0').className;
+		let source_opponent_1_className = $('opponent' + '-slash-effect_1').className;
 
 		// Check if this player played cards 3,4,5, or 8
 		
-		if (player_effect != -1)
-		{
+		if (player_card_valid)
 			player_card_div.classList.add('evaluating');
 
+		if (opponent_card_valid)
+			opponent_card_div.classList.add('evaluating');
+
+		await new Promise(res => setTimeout(res, 500));
+
+		if (player_card_valid)
+		{
 			if (player_stance_good)
 			{
 				for (let pos of player_hit_positions) {
@@ -912,10 +1034,8 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			}
 		}
 
-		if (opponent_effect != -1)
+		if (opponent_card_valid)
 		{
-			opponent_card_div.classList.add('evaluating');
-
 			if (opponent_stance_good)
 			{
 				for (let pos of opponent_hit_positions) {
@@ -929,20 +1049,53 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		await new Promise(res => setTimeout(res, 1000));
 
-		if (player_effect != -1 && player_stance_good)
+		const animateCard = (card: number, special: number, prefix: string, positions: number[], hit: boolean) =>
 		{
-			player_effect_div.classList.add('slash-effect-anim_' + player_effect);
-			this.placeOnObject('player-slash-effect', 'opponent_samurai');
-			if (!player_hit)
-				player_effect_div.classList.add('player_miss');
+			if (card != 8) {
+				if (player_hit_positions.length == 1) {
+					$(prefix + '-slash-effect_0').classList.add('slash-effect-anim-'+prefix+'-' + this.card_names[card - 1]);
+					this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
+				}
+			}
+			else if (special == 1) {
+				if (player_hit_positions.length >= 1) {
+					$(prefix + '-slash-effect_0').classList.add('slash-effect-anim-'+prefix+'-kesa-0');
+					this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
+				}
+				if (player_hit_positions.length >= 2) {
+					$(prefix + '-slash-effect_1').classList.add('slash-effect-anim-'+prefix+'-kesa-1');
+					this.placeOnObject(prefix + '-slash-effect_1', 'battlefield_position_' + positions[1]);
+				}
+			}
+			else if (special == 2) {
+				if (player_hit_positions.length >= 1) {
+					$(prefix + '-slash-effect_0').classList.add('slash-effect-anim-'+prefix+'-zantetsu-0');
+					this.placeOnObject(prefix + '-slash-effect_0', 'battlefield_position_' + positions[0]);
+				}
+				if (player_hit_positions.length >= 2) {
+					$(prefix + '-slash-effect_1').classList.add('slash-effect-anim-'+prefix+'-zantetsu-1');
+					this.placeOnObject(prefix + '-slash-effect_1', 'battlefield_position_' + positions[1]);
+				}
+			}
+			else if (special == 3) {
+				$(prefix + '-slash-effect_0').classList.add('slash-effect-anim-'+prefix+'-counter');
+				this.placeOnObject(prefix + '-slash-effect_0', 'battlefield');
+			}
+
+			if (!hit) {
+				$(prefix + '-slash-effect_0').classList.add('miss');
+				$(prefix + '-slash-effect_1').classList.add('miss');
+			}
 		}
 
-		if (opponent_effect != -1 && opponent_stance_good)
+		if (player_card_valid)
 		{
-			opponent_effect_div.classList.add('slash-effect-anim_' + opponent_effect);
-			this.placeOnObject('opponent-slash-effect', 'player_samurai');
-			if (!opponent_hit)
-				opponent_effect_div.classList.add('opponent_miss');
+			animateCard(player_card, this.playerSpecialCard(), 'player', player_hit_positions, player_hit);
+		}
+
+		if (opponent_card_valid)
+		{
+			animateCard(opponent_card, this.opponentSpecialCard(), 'opponent', opponent_hit_positions, opponent_hit);
 		}
 
 		await new Promise(res => setTimeout(res, 1000));
@@ -955,10 +1108,11 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 			$('battlefield_position_' + pos)?.classList.remove('opponent_highlight');
 		}
 
-		player_effect_div.classList.remove('slash-effect-anim_' + player_effect);
-		opponent_effect_div.classList.remove('slash-effect-anim_' + opponent_effect);
-		player_effect_div.classList.remove('player_miss');
-		opponent_effect_div.classList.remove('opponent_miss');
+		$('player-slash-effect_0').className = source_player_0_className;
+		$('player-slash-effect_1').className = source_player_1_className;
+		$('opponent-slash-effect_0').className = source_opponent_0_className;
+		$('opponent-slash-effect_1').className = source_opponent_1_className;
+
 		$('player_samurai')?.classList.remove('attack-stance-bad');
 		$('opponent_samurai')?.classList.remove('attack-stance-bad');
 		player_card_div.classList.remove('evaluating');

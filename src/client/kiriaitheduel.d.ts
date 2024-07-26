@@ -18,11 +18,24 @@ interface NotifTypes {
 	'before first resolve': GameStateData;
 	'before second resolve': GameStateData;
 	'after resolve': GameStateData;
-	'player(s) charged': GameStateData;
-	'player(s) moved': GameStateData;
-	'player(s) changed stance': GameStateData;
+	'player(s) charged': GameStateData & { isHeaven: boolean };
+	'player(s) moved': GameStateData & { isHeaven: boolean };
+	'player(s) changed stance': GameStateData & { isSpecial: boolean };
 	'player(s) attacked': GameStateData & { first: boolean };
 	'player(s) hit': GameStateData & { winner: Player['id'] };
+
+	'_spectator_ starting special card': { card_name: string } & GameStateData;
+	'_spectator_ battlefield setup': GameStateData;
+	'_spectator_ played card': GameStateData;
+	'_spectator_ undo card': GameStateData;
+	'_spectator_ before first resolve': GameStateData;
+	'_spectator_ before second resolve': GameStateData;
+	'_spectator_ after resolve': GameStateData;
+	'_spectator_ player(s) charged': GameStateData & { isHeaven: boolean };
+	'_spectator_ player(s) moved': GameStateData & { isHeaven: boolean };
+	'_spectator_ player(s) changed stance': GameStateData & { isSpecial: boolean };
+	'_spectator_ player(s) attacked': GameStateData & { first: boolean };
+	'_spectator_ player(s) hit': GameStateData & { winner: Player['id'] };
 
 	'log': any;
 }
@@ -83,3 +96,7 @@ interface SpecialCard
 	ZAN_TETSU_STRIKE: 2;
 	COUNTERATTACK: 3;
 }
+
+declare const PLAYER_IMAGES: string;
+declare const PLAYER_COLOR: string;
+declare const OPPONENT_COLOR: string;

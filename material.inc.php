@@ -55,16 +55,16 @@ $this->userErrors = array (
 );
 
 $this->notifMessages = array (
-	'starting special card' => clienttranslate('You started the game with the ${card_name} special card'),
+	'starting special card' => clienttranslate('You started the game with the ${card_name} special card.'),
 	'played card' => '',
 	'undo card' => '',
 	'battlefield setup' => '',
 	'before first resolve' => '',
 	'before second resolve' => '',
 	'after resolve' => '',
-	'player(s) charged' => '',
-	'player(s) moved' => '',
-	'player(s) changed stance' => '',
-	'player(s) attacked' => '',
-	'player(s) hit' => '',
+	'player(s) charged' => '${act_players} charged.',
+	'player(s) moved' => '${act_players} moved.',
+	'player(s) changed stance' => '${act_players} changed stance.',
+	'player(s) attacked' => '${act_players} attacked.',
+	'player(s) hit' => '${act_players} scored a hit.',
 );

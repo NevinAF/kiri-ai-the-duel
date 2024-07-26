@@ -56,7 +56,7 @@ html {
   user-select: none;
 
   aspect-ratio: 1110/810;
-  max-height: calc(100vh - 160px);
+  max-height: calc(95vh - 170px);
   margin: 10px auto;
   overflow: hidden;
 }
@@ -66,6 +66,7 @@ html {
   flex: 2;
   width: 100%;
   position: relative;
+  z-index: 1;
 }
 
 #hands {
@@ -76,19 +77,25 @@ html {
 
 // .hand-area is a flex container with 6 elements laid out in a single row, with each element taking up 1/6 of the width
 .hand-area {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: auto;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  width: 100%;
-  height: 90%;
+	position: absolute;
+	bottom: 5%;
+	margin: auto;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	height: 86%;
+}
+
+#player-area {
+	width: 100%;
+	left: 0;
+	right: 0;
 }
 
 #opponent-area {
+	z-index: 2;
+	width: 89.3%;
+	right: 0;
 	transform: translate(0, 110%);
 	transition: 500ms;
 }
@@ -104,10 +111,14 @@ html {
 /* #endregion */
 /* #region Cards */
 .cardslot {
-  position: absolute;
-  overflow: hidden;
-  aspect-ratio: 185/270;
-  pointer-events: all;
+	position: absolute;
+	// overflow: hidden;
+	aspect-ratio: 185/270;
+	pointer-events: all;
+	// border-radius: 6%;
+	// border-color: transparent;
+	// border-style: solid;
+	// border-width: 2px;
 }
 
 .cardslot::after {
@@ -189,31 +200,60 @@ html {
 	position: absolute;
 }
 
-#play-area .cardslot {
-	height: 50%;
+#player_played_0 p,
+#player_played_1 p,
+#opponent_played_0 p,
+#opponent_played_1 p {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 1.5em;
+}
+
+#player_played_0,
+#player_played_1,
+#opponent_played_0,
+#opponent_played_1 {
+	background: color-mix(in srgb, currentColor 20%, transparent);
+	border-color: black;
+	border-radius: 5%;
+	border-style: solid;
+	border-width: 2px;
+	height: 47%;
+	transition: 400ms transform;
 }
 
 #player_played_0 {
-	top: 0;
-	right: 0;
+	top: 2%;
+	right: 1%;
+	color: var(--player-color);
 }
 
 #player_played_1 {
-	bottom: 0;
-	right: 0;
+	bottom: 1.5%;
+	right: 1%;
+	color: var(--player-color);
 }
 
 #opponent_played_0 {
-	top: 0;
-	left: 0;
+	top: 2%;
+	left: 1%;
+	color: var(--opponent-color);
 }
 
 #opponent_played_1 {
-	bottom: 0;
-	left: 0;
+	bottom: 1.5%;
+	left: 1%;
+	color: var(--opponent-color);
 }
 
 #battlefield {
+	height: 50%;
 	position: absolute;
 	inset: 0;
 	margin: auto;
@@ -231,7 +271,7 @@ html {
 	right: 0;
 	margin: auto;
 	rotate: 45deg;
-	z-index: 1;
+	z-index: 2;
 }
 
 .battlefield_position.highlight {
@@ -285,8 +325,44 @@ html {
 	display: hidden;
 }
 
-#player_samurai { translate: 43% -32%; }
-#opponent_samurai { translate: -122% -54%; }
+.opponent_hand_icon {
+	width: 10%;
+}
+
+.opponent_hand_icon img {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	bottom: 0;
+	margin: auto;
+	rotate: -90deg;
+}
+
+.opponent_hand_icon p {
+	position: absolute;
+	color: white;
+	font-style: italic;
+	font-size: 100%;
+	pointer-events: none;
+	top: 10%;
+	height: 80%;
+	text-align: center;
+	text-shadow: 1px 1px 2px black, 0 0 1em black, 0 0 0.2em black;
+	writing-mode: vertical-rl;
+	scale: -1;
+	right: 5%;
+}
+
+.rotating {
+	transition: 750ms rotate;
+}
+
+#player_samurai { translate: 42.5% -31.7%; height: 50%; }
+#opponent_samurai { translate: -122% -54%; height: 50%; }
+
+#player_samurai.loser { filter: grayscale(90%); }
+#opponent_samurai.loser { filter: grayscale(90%); }
 
 .player-heaven #player_samurai { rotate: 315deg };
 .player-earth #player_samurai { rotate: 135deg };
@@ -296,17 +372,17 @@ html {
 #discard_icon, #special_icon {
 	width: 6%;
 	position: absolute;
-	top: -14.5%;
+	top: -13%;
 	left: -4.5%;
 }
 
 #discard_icon { display: none; }
 
-.approach-opponent-discarded #discard_icon { left: 4.3%; display: block; }
-.charge-opponent-discarded #discard_icon { left: 21.36%; display: block; }
-.high-strike-opponent-discarded #discard_icon { left: 38.42%; display: block; }
-.low-strike-opponent-discarded #discard_icon { left: 55.48%; display: block; }
-.balance-strike-opponent-discarded #discard_icon { left: 72.54%; display: block; }
+.approach-opponent-discarded #discard_icon { left: 14.6%; display: block; }
+.charge-opponent-discarded #discard_icon { left: 29.3%; display: block; }
+.high-strike-opponent-discarded #discard_icon { left: 44.6%; display: block; }
+.low-strike-opponent-discarded #discard_icon { left: 59.5%; display: block; }
+.balance-strike-opponent-discarded #discard_icon { left: 74.6%; display: block; }
 #special_icon { left: 89.6%; }
 
 .approach-player-discarded #player-hand_0::after,
@@ -326,90 +402,64 @@ html {
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+	background: linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.75));
 }
 
 .selection-border {
-	--borderWidth: 4px;
-	--borderRadius: 3.5%;
-	--duration: 5s;
-	--gradient: radial-gradient(circle, #e49d00 0%, #fff340 100%);
+	--borderRadius: 5%;
 	width: 100%;
 	height: 100%;
-	border-radius: var(--borderRadius);
-	mask:
-		linear-gradient(#fff, #fff) top,
-		linear-gradient(#fff, #fff) bottom,
-		linear-gradient(#fff, #fff) left,
-		linear-gradient(#fff, #fff) right;
-	mask-size: 100% var(--borderWidth), 100% var(--borderWidth),
-		var(--borderWidth) 100%, var(--borderWidth) 100%;
-	mask-repeat: no-repeat;
 	position: absolute;
 	left: 0;
 	top: 0;
 	display: none;
+	border-radius: var(--borderRadius);
+	color: lch(from var(--player-color) calc(l + 10) c h);
+	z-index: 2;
+	box-shadow: currentColor 0 0 8px 6px;
+	animation: selection-border-anim 1.5s infinite;
 }
 
-.selection-border:after {
-	content: "";
-	position: absolute;
-	top: calc(-1 * var(--borderWidth));
-	left: calc(-1 * var(--borderWidth));
-	height: calc(100% + var(--borderWidth) * 2);
-	width: calc(100% + var(--borderWidth) * 2);
-	background: var(--gradient);
-	border-radius: calc(2 * var(--borderRadius));
-	animation: selection-border-anim var(--duration) ease-in-out infinite;
-	background-size: 200% 200%;
+#opponent-area .selection-border,
+#opponent_played_0 .selection-border,
+#opponent_played_1 .selection-border {
+	color: lch(from var(--opponent-color) calc(l + 10) c h);
 }
 
 @keyframes selection-border-anim {
-	0% {
-		background-position: 0% 0%;
-	}
-	25% {
-		background-position: 100% 0%;
-	}
-	50% {
-		background-position: 100% 100%;
-	}
-	75% {
-		background-position: 0% 100%;
-	}
-	100% {
-		background-position: 0% 0%;
-	}
+	0% { box-shadow: currentColor 0 0 8px 6px; }
+	50% { box-shadow: currentColor 0 0 8px 4px; }
+	100% { box-shadow: currentColor 0 0 8px 6px; }
 }
 
-#player_played_0, #player_played_1 {
-	border-left-style: solid;
-	border-left-color: transparent;
-	border-left-width: 4%;
-	border-radius: 10px;
-}
+// #player_played_0, #player_played_1 {
+// 	border-left-style: solid;
+// 	border-left-color: transparent;
+// 	border-left-width: 4%;
+// 	border-radius: 10px;
+// }
 
 #player_played_0.evaluating, #player_played_1.evaluating {
-	border-left-color: #fff340;
+	transform: translateX(-10%);
 }
 
-#opponent_played_0, #opponent_played_1 {
-	border-right-style: solid;
-	border-right-color: transparent;
-	border-right-width: 4%;
-	border-radius: 10px;
-}
+// #opponent_played_0, #opponent_played_1 {
+// 	border-right-style: solid;
+// 	border-right-color: transparent;
+// 	border-right-width: 4%;
+// 	border-radius: 10px;
+// }
 
 #opponent_played_0.evaluating, #opponent_played_1.evaluating {
-	border-right-color: #fff340;
+	transform: translateX(10%);
 }
 
 .approach-player-played-first #player-hand_0 .selection-border,
 .approach-player-played-second #player-hand_0 .selection-border,
 .approach-player-played-first #player_played_0 .selection-border,
 .approach-player-played-second #player_played_1 .selection-border,
-.approach-opponent-played-first #opponent_played_0 .selection-border,
-.approach-opponent-played-second #opponent_played_1 .selection-border {
+.retreat-opponent-played-first #opponent_played_0 .selection-border,
+.retreat-opponent-played-second #opponent_played_1 .selection-border {
 	display: block;
 	height: 50%;
 	border-radius: var(--borderRadius) var(--borderRadius) 0 0;
@@ -447,8 +497,8 @@ html {
 .retreat-player-played-second #player-hand_0 .selection-border,
 .retreat-player-played-first #player_played_0 .selection-border,
 .retreat-player-played-second #player_played_1 .selection-border,
-.retreat-opponent-played-first #opponent_played_0 .selection-border,
-.retreat-opponent-played-second #opponent_played_1 .selection-border {
+.approach-opponent-played-first #opponent_played_0 .selection-border,
+.approach-opponent-played-second #opponent_played_1 .selection-border {
 	display: block;
 	height: 50%;
 	top: 50%;
@@ -467,55 +517,113 @@ html {
 	border-radius: 0 0 var(--borderRadius) var(--borderRadius);
 }
 
-// A 6x5 sprite sheet of the card backs, where each row is a different effect
+// A 13x1 sprite sheet of the card backs, where each row is a different effect
 .slash-effect {
-	background: url("img/Preview_270.png") no-repeat;
-	background-size: 600% 500%;
-	width: 100px;
-	height: 100px;
-	mix-blend-mode: plus-lighter;
+	background: url("img/slash-sprite-sheet.png") no-repeat;
+	background-size: 100% 1500%;
+	height: 3%;
+	aspect-ratio: 754/78;
+	// mix-blend-mode: ;
 	position: absolute;
-	top: 160px;
-	left: 240px;
-	background-position-y: -25%;
+	background-position-y: -100%;
 }
 
-.slash-effect.player_miss {
-	transform: translateX(100%);
-	transform: translateY(100%);
+.slash-effect.miss {
+	filter: saturate(0);
 }
 
-.slash-effect.opponent_miss {
-	transform: translateX(-100%);
-	transform: translateY(-100%);
+.slash-effect-anim-player-high-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(105deg) translateX(-20%);
 }
 
-.slash-effect-anim_0 {
-	animation: slash-effect-anim_0 1s steps(10);
+.slash-effect-anim-opponent-high-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(285deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-low-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(240deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-low-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(60deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-balance-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(180deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-balance-strike {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(0deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-kesa-0 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(135deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-kesa-1 {
+	animation: slash-effect-anim 1s steps(14);
+	animation-delay: 500ms;
+	transform: rotate(285deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-kesa-0 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(315deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-kesa-1 {
+	animation: slash-effect-anim 1s steps(14);
+	animation-delay: 500ms;
+	transform: rotate(105deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-zantetsu-0 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(135deg) translateX(-20%);
+}
+
+.slash-effect-anim-player-zantetsu-1 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(225deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-zantetsu-0 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(315deg) translateX(-20%);
+}
+
+.slash-effect-anim-opponent-zantetsu-1 {
+	animation: slash-effect-anim 1s steps(14);
+	transform: rotate(45deg) translateX(-20%);
+}
+.slash-effect-anim-player-counter,
+.slash-effect-anim-opponent-counter {
+	background: url("img/counter-sprite-sheet-15.png") no-repeat;
+	background-size: 1500% 100%;
+	height: 50%;
+	aspect-ratio: 327/531;
 	background-position-y: 0%;
+	background-position-x: -100%;
+	animation: counter-effect-anim 1s steps(14);
 }
 
-.slash-effect-anim_1 {
-	animation: slash-effect-anim_0 1s steps(10);
-	background-position-y: 25%;
+.slash-effect-anim-opponent-counter {
+	transform: scale(-1, -1);
 }
 
-.slash-effect-anim_2 {
-	animation: slash-effect-anim_0 1s steps(10);
-	background-position-y: 50%;
+@keyframes slash-effect-anim {
+	0% { background-position-y: 0%;  }
+	100% { background-position-y: 100%; }
 }
 
-.slash-effect-anim_3 {
-	animation: slash-effect-anim_0 1s steps(10);
-	background-position-y: 75%;
-}
-
-.slash-effect-anim_4 {
-	animation: slash-effect-anim_0 1s steps(10);
-	background-position-y: 100%;
-}
-
-@keyframes slash-effect-anim_0 {
+@keyframes counter-effect-anim {
 	0% { background-position-x: 0%;  }
-	100% { background-position-x: 200%; }
+	100% { background-position-x: 100%; }
 }

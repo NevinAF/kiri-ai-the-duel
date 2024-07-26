@@ -141,7 +141,10 @@ class KiriaiTheDuel extends Table
 		$result['players'] = self::getCollectionFromDb( $sql );
 
 		$current_player_id = self::getCurrentPlayerId();
-		self::addStateArgs($result, $current_player_id);
+
+		if (array_key_exists($current_player_id, $result['players']))
+			self::addStateArgs($result, $current_player_id);
+		else self::addSpectatorStateArgs($result);
 
 		$result['battlefield_type'] = self::getGameStateValue( self::BATTLEFIELD_TYPE );
 
@@ -200,7 +203,7 @@ class KiriaiTheDuel extends Table
 				$value = $this->getUniqueValueFromDB("SELECT player_score FROM player WHERE player_id='$player_id'");
 				$value++;
 				$this->DbQuery("UPDATE player SET player_score='$value' WHERE player_id='$player_id'");
-				return $player_id;
+				return $value == 2 ? $player_id : -1;
 			}
 		}
 
@@ -210,6 +213,16 @@ class KiriaiTheDuel extends Table
 	function addStateArgs(array &$args, int $player_id, int|null $primary_state = null, int|null $secondary_state = null)
 	{
 		$primary_player_id = self::getGameStateValue( self::PRIMARY_PLAYER_ID );
+
+		if (array_key_exists('act_players', $args) && $args['act_players'] != -1)
+		{
+			if ($args['act_players'] == 0)
+				$args['act_players'] = $player_id == $primary_player_id ? clienttranslate('You') : clienttranslate('Your opponent');
+			else if ($args['act_players'] == 1)
+				$args['act_players'] = $player_id != $primary_player_id ? clienttranslate('You') : clienttranslate('Your opponent');
+			else $args['act_players'] = clienttranslate('You and your opponent');
+		}
+
 		$primary_state = $primary_state ?? self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
 		$secondary_state = $secondary_state ?? self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
 
@@ -241,10 +254,52 @@ class KiriaiTheDuel extends Table
 		$args['opponent_state'] = $opponent_state;
 	}
 
+	function addSpectatorStateArgs(array &$args, int|null $primary_state = null, int|null $secondary_state = null)
+	{
+		$primary_state = $primary_state ?? self::getGameStateValue( self::PRIMARY_PLAYER_STATE );
+		$secondary_state = $secondary_state ?? self::getGameStateValue( self::SECONDARY_PLAYER_STATE );
+
+		// If both players have not set there battlefield position, keep all opponent information hidden.
+		if (self::getState_position($primary_state) == 0 || self::getState_position($secondary_state) == 0)
+		{
+			$args['player_state'] = 0;
+			$args['opponent_state'] = 0;
+			return;
+		}
+
+		// Hide special card if they are not played (and not this player)
+		if (!self::getState_SpecialPlayed($primary_state))
+			self::setState_Special($primary_state, SpecialCard::HIDDEN);
+		if (!self::getState_SpecialPlayed($secondary_state))
+			self::setState_Special($secondary_state, SpecialCard::HIDDEN);
+
+		// If we are picking cards, hide the played cards (and not this player)
+		if ($this->gamestate->state()['name'] == 'pickCards')
+		{
+			if (self::getState_Played0($primary_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played0($primary_state, PlayedCard::HIDDEN);
+			if (self::getState_Played1($primary_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played1($primary_state, PlayedCard::HIDDEN);
+			if (self::getState_Played0($secondary_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played0($secondary_state, PlayedCard::HIDDEN);
+			if (self::getState_Played1($secondary_state) != PlayedCard::NOT_PLAYED)
+				self::setState_Played1($secondary_state, PlayedCard::HIDDEN);
+		}
+
+		$args['player_state'] = $primary_state;
+		$args['opponent_state'] = $secondary_state;
+	}
+
 	function notifyAllWithGameState(array &$players, string $type, array $args, int|null $primary_state = null, int|null $secondary_state = null)
 	{
 		foreach ($players as $player)
 			self::notifyGameState($player, $type, $args, $primary_state, $secondary_state);
+
+		self::addSpectatorStateArgs($args, $primary_state, $secondary_state);
+		self::notifyAllPlayers(
+			"_spectator_ " . $type,
+			$this->notifMessages[$type],
+			$args );
 	}
 
 	function notifyGameState(array $player, string $type, array $args, int|null $primary_state = null, int|null $secondary_state = null)
@@ -656,109 +711,155 @@ class KiriaiTheDuel extends Table
 		// but the position is stored based on the distance from their end.
 		$primary_position = $battlefieldSize - $primary_position + 1;
 
+		
 		//
 		// MOVEMENT
 		//
 
-		// Charge: Move two spaces forward (-2 for red, +2 for blue)
-
-		if ($primary_card == PlayedCard::CHARGE && $secondary_card == PlayedCard::CHARGE)
+		// Charge Heaven: Move two spaces forward (-2 for red, +2 for blue)
+		$act_players = -1;
+		if ($primary_card == PlayedCard::CHARGE && $secondary_card == PlayedCard::CHARGE && $primary_stance == 0 && $secondary_stance == 0)
 		{
-			if ($primary_stance == $secondary_stance) // Both move at the same time.
+			if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
+			else if ($primary_position - $secondary_position <= 3) // Both can move only once.
 			{
-				if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
-				else if ($primary_position - $secondary_position <= 3) // Both can move only once.
-				{
-					$primary_position -= 1;
-					$secondary_position += 1;
-				}
-				else { // Move full amount
-					$primary_position -= 2;
-					$secondary_position += 2;
-				}
+				$primary_position -= 1;
+				$secondary_position += 1;
 			}
-
-			else if ($primary_stance == 0) // Red Player moves first
-			{
-				$primary_position = max($primary_position - 2, $secondary_position);
-				$secondary_position = min($secondary_position + 2, $primary_position);
+			else { // Move full amount
+				$primary_position -= 2;
+				$secondary_position += 2;
 			}
-
-			else // Blue Player moves first
-			{
-				$secondary_position = min($secondary_position + 2, $primary_position);
-				$primary_position = max($primary_position - 2, $secondary_position);
-			}
+			$act_players = 2;
 		}
-
-		else if ($primary_card == PlayedCard::CHARGE)
+		else if ($primary_card == PlayedCard::CHARGE && $primary_stance == 0)
 		{
 			$primary_position = max($primary_position - 2, $secondary_position);
+			$act_players = 0;
 		}
-
-		else if ($secondary_card == PlayedCard::CHARGE)
+		else if ($secondary_card == PlayedCard::CHARGE && $secondary_stance == 0)
 		{
 			$secondary_position = min($secondary_position + 2, $primary_position);
+			$act_players = 1;
 		}
-
-		if ($primary_card == PlayedCard::CHARGE || $secondary_card == PlayedCard::CHARGE)
+		if ($act_players != -1)
 		{
 			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
 			self::setState_position($secondary_state, $secondary_position);
-			self::notifyAllWithGameState($players, 'player(s) charged', array(), $primary_state, $secondary_state);
+			self::notifyAllWithGameState($players, 'player(s) charged', array(
+				'isHeaven' => true,
+				'act_players' => $act_players
+			), $primary_state, $secondary_state);
 		}
 
 		// Approach/Retreat: Move one space forward/backward (-1 for red, +1 for blue)
-
-		$primary_move =
+		$act_players = -1;
+		$primary_move = $primary_stance != 0 ? 0 : (
 			$primary_card == PlayedCard::APPROACH ? -1 :
-			($primary_card == PlayedCard::RETREAT ? 1 : 0);
-		$secondary_move =
+			($primary_card == PlayedCard::RETREAT ? 1 : 0));
+		$secondary_move = $secondary_stance != 0 ? 0 : (
 			$secondary_card == PlayedCard::APPROACH ? 1 :
-			($secondary_card == PlayedCard::RETREAT ? -1 : 0);
+			($secondary_card == PlayedCard::RETREAT ? -1 : 0));
 
 		if ($primary_move != 0 && $secondary_move != 0)
 		{
-			if ($primary_stance == $secondary_stance) // Both move at the same time.
+			if ($primary_card == PlayedCard::APPROACH && $secondary_card == PlayedCard::APPROACH)
 			{
-				if ($primary_card == PlayedCard::APPROACH && $secondary_card == PlayedCard::APPROACH)
-				{
-					if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
-					else {
-						$primary_position -= 1;
-						$secondary_position += 1;
-					}
-				}
-				else { // Otherwise, both players can move according to card without interference
-					$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), 1);
-					$secondary_position = max(min($secondary_position + $secondary_move, $battlefieldSize), 1);
+				if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
+				else {
+					$primary_position -= 1;
+					$secondary_position += 1;
 				}
 			}
-
-			else if ($primary_stance == 0) // Red Player moves first
-			{
-				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
-				$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
+			else { // Otherwise, both players can move according to card without interference
+				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), 1);
+				$secondary_position = max(min($secondary_position + $secondary_move, $battlefieldSize), 1);
 			}
-
-			else // Blue Player moves first
-			{
-				$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
-				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
-			}
+			$act_players = 2;
 		}
 		// Only one or the other is trying to move...
 		else if ($primary_move != 0 || $secondary_move != 0)
 		{
 			$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
 			$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
+			$act_players = $primary_move != 0 ? 0 : 1;
 		}
-
-		if ($primary_move != 0 || $secondary_move != 0)
+		if ($act_players != -1)
 		{
 			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
 			self::setState_position($secondary_state, $secondary_position);
-			self::notifyAllWithGameState($players, 'player(s) moved', array(), $primary_state, $secondary_state);
+			self::notifyAllWithGameState($players, 'player(s) moved', array('isHeaven' => true, 'act_players' => $act_players), $primary_state, $secondary_state);
+		}
+
+		// Charge Earth: Move two spaces forward (-2 for red, +2 for blue)
+		$act_players = -1;
+		if ($primary_card == PlayedCard::CHARGE && $secondary_card == PlayedCard::CHARGE && $primary_stance == 1 && $secondary_stance == 1)
+		{
+			if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
+			else if ($primary_position - $secondary_position <= 3) // Both can move only once.
+			{
+				$primary_position -= 1;
+				$secondary_position += 1;
+			}
+			else { // Move full amount
+				$primary_position -= 2;
+				$secondary_position += 2;
+			}
+			$act_players = 2;
+		}
+		else if ($primary_card == PlayedCard::CHARGE && $primary_stance == 1)
+		{
+			$primary_position = max($primary_position - 2, $secondary_position);
+			$act_players = 0;
+		}
+		else if ($secondary_card == PlayedCard::CHARGE && $secondary_stance == 1)
+		{
+			$secondary_position = min($secondary_position + 2, $primary_position);
+			$act_players = 1;
+		}
+		if ($act_players != -1)
+		{
+			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
+			self::setState_position($secondary_state, $secondary_position);
+			self::notifyAllWithGameState($players, 'player(s) charged', array('isHeaven' => false, 'act_players' => $act_players), $primary_state, $secondary_state);
+		}
+
+		// Approach/Retreat: Move one space forward/backward (-1 for red, +1 for blue)
+		$act_players = -1;
+		$primary_move = $primary_stance == 0 ? 0 : (
+			$primary_card == PlayedCard::APPROACH ? -1 :
+			($primary_card == PlayedCard::RETREAT ? 1 : 0));
+		$secondary_move = $secondary_stance == 0 ? 0 : (
+			$secondary_card == PlayedCard::APPROACH ? 1 :
+			($secondary_card == PlayedCard::RETREAT ? -1 : 0));
+		if ($primary_move != 0 && $secondary_move != 0)
+		{
+			if ($primary_card == PlayedCard::APPROACH && $secondary_card == PlayedCard::APPROACH)
+			{
+				if ($primary_position - $secondary_position <= 1) {} // There is not enough room to move
+				else {
+					$primary_position -= 1;
+					$secondary_position += 1;
+				}
+			}
+			else { // Otherwise, both players can move according to card without interference
+				$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), 1);
+				$secondary_position = max(min($secondary_position + $secondary_move, $battlefieldSize), 1);
+			}
+			$act_players = 2;
+		}
+		// Only one or the other is trying to move...
+		else if ($primary_move != 0 || $secondary_move != 0)
+		{
+			$primary_position = max(min($primary_position + $primary_move, $battlefieldSize), $secondary_position);
+			$secondary_position = max(min($secondary_position + $secondary_move, $primary_position), 1);
+			$act_players = $primary_move != 0 ? 0 : 1;
+		}
+		if ($act_players != -1)
+		{
+			self::setState_position($primary_state, $battlefieldSize - $primary_position + 1);// see note near $primary_position init
+			self::setState_position($secondary_state, $secondary_position);
+			self::notifyAllWithGameState($players, 'player(s) moved', array('isHeaven' => false, 'act_players' => $act_players), $primary_state, $secondary_state);
 		}
 
 		// Change stance: Invert the current stance
@@ -772,8 +873,10 @@ class KiriaiTheDuel extends Table
 			self::setState_stance($secondary_state, $secondary_stance);
 		}
 
-		if ($primary_card == PlayedCard::CHANGE_STANCE || $secondary_card == PlayedCard::CHANGE_STANCE)
-			self::notifyAllWithGameState($players, 'player(s) changed stance', array(), $primary_state, $secondary_state);
+		$act_players = $primary_card == PlayedCard::CHANGE_STANCE && $secondary_card == PlayedCard::CHANGE_STANCE ? 2 : ($primary_card == PlayedCard::CHANGE_STANCE ? 0 : ($secondary_card == PlayedCard::CHANGE_STANCE ? 1 : -1));
+
+		if ($act_players != -1)
+			self::notifyAllWithGameState($players, 'player(s) changed stance', array('isSpecial' => false, 'act_players' => $act_players), $primary_state, $secondary_state);
 
 		//
 		// ATTACKS
@@ -850,18 +953,16 @@ class KiriaiTheDuel extends Table
 			$primary_landed_hit = false;
 		}
 
-		if ($primary_card == PlayedCard::HIGH_STRIKE || $primary_card == PlayedCard::LOW_STRIKE || $primary_card == PlayedCard::BALANCED_STRIKE || $primary_card == PlayedCard::SPECIAL || $secondary_card == PlayedCard::HIGH_STRIKE || $secondary_card == PlayedCard::LOW_STRIKE || $secondary_card == PlayedCard::BALANCED_STRIKE || $secondary_card == PlayedCard::SPECIAL
-		) {
+		$primary_attacked = $primary_card == PlayedCard::HIGH_STRIKE || $primary_card == PlayedCard::LOW_STRIKE || $primary_card == PlayedCard::BALANCED_STRIKE || $primary_card == PlayedCard::SPECIAL;
+		$secondary_attacked = $secondary_card == PlayedCard::HIGH_STRIKE || $secondary_card == PlayedCard::LOW_STRIKE || $secondary_card == PlayedCard::BALANCED_STRIKE || $secondary_card == PlayedCard::SPECIAL;
+
+		$act_players = $primary_attacked && $secondary_attacked ? 2 : ($primary_attacked ? 0 : ($secondary_attacked ? 1 : -1));
+
+		if ($act_players != -1) {
 			self::notifyAllWithGameState($players, 'player(s) attacked', array(
 				'first' => $first,
+				'act_players' => $act_players
 			), $primary_state, $secondary_state);
-
-			if ($primary_card == PlayedCard::SPECIAL && $primary_special_played != SpecialCard::COUNTERATTACK || $secondary_card == PlayedCard::SPECIAL && $secondary_special_played != SpecialCard::COUNTERATTACK)
-			{
-				self::setState_stance($primary_state, $primary_stance);
-				self::setState_stance($secondary_state, $secondary_stance);
-				self::notifyAllWithGameState($players, 'player(s) changed stance', array(), $primary_state, $secondary_state);
-			}
 		}
 
 		if ($primary_landed_hit && !$secondary_landed_hit)
@@ -871,7 +972,8 @@ class KiriaiTheDuel extends Table
 
 			$primary_id = self::dbIncrementScore($players, true);
 			self::notifyAllWithGameState($players, 'player(s) hit', array(
-				"winner" => $primary_id
+				"winner" => $primary_id,
+				"act_players" => 0
 			), $primary_state, $secondary_state);
 
 			if ($wasHit)
@@ -890,7 +992,8 @@ class KiriaiTheDuel extends Table
 
 			$secondary_id = self::dbIncrementScore($players, false);
 			self::notifyAllWithGameState($players, 'player(s) hit', array(
-				"winner" => $secondary_id
+				"winner" => $secondary_id,
+				'act_players' => 1
 			), $primary_state, $secondary_state);
 
 			if ($wasHit)
@@ -903,7 +1006,21 @@ class KiriaiTheDuel extends Table
 		}
 
 		else if ($primary_landed_hit && $secondary_landed_hit) {
-			self::notifyAllWithGameState($players, 'player(s) hit', array(), $primary_state, $secondary_state);
+			self::notifyAllWithGameState($players, 'player(s) hit', array(
+				'act_players' => 2
+			), $primary_state, $secondary_state);
+		}
+
+		// Special change stance
+		$primary_change = $primary_card == PlayedCard::SPECIAL && $primary_special_played != SpecialCard::COUNTERATTACK;
+		$secondary_change = $secondary_card == PlayedCard::SPECIAL && $secondary_special_played != SpecialCard::COUNTERATTACK;
+		$act_players = $primary_change && $secondary_change ? 2 : ($primary_change ? 0 : ($secondary_change ? 1 : -1));
+
+		if ($act_players != -1)
+		{
+			self::setState_stance($primary_state, $primary_stance);
+			self::setState_stance($secondary_state, $secondary_stance);
+			self::notifyAllWithGameState($players, 'player(s) changed stance', array('isSpecial' => true, 'act_players' => $act_players), $primary_state, $secondary_state);
 		}
 
 		return false;
