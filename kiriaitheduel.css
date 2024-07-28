@@ -203,7 +203,9 @@ html {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1.5em;
+  font-size: 2em;
+  font-family: Perpetua, Baskerville, Big Caslon, Palatino Linotype, Palatino, URW Palladio L, Nimbus Roman No9 L, serif;
+  font-weight: bold;
 }
 
 #player_played_0,
@@ -381,7 +383,6 @@ html {
 .opponent_hand_icon p {
   position: absolute;
   color: white;
-  font-style: italic;
   font-size: 100%;
   pointer-events: none;
   top: 10%;
@@ -391,6 +392,7 @@ html {
   writing-mode: vertical-rl;
   scale: -1;
   right: 5%;
+  font-family: Perpetua, Baskerville, Big Caslon, Palatino Linotype, Palatino, URW Palladio L, Nimbus Roman No9 L, serif;
 }
 
 .rotating {

@@ -728,16 +728,16 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		if (this.isSpectator)
 		{
 			this.subscribeNotif('_spectator_ battlefield setup', this.notif_instantMatch);
-			this.subscribeNotif('_spectator_ played card',  this.notif_instantMatch);
-			this.subscribeNotif('_spectator_ undo card',  this.notif_instantMatch);
-			this.subscribeNotif('_spectator_ before first resolve',  this.notif_beforeFirstResolve);
-			this.subscribeNotif('_spectator_ before second resolve',  this.notif_beforeSecondResolve);
+			this.subscribeNotif('_spectator_ played card', this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ undo card', this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ before first resolve', this.notif_beforeFirstResolve);
+			this.subscribeNotif('_spectator_ before second resolve', this.notif_beforeSecondResolve);
 			this.subscribeNotif('_spectator_ after resolve',  this.notif_afterResolve);
-			this.subscribeNotif('_spectator_ player(s) charged',  this.notif_playerMoved);
-			this.subscribeNotif('_spectator_ player(s) moved',  this.notif_playerMoved);
-			this.subscribeNotif('_spectator_ player(s) changed stance',  this.notif_playerStance);
-			this.subscribeNotif('_spectator_ player(s) attacked',  this.notif_playerAttacked);
-			this.subscribeNotif('_spectator_ player(s) hit',  this.notif_instantMatch);
+			this.subscribeNotif('_spectator_ player(s) charged', n => this.notif_playerMoved(n, true));
+			this.subscribeNotif('_spectator_ player(s) moved', n => this.notif_playerMoved(n, false));
+			this.subscribeNotif('_spectator_ player(s) changed stance', this.notif_playerStance);
+			this.subscribeNotif('_spectator_ player(s) attacked', this.notif_playerAttacked);
+			this.subscribeNotif('_spectator_ player(s) hit', this.notif_instantMatch);
 			this.notifqueue.setSynchronous( '_spectator_ battlefield setup', 1000 );
 			this.notifqueue.setSynchronous( '_spectator_ before first resolve', 2000 );
 			this.notifqueue.setSynchronous( '_spectator_ before second resolve', 1800 );
@@ -750,16 +750,16 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		}
 		else {
 			this.subscribeNotif('battlefield setup', this.notif_instantMatch);
-			this.subscribeNotif('played card',  this.notif_instantMatch);
-			this.subscribeNotif('undo card',  this.notif_instantMatch);
-			this.subscribeNotif('before first resolve',  this.notif_beforeFirstResolve);
-			this.subscribeNotif('before second resolve',  this.notif_beforeSecondResolve);
-			this.subscribeNotif('after resolve',  this.notif_afterResolve);
-			this.subscribeNotif('player(s) charged',  this.notif_playerMoved);
-			this.subscribeNotif('player(s) moved',  this.notif_playerMoved);
-			this.subscribeNotif('player(s) changed stance',  this.notif_playerStance);
-			this.subscribeNotif('player(s) attacked',  this.notif_playerAttacked);
-			this.subscribeNotif('player(s) hit',  this.notif_instantMatch);
+			this.subscribeNotif('played card', this.notif_instantMatch);
+			this.subscribeNotif('undo card', this.notif_instantMatch);
+			this.subscribeNotif('before first resolve', this.notif_beforeFirstResolve);
+			this.subscribeNotif('before second resolve', this.notif_beforeSecondResolve);
+			this.subscribeNotif('after resolve', this.notif_afterResolve);
+			this.subscribeNotif('player(s) charged', n => this.notif_playerMoved(n, true));
+			this.subscribeNotif('player(s) moved', n => this.notif_playerMoved(n, false));
+			this.subscribeNotif('player(s) changed stance', this.notif_playerStance);
+			this.subscribeNotif('player(s) attacked', this.notif_playerAttacked);
+			this.subscribeNotif('player(s) hit', this.notif_instantMatch);
 			this.notifqueue.setSynchronous( 'battlefield setup', 1000 );
 			this.notifqueue.setSynchronous( 'before first resolve', 2000 );
 			this.notifqueue.setSynchronous( 'before second resolve', 1800 );
@@ -908,7 +908,7 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		this.instantMatch();
 	}
 
-	async notif_playerMoved(notif: NotifAs<'player(s) moved'> | NotifAs<'player(s) charged'> | NotifAs<'_spectator_ player(s) moved'> | NotifAs<'_spectator_ player(s) charged'>)
+	async notif_playerMoved(notif: NotifAs<'player(s) moved'> | NotifAs<'player(s) charged'> | NotifAs<'_spectator_ player(s) moved'> | NotifAs<'_spectator_ player(s) charged'>, charged: boolean)
 	{
 		// console.log('notif_playerMoved', notif);
 
@@ -922,10 +922,14 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
 		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
 
-		if ((player_card == 1 || player_card == 2 || player_card == 6) && notif.args.isHeaven == (this.playerStance() == 0))
-			player_card_div.classList.add('evaluating');
-		if ((opponent_card == 1 || opponent_card == 2 || opponent_card == 6) && notif.args.isHeaven == (this.opponentStance() == 0))
-			opponent_card_div.classList.add('evaluating');
+		if ((((player_card == 1 || player_card == 2) && !charged) ||
+			(player_card == 6 && charged))
+			&& notif.args.isHeaven == (this.playerStance() == 0)
+		) player_card_div.classList.add('evaluating');
+		if ((((opponent_card == 1 || opponent_card == 2) && !charged) ||
+			(opponent_card == 6 && charged))
+			&& notif.args.isHeaven == (this.opponentStance() == 0)
+		) opponent_card_div.classList.add('evaluating');
 
 		await new Promise(res => setTimeout(res, 500));
 

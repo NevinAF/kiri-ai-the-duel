@@ -568,6 +568,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 this.instantMatch();
         };
         KiriaiTheDuel.prototype.setupNotifications = function () {
+            var _this = this;
             if (this.isSpectator) {
                 this.subscribeNotif('_spectator_ battlefield setup', this.notif_instantMatch);
                 this.subscribeNotif('_spectator_ played card', this.notif_instantMatch);
@@ -575,8 +576,8 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 this.subscribeNotif('_spectator_ before first resolve', this.notif_beforeFirstResolve);
                 this.subscribeNotif('_spectator_ before second resolve', this.notif_beforeSecondResolve);
                 this.subscribeNotif('_spectator_ after resolve', this.notif_afterResolve);
-                this.subscribeNotif('_spectator_ player(s) charged', this.notif_playerMoved);
-                this.subscribeNotif('_spectator_ player(s) moved', this.notif_playerMoved);
+                this.subscribeNotif('_spectator_ player(s) charged', function (n) { return _this.notif_playerMoved(n, true); });
+                this.subscribeNotif('_spectator_ player(s) moved', function (n) { return _this.notif_playerMoved(n, false); });
                 this.subscribeNotif('_spectator_ player(s) changed stance', this.notif_playerStance);
                 this.subscribeNotif('_spectator_ player(s) attacked', this.notif_playerAttacked);
                 this.subscribeNotif('_spectator_ player(s) hit', this.notif_instantMatch);
@@ -597,8 +598,8 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 this.subscribeNotif('before first resolve', this.notif_beforeFirstResolve);
                 this.subscribeNotif('before second resolve', this.notif_beforeSecondResolve);
                 this.subscribeNotif('after resolve', this.notif_afterResolve);
-                this.subscribeNotif('player(s) charged', this.notif_playerMoved);
-                this.subscribeNotif('player(s) moved', this.notif_playerMoved);
+                this.subscribeNotif('player(s) charged', function (n) { return _this.notif_playerMoved(n, true); });
+                this.subscribeNotif('player(s) moved', function (n) { return _this.notif_playerMoved(n, false); });
                 this.subscribeNotif('player(s) changed stance', this.notif_playerStance);
                 this.subscribeNotif('player(s) attacked', this.notif_playerAttacked);
                 this.subscribeNotif('player(s) hit', this.notif_instantMatch);
@@ -723,7 +724,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                 });
             });
         };
-        KiriaiTheDuel.prototype.notif_playerMoved = function (notif) {
+        KiriaiTheDuel.prototype.notif_playerMoved = function (notif, charged) {
             return __awaiter(this, void 0, void 0, function () {
                 var first, player_card, opponent_card, player_card_div, opponent_card_div, player_samurai, opponent_samurai;
                 return __generator(this, function (_a) {
@@ -737,9 +738,13 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                             opponent_card = first ? this.opponentPlayed0() : this.opponentPlayed1();
                             player_card_div = $('player_played_' + (first ? 0 : 1));
                             opponent_card_div = $('opponent_played_' + (first ? 0 : 1));
-                            if ((player_card == 1 || player_card == 2 || player_card == 6) && notif.args.isHeaven == (this.playerStance() == 0))
+                            if ((((player_card == 1 || player_card == 2) && !charged) ||
+                                (player_card == 6 && charged))
+                                && notif.args.isHeaven == (this.playerStance() == 0))
                                 player_card_div.classList.add('evaluating');
-                            if ((opponent_card == 1 || opponent_card == 2 || opponent_card == 6) && notif.args.isHeaven == (this.opponentStance() == 0))
+                            if ((((opponent_card == 1 || opponent_card == 2) && !charged) ||
+                                (opponent_card == 6 && charged))
+                                && notif.args.isHeaven == (this.opponentStance() == 0))
                                 opponent_card_div.classList.add('evaluating');
                             return [4, new Promise(function (res) { return setTimeout(res, 500); })];
                         case 1:
