@@ -254,14 +254,22 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
         KiriaiTheDuel.prototype.setCardSlot = function (slot, src) {
             if (typeof slot == 'string')
                 slot = $(slot);
-            for (var i = 0; i < slot.children.length; i++) {
+            var _loop_1 = function (i) {
                 var child = slot.children[i];
-                if (child instanceof HTMLImageElement) {
-                    child.style.display = src ? 'block' : 'none';
-                    if (src != null)
-                        child.src = src;
-                    return;
+                if (!(child instanceof HTMLImageElement))
+                    return "continue";
+                if (src != null) {
+                    child.onload = function () { child.style.display = 'block'; };
+                    child.src = src;
                 }
+                else
+                    child.style.display = 'none';
+                return { value: void 0 };
+            };
+            for (var i = 0; i < slot.children.length; i++) {
+                var state_1 = _loop_1(i);
+                if (typeof state_1 === "object")
+                    return state_1.value;
             }
             console.error('Invalid slot: ', slot);
         };
@@ -280,21 +288,21 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
             this.addTooltip('discard_icon', _('This icon shows the last card that was discarded by the opponent.'), _('Hover to show opponent\'s hand.'));
             this.addTooltip('special_icon', _('This icon shows if your opponent still has a hidden special card.'), _('Hover to show opponent\'s hand.'));
             this.instantMatch();
-            var _loop_1 = function (i) {
+            var _loop_2 = function (i) {
                 var index = i + 1;
                 dojo.connect($('player-hand_' + i), 'onclick', this_1, function (e) { return _this.onHandCardClick(e, index); });
             };
             var this_1 = this;
             for (var i = 0; i < 6; i++) {
-                _loop_1(i);
+                _loop_2(i);
             }
-            var _loop_2 = function (i) {
+            var _loop_3 = function (i) {
                 var first = i == 0;
                 dojo.connect($('player_played_' + i), 'onclick', this_2, function (e) { return _this.returnCardToHand(e, first); });
             };
             var this_2 = this;
             for (var i = 0; i < 2; i++) {
-                _loop_2(i);
+                _loop_3(i);
             }
             [$('discard_icon'), $('special_icon'), $('opponent_hand_icon')].forEach(function (target) {
                 target === null || target === void 0 ? void 0 : target.addEventListener('mouseenter', function () {
@@ -356,7 +364,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                     case "setupBattlefield":
                         (_a = this.setupHandles) === null || _a === void 0 ? void 0 : _a.forEach(function (h) { return dojo.disconnect(h); });
                         this.setupHandles = [];
-                        var _loop_3 = function (index) {
+                        var _loop_4 = function (index) {
                             var element = $('battlefield_position_' + index);
                             element.classList.add('highlight');
                             this_3.setupHandles.push(dojo.connect(element, 'onclick', this_3, function (e) {
@@ -368,7 +376,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                         var this_3 = this;
                         for (var _i = 0, _b = [2, 3, 4]; _i < _b.length; _i++) {
                             var index = _b[_i];
-                            _loop_3(index);
+                            _loop_4(index);
                         }
                         this.addTooltip('player_samurai', _("This Samurai Card shows your samurai's positions on the battlefield, stance (heaven or earth), and if it is damaged."), _('Click to switch your stance'));
                         this.setupHandles.push(dojo.connect($('player_samurai'), 'onclick', this, function (e) {
@@ -726,7 +734,7 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
         };
         KiriaiTheDuel.prototype.notif_playerMoved = function (notif, charged) {
             return __awaiter(this, void 0, void 0, function () {
-                var first, player_card, opponent_card, player_card_div, opponent_card_div, player_samurai, opponent_samurai;
+                var first, player_card, opponent_card, player_card_div, opponent_card_div, player_charged, player_singleMoved, player_stanceCorrect, opponent_charged, opponent_singleMoved, opponent_stanceCorrect, player_samurai, opponent_samurai;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
@@ -738,13 +746,15 @@ define("bgagame/kiriaitheduel", ["require", "exports", "dojo", "ebg/core/gamegui
                             opponent_card = first ? this.opponentPlayed0() : this.opponentPlayed1();
                             player_card_div = $('player_played_' + (first ? 0 : 1));
                             opponent_card_div = $('opponent_played_' + (first ? 0 : 1));
-                            if ((((player_card == 1 || player_card == 2) && !charged) ||
-                                (player_card == 6 && charged))
-                                && notif.args.isHeaven == (this.playerStance() == 0))
+                            player_charged = player_card == 2 && charged;
+                            player_singleMoved = (player_card == 1 || player_card == 6) && !charged;
+                            player_stanceCorrect = notif.args.isHeaven == (this.playerStance() == 0);
+                            if ((player_charged || player_singleMoved) && player_stanceCorrect)
                                 player_card_div.classList.add('evaluating');
-                            if ((((opponent_card == 1 || opponent_card == 2) && !charged) ||
-                                (opponent_card == 6 && charged))
-                                && notif.args.isHeaven == (this.opponentStance() == 0))
+                            opponent_charged = opponent_card == 2 && charged;
+                            opponent_singleMoved = (opponent_card == 1 || opponent_card == 6) && !charged;
+                            opponent_stanceCorrect = notif.args.isHeaven == (this.opponentStance() == 0);
+                            if ((opponent_charged || opponent_singleMoved) && opponent_stanceCorrect)
                                 opponent_card_div.classList.add('evaluating');
                             return [4, new Promise(function (res) { return setTimeout(res, 500); })];
                         case 1:
@@ -1181,7 +1191,7 @@ define("cookbook/nevinAF/playeractionqueue", ["require", "exports"], function (r
                 this.queue = [];
             }
             var now = Date.now();
-            var _loop_4 = function (i) {
+            var _loop_5 = function (i) {
                 var item = this_4.queue[i];
                 if (!item) {
                     console.warn("Found a null item in the action queue. This should not happen and is likely an internal error.");
@@ -1227,7 +1237,7 @@ define("cookbook/nevinAF/playeractionqueue", ["require", "exports"], function (r
             };
             var this_4 = this, out_i_1;
             for (var i = 0; i < this.queue.length; i++) {
-                _loop_4(i);
+                _loop_5(i);
                 i = out_i_1;
             }
             if (this.queue.length === 0) {
@@ -1272,7 +1282,7 @@ define("cookbook/nevinAF/titlelocking", ["require", "exports", "dojo"], function
                             var property = _a[_i];
                             el.style[property] = computedStyle.getPropertyValue(property);
                         }
-                        var _loop_5 = function (event_1) {
+                        var _loop_6 = function (event_1) {
                             el.addEventListener('click', function (e) {
                                 var _a, _b;
                                 (_b = (_a = $(id))[event_1]) === null || _b === void 0 ? void 0 : _b.call(_a, e);
@@ -1280,7 +1290,7 @@ define("cookbook/nevinAF/titlelocking", ["require", "exports", "dojo"], function
                         };
                         for (var _b = 0, maintainEvents_1 = maintainEvents; _b < maintainEvents_1.length; _b++) {
                             var event_1 = maintainEvents_1[_b];
-                            _loop_5(event_1);
+                            _loop_6(event_1);
                         }
                     }
                 }

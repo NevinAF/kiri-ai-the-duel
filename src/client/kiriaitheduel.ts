@@ -119,12 +119,16 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 
 		for (let i = 0; i < slot.children.length; i++) {
 			let child = slot.children[i];
-			if (child instanceof HTMLImageElement) {
-				child.style.display = src ? 'block' : 'none';
-				if (src != null)
-					child.src = src;
-				return;
+			if (!(child instanceof HTMLImageElement)) continue;
+
+			if (src != null)
+			{
+				child.onload = () => { child.style.display = 'block'; };
+				child.src = src;
 			}
+			else child.style.display = 'none';
+
+			return;
 		}
 
 		console.error('Invalid slot: ', slot);
@@ -922,14 +926,17 @@ class KiriaiTheDuel extends TitleLockingMixin(CommonMixin(Gamegui))
 		const player_card_div = $('player_played_' + (first ? 0 : 1)) as HTMLElement;
 		const opponent_card_div = $('opponent_played_' + (first ? 0 : 1)) as HTMLElement;
 
-		if ((((player_card == 1 || player_card == 2) && !charged) ||
-			(player_card == 6 && charged))
-			&& notif.args.isHeaven == (this.playerStance() == 0)
-		) player_card_div.classList.add('evaluating');
-		if ((((opponent_card == 1 || opponent_card == 2) && !charged) ||
-			(opponent_card == 6 && charged))
-			&& notif.args.isHeaven == (this.opponentStance() == 0)
-		) opponent_card_div.classList.add('evaluating');
+		const player_charged = player_card == 2 && charged;
+		const player_singleMoved = (player_card == 1 || player_card == 6) && !charged;
+		const player_stanceCorrect = notif.args.isHeaven == (this.playerStance() == 0);
+		if ((player_charged || player_singleMoved) && player_stanceCorrect)
+			player_card_div.classList.add('evaluating');
+
+		const opponent_charged = opponent_card == 2 && charged;
+		const opponent_singleMoved = (opponent_card == 1 || opponent_card == 6) && !charged;
+		const opponent_stanceCorrect = notif.args.isHeaven == (this.opponentStance() == 0);
+		if ((opponent_charged || opponent_singleMoved) && opponent_stanceCorrect)
+			opponent_card_div.classList.add('evaluating');
 
 		await new Promise(res => setTimeout(res, 500));
 
